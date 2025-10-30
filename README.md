@@ -86,12 +86,29 @@ cd Top-view-rpg-game
 
 2. **Compile o projeto**
 ```bash
+# Windows
+compile.bat
+
+# Linux/macOS
+chmod +x compile.sh
+./compile.sh
+
+# Ou manualmente:
 cd src
 javac *.java
 ```
 
 3. **Execute o jogo**
 ```bash
+# Windows
+run.bat
+
+# Linux/macOS
+chmod +x run.sh
+./run.sh
+
+# Ou manualmente:
+cd src
 java Game
 ```
 

@@ -2,22 +2,24 @@
 
 ## Inicializando o Repositório
 
-### 1. Navegue até a pasta do projeto
+### Método Manual
+
+1. **Navegue até a pasta do projeto**
 ```bash
 cd rpg-2d-java
 ```
 
-### 2. Inicialize o repositório Git
+2. **Inicialize o repositório Git**
 ```bash
 git init
 ```
 
-### 3. Adicione todos os arquivos
+3. **Adicione todos os arquivos**
 ```bash
 git add .
 ```
 
-### 4. Faça o primeiro commit
+4. **Faça o primeiro commit**
 ```bash
 git commit -m "Initial commit: RPG 2D Java v1.0.0
 
