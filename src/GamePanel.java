@@ -146,53 +146,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (player == null)
       return;
 
-    // Painel de informações do jogador (canto superior esquerdo)
-    int panelX = 10;
-    int panelY = 10;
-    int panelWidth = 280;
-    int panelHeight = 135;
+    // Barras de vida e mana (canto superior esquerdo)
+    drawHealthAndManaBars(g, player);
 
-    // Fundo do painel
-    g.setColor(new Color(0, 0, 0, 150));
-    g.fillRoundRect(panelX, panelY, panelWidth, panelHeight, 10, 10);
-    g.setColor(new Color(100, 150, 200));
-    g.drawRoundRect(panelX, panelY, panelWidth, panelHeight, 10, 10);
-
-    // Fonte para o texto
-    g.setFont(new Font("Arial", Font.BOLD, 14));
-    g.setColor(Color.WHITE);
-
-    // Informações do jogador
-    int textY = panelY + 20;
-    int lineHeight = 15;
-
-    g.drawString("Classe: " + player.getPlayerClass(), panelX + 10, textY);
-    textY += lineHeight;
-
-    CharacterStats stats = player.getStats();
-    if (stats != null) {
-      g.drawString("FOR:" + stats.getStrength() + " DEX:" + stats.getDexterity() + " INT:" + stats.getIntelligence(),
-          panelX + 10, textY);
-      textY += lineHeight;
-      g.drawString("SAB:" + stats.getWisdom() + " CAR:" + stats.getCharisma() + " CON:" + stats.getConstitution(),
-          panelX + 10, textY);
-      textY += lineHeight;
-
-      g.drawString("Dano: " + (10 + stats.getDamageBonus()) + " | Slots: " + stats.getInventorySlots(), panelX + 10,
-          textY);
-      textY += lineHeight;
-
-      g.drawString("XP: +" + String.format("%.0f%%", (stats.getXpMultiplier() - 1) * 100) +
-          " | Evasão: " + String.format("%.0f%%", stats.getEvasionChance() * 100), panelX + 10, textY);
-      textY += lineHeight;
-
-      g.drawString("Defesa: -" + String.format("%.0f%%", stats.getDamageReduction() * 100) + " dano recebido",
-          panelX + 10, textY);
-      textY += lineHeight;
-
-      // Barra de vida detalhada
-      g.drawString("Vida: " + player.getCurrentHealth() + "/" + player.getMaxHealth(), panelX + 10, textY);
-    } // Instruções de controle (canto inferior direito)
+    // Instruções de controle (canto inferior direito)
     String[] instructions = {
         "WASD - Movimento",
         "ESPAÇO - Atacar"
@@ -207,6 +164,62 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     for (int i = 0; i < instructions.length; i++) {
       g.drawString(instructions[i], instrX, instrY + (i * 15));
     }
+  }
+
+  /**
+   * Desenha as barras de vida e mana no canto superior esquerdo
+   */
+  private void drawHealthAndManaBars(Graphics2D g, Player player) {
+    int barX = 20;
+    int barY = 20;
+    int barWidth = 200;
+    int barHeight = 20;
+    int barSpacing = 30;
+
+    // Barra de Vida
+    drawBar(g, "VIDA", barX, barY, barWidth, barHeight, 
+            player.getCurrentHealth(), player.getMaxHealth(), 
+            Color.RED, Color.DARK_GRAY);
+
+    // Barra de Mana
+    drawBar(g, "MANA", barX, barY + barSpacing, barWidth, barHeight, 
+            player.getCurrentMana(), player.getMaxMana(), 
+            Color.BLUE, Color.DARK_GRAY);
+
+    // Classe do jogador abaixo das barras
+    g.setFont(new Font("Arial", Font.BOLD, 14));
+    g.setColor(Color.WHITE);
+    g.drawString("Classe: " + player.getPlayerClass(), barX, barY + (barSpacing * 2) + 15);
+  }
+
+  /**
+   * Desenha uma barra de recurso (vida, mana, etc.)
+   */
+  private void drawBar(Graphics2D g, String label, int x, int y, int width, int height, 
+                       int current, int max, Color fillColor, Color bgColor) {
+    // Fundo da barra
+    g.setColor(bgColor);
+    g.fillRect(x, y, width, height);
+
+    // Borda da barra
+    g.setColor(Color.WHITE);
+    g.drawRect(x, y, width, height);
+
+    // Preenchimento da barra
+    if (max > 0) {
+      int fillWidth = (int) ((double) current / max * width);
+      g.setColor(fillColor);
+      g.fillRect(x + 1, y + 1, fillWidth - 1, height - 2);
+    }
+
+    // Texto da barra
+    g.setFont(new Font("Arial", Font.BOLD, 12));
+    g.setColor(Color.WHITE);
+    String text = label + ": " + current + "/" + max;
+    FontMetrics fm = g.getFontMetrics();
+    int textX = x + (width - fm.stringWidth(text)) / 2;
+    int textY = y + (height + fm.getAscent()) / 2 - 2;
+    g.drawString(text, textX, textY);
   }
 
   @Override
