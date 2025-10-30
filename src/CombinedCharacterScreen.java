@@ -576,7 +576,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     bonusLabels[1].setText("Dano: +" + Math.max(0, stats.getDexterity() - 5) 
         + " | Evasão: " + String.format("%.0f%%", stats.getEvasionChance() * 100));
     bonusLabels[2].setText("Dano: +" + Math.max(0, stats.getIntelligence() - 5) 
-        + " | Projéteis mágicos");
+        + " | Mana: " + stats.getMaxMana());
     bonusLabels[3].setText("XP: +" + String.format("%.0f%%", (stats.getXpMultiplier() - 1) * 100));
     bonusLabels[4].setText("Intimidação (futuro)");
     bonusLabels[5].setText("Vida: " + stats.getMaxHealth() + "HP | Def: -" 

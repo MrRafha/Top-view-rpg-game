@@ -36,6 +36,8 @@ public class Player {
   private CharacterStats stats;
   private int currentHealth;
   private int maxHealth;
+  private int currentMana;
+  private int maxMana;
 
   // Direção atual (para ataques direcionais)
   private double facing = 0; // 0 = direita, PI/2 = baixo, PI = esquerda, 3*PI/2 = cima
@@ -57,6 +59,8 @@ public class Player {
     this.stats = new CharacterStats("Warrior");
     this.maxHealth = stats.getMaxHealth();
     this.currentHealth = maxHealth;
+    this.maxMana = stats.getMaxMana();
+    this.currentMana = maxMana;
     this.projectiles = new ArrayList<>();
     this.floatingTexts = new ArrayList<>();
     loadSprite(spritePath);
@@ -69,6 +73,8 @@ public class Player {
     this.stats = stats;
     this.maxHealth = stats.getMaxHealth();
     this.currentHealth = maxHealth;
+    this.maxMana = stats.getMaxMana();
+    this.currentMana = maxMana;
     this.speed = 3.0; // Velocidade base fixa
     this.projectiles = new ArrayList<>();
     this.floatingTexts = new ArrayList<>();
@@ -173,8 +179,7 @@ public class Player {
       // g.drawRect(screenX + HITBOX_OFFSET_X, screenY + HITBOX_OFFSET_Y,
       // HITBOX_WIDTH, HITBOX_HEIGHT);
 
-      // Renderizar barra de vida
-      renderHealthBar(g, screenX, screenY);
+      // Barra de vida removida - agora exibida na UI
     }
 
     // Renderizar projéteis
@@ -328,6 +333,14 @@ public class Player {
 
   public int getMaxHealth() {
     return maxHealth;
+  }
+
+  public int getCurrentMana() {
+    return currentMana;
+  }
+
+  public int getMaxMana() {
+    return maxMana;
   }
 
   public ArrayList<Projectile> getProjectiles() {
