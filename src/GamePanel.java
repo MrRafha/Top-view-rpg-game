@@ -42,10 +42,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Criar o mapa de tiles
     tileMap = new TileMap();
 
-    // Criar o jogador no centro do novo mapa 15x15 (usando sprite do Warrior por
-    // padrão)
-    // Posição central aproximada: (15*48)/2 = 360px
-    player = new Player(360, 360, "sprites/WarriorPlayer.png");
+    // Encontrar uma posição aleatória de grama para spawn do jogador
+    Point spawnPosition = tileMap.getRandomGrassPosition();
+    player = new Player(spawnPosition.x, spawnPosition.y, "sprites/WarriorPlayer.png");
 
     // Conectar o mapa ao jogador para verificação de colisão
     player.setTileMap(tileMap);
@@ -62,25 +61,29 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   }
 
   public void setPlayerClass(String playerClass, String spritePath) {
-    // Criar novo jogador com a classe selecionada no centro do mapa 15x15
-    player = new Player(360, 360, spritePath);
-
-    // Verificar se o tileMap já foi inicializado antes de conectar
+    // Verificar se o tileMap já foi inicializado antes de criar o player
     if (tileMap != null) {
+      // Encontrar uma posição aleatória de grama para spawn do jogador
+      Point spawnPosition = tileMap.getRandomGrassPosition();
+      player = new Player(spawnPosition.x, spawnPosition.y, spritePath);
       player.setTileMap(tileMap);
     } else {
+      // Fallback para posição central se tileMap ainda não foi inicializado
+      player = new Player(360, 360, spritePath);
       System.out.println("Aviso: TileMap ainda não foi inicializado quando setPlayerClass foi chamado");
     }
   }
 
   public void setPlayerClass(String playerClass, String spritePath, CharacterStats stats) {
-    // Criar novo jogador com a classe e atributos selecionados no centro do mapa 15x15
-    player = new Player(360, 360, spritePath, playerClass, stats);
-    
     // Conectar o mapa ao jogador para verificação de colisão
     if (tileMap != null) {
+      // Encontrar uma posição aleatória de grama para spawn do jogador
+      Point spawnPosition = tileMap.getRandomGrassPosition();
+      player = new Player(spawnPosition.x, spawnPosition.y, spritePath, playerClass, stats);
       player.setTileMap(tileMap);
     } else {
+      // Fallback para posição central se tileMap ainda não foi inicializado
+      player = new Player(360, 360, spritePath, playerClass, stats);
       System.out.println("Aviso: TileMap ainda não foi inicializado quando setPlayerClass(com stats) foi chamado");
     }
   }

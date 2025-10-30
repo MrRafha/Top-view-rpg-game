@@ -15,8 +15,14 @@ public class Player {
   private double speed;
 
   private BufferedImage sprite;
-  private final int WIDTH = 33; // Aumentado de 22 para 33 (1.5x)
-  private final int HEIGHT = 48; // Aumentado de 32 para 48 (1.5x)
+  private final int WIDTH = 33; // Tamanho visual do sprite
+  private final int HEIGHT = 48; // Tamanho visual do sprite
+
+  // Hitbox menor para colisão (permite passar por corredores de 1 tile)
+  private final int HITBOX_WIDTH = 28; // ~60% da largura do tile (48px)
+  private final int HITBOX_HEIGHT = 40; // ~83% da altura do tile
+  private final int HITBOX_OFFSET_X = (WIDTH - HITBOX_WIDTH) / 2; // Centralizar hitbox
+  private final int HITBOX_OFFSET_Y = HEIGHT - HITBOX_HEIGHT; // Hitbox na parte inferior
 
   // Controles
   private boolean up, down, left, right;
@@ -71,16 +77,23 @@ public class Player {
 
   private void loadSprite(String path) {
     try {
+      // Tentar primeiro o caminho original
       sprite = ImageIO.read(new File(path));
-    } catch (IOException e) {
-      System.err.println("Erro ao carregar sprite do jogador: " + path);
-      e.printStackTrace();
-      // Criar um retângulo simples como fallback
-      sprite = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
-      Graphics2D g = sprite.createGraphics();
-      g.setColor(Color.BLUE);
-      g.fillRect(0, 0, WIDTH, HEIGHT);
-      g.dispose();
+    } catch (IOException e1) {
+      try {
+        // Tentar caminho relativo da pasta src
+        String alternatePath = "../" + path;
+        sprite = ImageIO.read(new File(alternatePath));
+      } catch (IOException e2) {
+        System.err.println("Erro ao carregar sprite do jogador: " + path);
+        e2.printStackTrace();
+        // Criar um retângulo simples como fallback
+        sprite = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
+        Graphics g = sprite.getGraphics();
+        g.setColor(Color.BLUE);
+        g.fillRect(0, 0, WIDTH, HEIGHT);
+        g.dispose();
+      }
     }
   }
 
@@ -154,6 +167,11 @@ public class Player {
         screenY > -HEIGHT && screenY < Game.SCREEN_HEIGHT) {
       // Renderizar sprite com tamanho correto
       g.drawImage(sprite, screenX, screenY, WIDTH, HEIGHT, null);
+
+      // DEBUG: Visualizar hitbox (descomente para debug)
+      // g.setColor(Color.RED);
+      // g.drawRect(screenX + HITBOX_OFFSET_X, screenY + HITBOX_OFFSET_Y,
+      // HITBOX_WIDTH, HITBOX_HEIGHT);
 
       // Renderizar barra de vida
       renderHealthBar(g, screenX, screenY);
@@ -354,9 +372,11 @@ public class Player {
     double newX = x + dx;
     double newY = y + dy;
 
-    // Verificar limites do mapa
-    newX = Math.max(0, Math.min(newX, GamePanel.MAP_WIDTH * GamePanel.TILE_SIZE - WIDTH));
-    newY = Math.max(0, Math.min(newY, GamePanel.MAP_HEIGHT * GamePanel.TILE_SIZE - HEIGHT));
+    // Verificar limites do mapa (usando a hitbox para cálculos precisos)
+    newX = Math.max(-HITBOX_OFFSET_X,
+        Math.min(newX, GamePanel.MAP_WIDTH * GamePanel.TILE_SIZE - HITBOX_WIDTH - HITBOX_OFFSET_X));
+    newY = Math.max(-HITBOX_OFFSET_Y,
+        Math.min(newY, GamePanel.MAP_HEIGHT * GamePanel.TILE_SIZE - HITBOX_HEIGHT - HITBOX_OFFSET_Y));
 
     // Verificar colisão com tiles (checkar os 4 cantos do jogador)
     if (canMoveToPosition(newX, newY)) {
@@ -365,11 +385,13 @@ public class Player {
     } else {
       // Tentar movimento apenas no eixo X
       if (dx != 0 && canMoveToPosition(x + dx, y)) {
-        x = Math.max(0, Math.min(x + dx, GamePanel.MAP_WIDTH * GamePanel.TILE_SIZE - WIDTH));
+        x = Math.max(-HITBOX_OFFSET_X,
+            Math.min(x + dx, GamePanel.MAP_WIDTH * GamePanel.TILE_SIZE - HITBOX_WIDTH - HITBOX_OFFSET_X));
       }
       // Tentar movimento apenas no eixo Y
       else if (dy != 0 && canMoveToPosition(x, y + dy)) {
-        y = Math.max(0, Math.min(y + dy, GamePanel.MAP_HEIGHT * GamePanel.TILE_SIZE - HEIGHT));
+        y = Math.max(-HITBOX_OFFSET_Y,
+            Math.min(y + dy, GamePanel.MAP_HEIGHT * GamePanel.TILE_SIZE - HITBOX_HEIGHT - HITBOX_OFFSET_Y));
       }
     }
   }
@@ -381,24 +403,29 @@ public class Player {
       return true;
     }
 
-    // Verificar os 4 cantos do jogador
+    // Usar hitbox menor para colisão (permite passar por corredores de 1 tile)
     int tileSize = GamePanel.TILE_SIZE;
 
+    // Calcular posição da hitbox
+    double hitboxX = newX + HITBOX_OFFSET_X;
+    double hitboxY = newY + HITBOX_OFFSET_Y;
+
+    // Verificar os 4 cantos da hitbox
     // Canto superior esquerdo
-    int tileX1 = (int) (newX / tileSize);
-    int tileY1 = (int) (newY / tileSize);
+    int tileX1 = (int) (hitboxX / tileSize);
+    int tileY1 = (int) (hitboxY / tileSize);
 
     // Canto superior direito
-    int tileX2 = (int) ((newX + WIDTH - 1) / tileSize);
-    int tileY2 = (int) (newY / tileSize);
+    int tileX2 = (int) ((hitboxX + HITBOX_WIDTH - 1) / tileSize);
+    int tileY2 = (int) (hitboxY / tileSize);
 
     // Canto inferior esquerdo
-    int tileX3 = (int) (newX / tileSize);
-    int tileY3 = (int) ((newY + HEIGHT - 1) / tileSize);
+    int tileX3 = (int) (hitboxX / tileSize);
+    int tileY3 = (int) ((hitboxY + HITBOX_HEIGHT - 1) / tileSize);
 
     // Canto inferior direito
-    int tileX4 = (int) ((newX + WIDTH - 1) / tileSize);
-    int tileY4 = (int) ((newY + HEIGHT - 1) / tileSize);
+    int tileX4 = (int) ((hitboxX + HITBOX_WIDTH - 1) / tileSize);
+    int tileY4 = (int) ((hitboxY + HITBOX_HEIGHT - 1) / tileSize);
 
     // Verificar se todos os tiles são válidos e caminháveis
     return isValidTile(tileX1, tileY1) && tileMap.isWalkable(tileX1, tileY1) &&

@@ -1,14 +1,35 @@
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Image;
+import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
-import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
+import javax.imageio.ImageIO;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JTextArea;
+import javax.swing.SwingConstants;
 
 /**
- * Tela combinada de criação de personagem e customização de atributos
+ * Tela combinada de criação de personagem e customização de atributos.
  */
 public class CombinedCharacterScreen extends JPanel implements ActionListener {
   private JFrame parentFrame;
@@ -43,11 +64,11 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
   private JPanel attributesPanel;
 
   // Nomes dos atributos
-  private final String[] ATTRIBUTE_NAMES = {
+  private final String[] attributeNames = {
       "Força", "Destreza", "Inteligência", "Sabedoria", "Carisma", "Constituição"
   };
 
-  private final String[] ATTRIBUTE_DESCRIPTIONS = {
+  private final String[] attributeDescriptions = {
       "(Dano + Slots de inventário)",
       "(Dano + Chance de evasão)",
       "(Dano + Projéteis mágicos)",
@@ -57,34 +78,44 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
   };
 
   // Cores do tema
-  private final Color BACKGROUND_COLOR = new Color(20, 30, 40);
-  private final Color PANEL_COLOR = new Color(40, 50, 60);
-  private final Color TEXT_COLOR = new Color(220, 220, 220);
-  private final Color ACCENT_COLOR = new Color(100, 150, 200);
-  private final Color PRIMARY_COLOR = new Color(255, 215, 0);
-  private final Color WARNING_COLOR = new Color(255, 100, 100);
+  private final Color backgroundColor = new Color(20, 30, 40);
+  private final Color panelColor = new Color(40, 50, 60);
+  private final Color textColor = new Color(220, 220, 220);
+  private final Color accentColor = new Color(100, 150, 200);
+  private final Color primaryColor = new Color(255, 215, 0);
+  private final Color warningColor = new Color(255, 100, 100);
 
+  /**
+   * Construtor da tela de criação de personagem.
+   * @param parentFrame frame pai da aplicação
+   */
   public CombinedCharacterScreen(JFrame parentFrame) {
     this.parentFrame = parentFrame;
     this.stats = new CharacterStats("Warrior");
     loadSprites();
-    initializeUI();
+    initializeUi();
   }
 
   private void loadSprites() {
     try {
-      warriorSprite = ImageIO.read(new File("sprites/WarriorPlayer.png"));
-      mageSprite = ImageIO.read(new File("sprites/MagePlayer.png"));
-      hunterSprite = ImageIO.read(new File("sprites/HunterPlayer.png"));
+      // Tenta primeiro o caminho relativo da pasta src
+      File spritesDir = new File("../sprites/");
+      if (!spritesDir.exists()) {
+        spritesDir = new File("sprites/");
+      }
+
+      warriorSprite = ImageIO.read(new File(spritesDir, "WarriorPlayer.png"));
+      mageSprite = ImageIO.read(new File(spritesDir, "MagePlayer.png"));
+      hunterSprite = ImageIO.read(new File(spritesDir, "HunterPlayer.png"));
     } catch (IOException e) {
       System.err.println("Erro ao carregar sprites das classes");
       e.printStackTrace();
     }
   }
 
-  private void initializeUI() {
+  private void initializeUi() {
     setLayout(new BorderLayout());
-    setBackground(BACKGROUND_COLOR);
+    setBackground(backgroundColor);
 
     // Painel superior com título
     JPanel topPanel = createTopPanel();
@@ -92,7 +123,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
 
     // Painel central principal
     JPanel centerPanel = new JPanel(new BorderLayout());
-    centerPanel.setBackground(BACKGROUND_COLOR);
+    centerPanel.setBackground(backgroundColor);
 
     // Painel esquerdo - seleção de classes
     JPanel leftPanel = createClassSelectionPanel();
@@ -112,16 +143,16 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
 
   private JPanel createTopPanel() {
     JPanel panel = new JPanel();
-    panel.setBackground(BACKGROUND_COLOR);
+    panel.setBackground(backgroundColor);
     panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 10, 20));
 
     titleLabel = new JLabel("CRIAÇÃO DE PERSONAGEM", SwingConstants.CENTER);
     titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
-    titleLabel.setForeground(TEXT_COLOR);
+    titleLabel.setForeground(textColor);
 
     classLabel = new JLabel("Escolha sua classe:", SwingConstants.CENTER);
     classLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-    classLabel.setForeground(TEXT_COLOR);
+    classLabel.setForeground(textColor);
 
     pointsLabel = new JLabel("", SwingConstants.CENTER);
     pointsLabel.setFont(new Font("Arial", Font.BOLD, 14));
@@ -139,7 +170,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
 
   private JPanel createClassSelectionPanel() {
     JPanel panel = new JPanel(new GridBagLayout());
-    panel.setBackground(BACKGROUND_COLOR);
+    panel.setBackground(backgroundColor);
     panel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 10));
 
     GridBagConstraints gbc = new GridBagConstraints();
@@ -172,13 +203,13 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
   private JPanel createClassPanel(String className, BufferedImage sprite, String description) {
     JPanel panel = new JPanel();
     panel.setLayout(new BorderLayout());
-    panel.setBackground(PANEL_COLOR);
+    panel.setBackground(panelColor);
     panel.setBorder(BorderFactory.createRaisedBevelBorder());
     panel.setPreferredSize(new Dimension(280, 120));
 
     // Painel esquerdo com sprite
     JPanel spritePanel = new JPanel();
-    spritePanel.setBackground(PANEL_COLOR);
+    spritePanel.setBackground(panelColor);
     spritePanel.setPreferredSize(new Dimension(80, 120));
 
     if (sprite != null) {
@@ -191,18 +222,18 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     // Painel central com informações
     JPanel infoPanel = new JPanel();
     infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
-    infoPanel.setBackground(PANEL_COLOR);
+    infoPanel.setBackground(panelColor);
     infoPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
 
     JLabel nameLabel = new JLabel(className);
     nameLabel.setFont(new Font("Arial", Font.BOLD, 16));
-    nameLabel.setForeground(TEXT_COLOR);
+    nameLabel.setForeground(textColor);
     nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
     JTextArea descArea = new JTextArea(description);
     descArea.setFont(new Font("Arial", Font.PLAIN, 11));
     descArea.setForeground(new Color(180, 180, 180));
-    descArea.setBackground(PANEL_COLOR);
+    descArea.setBackground(panelColor);
     descArea.setLineWrap(true);
     descArea.setWrapStyleWord(true);
     descArea.setEditable(false);
@@ -217,7 +248,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     JButton selectButton = new JButton("Escolher");
     selectButton.setActionCommand(className);
     selectButton.addActionListener(this);
-    selectButton.setBackground(ACCENT_COLOR);
+    selectButton.setBackground(accentColor);
     selectButton.setForeground(Color.WHITE);
     selectButton.setPreferredSize(new Dimension(80, 30));
 
@@ -231,7 +262,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     }
 
     JPanel buttonPanel = new JPanel();
-    buttonPanel.setBackground(PANEL_COLOR);
+    buttonPanel.setBackground(panelColor);
     buttonPanel.add(selectButton);
 
     panel.add(spritePanel, BorderLayout.WEST);
@@ -243,19 +274,19 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
 
   private JPanel createAttributesPanel() {
     JPanel mainPanel = new JPanel(new BorderLayout());
-    mainPanel.setBackground(BACKGROUND_COLOR);
+    mainPanel.setBackground(backgroundColor);
     mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
     // Título da seção
     JLabel attrTitle = new JLabel("DISTRIBUIÇÃO DE ATRIBUTOS", SwingConstants.CENTER);
     attrTitle.setFont(new Font("Arial", Font.BOLD, 18));
-    attrTitle.setForeground(TEXT_COLOR);
+    attrTitle.setForeground(textColor);
     attrTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
     mainPanel.add(attrTitle, BorderLayout.NORTH);
 
     // Painel dos atributos
     JPanel attributesGrid = new JPanel(new GridBagLayout());
-    attributesGrid.setBackground(BACKGROUND_COLOR);
+    attributesGrid.setBackground(backgroundColor);
 
     GridBagConstraints gbc = new GridBagConstraints();
     gbc.insets = new Insets(5, 8, 5, 8);
@@ -266,21 +297,21 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     gbc.anchor = GridBagConstraints.WEST;
     JLabel nameHeader = new JLabel("ATRIBUTO");
     nameHeader.setFont(new Font("Arial", Font.BOLD, 12));
-    nameHeader.setForeground(TEXT_COLOR);
+    nameHeader.setForeground(textColor);
     attributesGrid.add(nameHeader, gbc);
 
     gbc.gridx = 2;
     gbc.anchor = GridBagConstraints.CENTER;
     JLabel valueHeader = new JLabel("VALOR");
     valueHeader.setFont(new Font("Arial", Font.BOLD, 12));
-    valueHeader.setForeground(TEXT_COLOR);
+    valueHeader.setForeground(textColor);
     attributesGrid.add(valueHeader, gbc);
 
     gbc.gridx = 4;
     gbc.anchor = GridBagConstraints.WEST;
     JLabel bonusHeader = new JLabel("EFEITO");
     bonusHeader.setFont(new Font("Arial", Font.BOLD, 12));
-    bonusHeader.setForeground(TEXT_COLOR);
+    bonusHeader.setForeground(textColor);
     attributesGrid.add(bonusHeader, gbc);
 
     // Criar linhas dos atributos
@@ -293,18 +324,16 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
   }
 
   private void createAttributeRow(JPanel panel, int index, GridBagConstraints gbc) {
-    int row = index + 1;
-
     // Nome + descrição
     JPanel namePanel = new JPanel();
     namePanel.setLayout(new BoxLayout(namePanel, BoxLayout.Y_AXIS));
-    namePanel.setBackground(BACKGROUND_COLOR);
+    namePanel.setBackground(backgroundColor);
 
-    attributeLabels[index] = new JLabel(ATTRIBUTE_NAMES[index]);
+    attributeLabels[index] = new JLabel(attributeNames[index]);
     attributeLabels[index].setFont(new Font("Arial", Font.BOLD, 14));
-    attributeLabels[index].setForeground(TEXT_COLOR);
+    attributeLabels[index].setForeground(textColor);
 
-    JLabel descLabel = new JLabel(ATTRIBUTE_DESCRIPTIONS[index]);
+    JLabel descLabel = new JLabel(attributeDescriptions[index]);
     descLabel.setFont(new Font("Arial", Font.PLAIN, 10));
     descLabel.setForeground(new Color(160, 160, 160));
 
@@ -312,7 +341,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     namePanel.add(descLabel);
 
     gbc.gridx = 0;
-    gbc.gridy = row;
+    gbc.gridy = index + 1;
     gbc.anchor = GridBagConstraints.WEST;
     panel.add(namePanel, gbc);
 
@@ -321,7 +350,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     minusButtons[index].setPreferredSize(new Dimension(30, 25));
     minusButtons[index].setActionCommand("minus_" + index);
     minusButtons[index].addActionListener(this);
-    minusButtons[index].setBackground(WARNING_COLOR);
+    minusButtons[index].setBackground(warningColor);
     minusButtons[index].setForeground(Color.WHITE);
     minusButtons[index].setFont(new Font("Arial", Font.BOLD, 12));
     gbc.gridx = 1;
@@ -331,10 +360,10 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     // Valor
     valueLabels[index] = new JLabel("5", SwingConstants.CENTER);
     valueLabels[index].setFont(new Font("Arial", Font.BOLD, 16));
-    valueLabels[index].setForeground(TEXT_COLOR);
+    valueLabels[index].setForeground(textColor);
     valueLabels[index].setPreferredSize(new Dimension(30, 25));
     valueLabels[index].setOpaque(true);
-    valueLabels[index].setBackground(PANEL_COLOR);
+    valueLabels[index].setBackground(panelColor);
     valueLabels[index].setBorder(BorderFactory.createLoweredBevelBorder());
     gbc.gridx = 2;
     panel.add(valueLabels[index], gbc);
@@ -344,7 +373,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     plusButtons[index].setPreferredSize(new Dimension(30, 25));
     plusButtons[index].setActionCommand("plus_" + index);
     plusButtons[index].addActionListener(this);
-    plusButtons[index].setBackground(ACCENT_COLOR);
+    plusButtons[index].setBackground(accentColor);
     plusButtons[index].setForeground(Color.WHITE);
     plusButtons[index].setFont(new Font("Arial", Font.BOLD, 12));
     gbc.gridx = 3;
@@ -361,7 +390,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
 
   private JPanel createBottomPanel() {
     JPanel panel = new JPanel(new FlowLayout());
-    panel.setBackground(BACKGROUND_COLOR);
+    panel.setBackground(backgroundColor);
     panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 25, 20));
 
     // Botão Reset (inicialmente escondido)
@@ -370,7 +399,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     resetButton.setPreferredSize(new Dimension(100, 35));
     resetButton.addActionListener(this);
     resetButton.setActionCommand("reset");
-    resetButton.setBackground(WARNING_COLOR);
+    resetButton.setBackground(warningColor);
     resetButton.setForeground(Color.WHITE);
     resetButton.setVisible(false);
     panel.add(resetButton);
@@ -384,7 +413,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     confirmButton.setPreferredSize(new Dimension(150, 35));
     confirmButton.addActionListener(this);
     confirmButton.setActionCommand("confirm");
-    confirmButton.setBackground(ACCENT_COLOR);
+    confirmButton.setBackground(accentColor);
     confirmButton.setForeground(Color.WHITE);
     confirmButton.setVisible(false);
     panel.add(confirmButton);
@@ -450,8 +479,9 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
   }
 
   private void incrementAttribute(int index) {
-    if (stats.getRemainingPoints() <= 0)
+    if (stats.getRemainingPoints() <= 0) {
       return;
+    }
 
     boolean success = false;
     switch (index) {
@@ -472,6 +502,9 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
         break;
       case 5:
         success = stats.setConstitution(stats.getConstitution() + 1);
+        break;
+      default:
+        // Índice inválido
         break;
     }
 
@@ -501,6 +534,9 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
       case 5:
         success = stats.setConstitution(stats.getConstitution() - 1);
         break;
+      default:
+        // Índice inválido
+        break;
     }
 
     if (success) {
@@ -509,8 +545,9 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
   }
 
   private void updateInterface() {
-    if (!attributesPanel.isVisible())
+    if (!attributesPanel.isVisible()) {
       return;
+    }
 
     // Atualizar valores
     valueLabels[0].setText(String.valueOf(stats.getStrength()));
@@ -522,41 +559,44 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
 
     // Destacar atributo principal
     for (int i = 0; i < 6; i++) {
-      attributeLabels[i].setForeground(TEXT_COLOR);
+      attributeLabels[i].setForeground(textColor);
     }
 
     if (selectedClass.equalsIgnoreCase("warrior")) {
-      attributeLabels[0].setForeground(PRIMARY_COLOR);
+      attributeLabels[0].setForeground(primaryColor);
     } else if (selectedClass.equalsIgnoreCase("hunter")) {
-      attributeLabels[1].setForeground(PRIMARY_COLOR);
+      attributeLabels[1].setForeground(primaryColor);
     } else if (selectedClass.equalsIgnoreCase("mage")) {
-      attributeLabels[2].setForeground(PRIMARY_COLOR);
+      attributeLabels[2].setForeground(primaryColor);
     }
 
     // Atualizar bônus
-    bonusLabels[0].setText("Dano: +" + Math.max(0, stats.getStrength() - 5) + " | Slots: " + stats.getInventorySlots());
-    bonusLabels[1].setText("Dano: +" + Math.max(0, stats.getDexterity() - 5) + " | Evasão: "
-        + String.format("%.0f%%", stats.getEvasionChance() * 100));
-    bonusLabels[2].setText("Dano: +" + Math.max(0, stats.getIntelligence() - 5) + " | Projéteis mágicos");
+    bonusLabels[0].setText("Dano: +" + Math.max(0, stats.getStrength() - 5) 
+        + " | Slots: " + stats.getInventorySlots());
+    bonusLabels[1].setText("Dano: +" + Math.max(0, stats.getDexterity() - 5) 
+        + " | Evasão: " + String.format("%.0f%%", stats.getEvasionChance() * 100));
+    bonusLabels[2].setText("Dano: +" + Math.max(0, stats.getIntelligence() - 5) 
+        + " | Projéteis mágicos");
     bonusLabels[3].setText("XP: +" + String.format("%.0f%%", (stats.getXpMultiplier() - 1) * 100));
     bonusLabels[4].setText("Intimidação (futuro)");
-    bonusLabels[5].setText(
-        "Vida: " + stats.getMaxHealth() + "HP | Def: -" + String.format("%.0f%%", stats.getDamageReduction() * 100));
+    bonusLabels[5].setText("Vida: " + stats.getMaxHealth() + "HP | Def: -" 
+        + String.format("%.0f%%", stats.getDamageReduction() * 100));
 
     // Atualizar pontos restantes
     int remaining = stats.getRemainingPoints();
     pointsLabel.setText("Pontos restantes: " + remaining);
     if (remaining < 0) {
-      pointsLabel.setForeground(WARNING_COLOR);
+      pointsLabel.setForeground(warningColor);
     } else if (remaining == 0) {
       pointsLabel.setForeground(new Color(150, 255, 150));
     } else {
-      pointsLabel.setForeground(TEXT_COLOR);
+      pointsLabel.setForeground(textColor);
     }
 
     // Habilitar/desabilitar botões
     for (int i = 0; i < 6; i++) {
-      plusButtons[i].setEnabled(remaining > 0 && getCurrentAttributeValue(i) < CharacterStats.MAX_ATTRIBUTE);
+      plusButtons[i].setEnabled(remaining > 0 
+          && getCurrentAttributeValue(i) < CharacterStats.MAX_ATTRIBUTE);
       minusButtons[i].setEnabled(getCurrentAttributeValue(i) > CharacterStats.MIN_ATTRIBUTE);
     }
 

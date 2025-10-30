@@ -1,8 +1,10 @@
-import javax.swing.*;
-import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
 
 /**
- * Classe principal do jogo RPG 2.5D
+ * Classe principal do jogo RPG 2.5D.
  */
 public class Game {
   public static final int SCREEN_WIDTH = 1024;
@@ -12,6 +14,10 @@ public class Game {
   private JFrame frame;
   private GamePanel gamePanel;
 
+  /**
+   * Construtor da classe Game.
+   * Inicializa o jogo chamando o método initializeGame.
+   */
   public Game() {
     initializeGame();
   }
@@ -34,6 +40,10 @@ public class Game {
     characterScreen.requestFocusInWindow();
   }
 
+  /**
+   * Método principal para iniciar a aplicação.
+   * @param args argumentos da linha de comando
+   */
   public static void main(String[] args) {
     SwingUtilities.invokeLater(() -> {
       try {
