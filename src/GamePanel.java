@@ -19,6 +19,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private Player player;
   private TileMap tileMap;
   private Camera camera;
+  private EnemyManager enemyManager;
 
   // FPS
   private final int FPS = 60;
@@ -52,6 +53,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Criar a câmera
     camera = new Camera(0, 0);
 
+    // Criar o gerenciador de inimigos
+    enemyManager = new EnemyManager(player, tileMap);
+    enemyManager.spawnInitialEnemies(tileMap);
+
     System.out.println("=== JOGO INICIALIZADO ===");
     System.out.println("Tamanho do player: " + player.getWidth() + "x" + player.getHeight());
     System.out.println("Tamanho dos tiles: " + TILE_SIZE + "px");
@@ -67,6 +72,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       Point spawnPosition = tileMap.getRandomGrassPosition();
       player = new Player(spawnPosition.x, spawnPosition.y, spritePath);
       player.setTileMap(tileMap);
+      
+      // Reinicializar o gerenciador de inimigos com o novo player
+      enemyManager = new EnemyManager(player, tileMap);
+      enemyManager.spawnInitialEnemies(tileMap);
     } else {
       // Fallback para posição central se tileMap ainda não foi inicializado
       player = new Player(360, 360, spritePath);
@@ -81,6 +90,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       Point spawnPosition = tileMap.getRandomGrassPosition();
       player = new Player(spawnPosition.x, spawnPosition.y, spritePath, playerClass, stats);
       player.setTileMap(tileMap);
+      
+      // Reinicializar o gerenciador de inimigos com o novo player
+      enemyManager = new EnemyManager(player, tileMap);
+      enemyManager.spawnInitialEnemies(tileMap);
     } else {
       // Fallback para posição central se tileMap ainda não foi inicializado
       player = new Player(360, 360, spritePath, playerClass, stats);
@@ -120,6 +133,15 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private void update() {
     player.update();
 
+    // Atualizar inimigos
+    if (enemyManager != null) {
+      enemyManager.update();
+      
+      // Verificar colisões
+      enemyManager.checkProjectileCollisions(player.getProjectiles());
+      enemyManager.checkPlayerCollisions();
+    }
+
     // Atualizar câmera para seguir o jogador
     camera.centerOnPlayer(player);
   }
@@ -134,6 +156,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Renderizar o mapa
     tileMap.render(g2d, camera, player);
+
+    // Renderizar inimigos (apenas os visíveis)
+    if (enemyManager != null) {
+      enemyManager.render(g2d, camera, tileMap.getFogOfWar());
+    }
 
     // Renderizar o jogador
     player.render(g2d, camera);
@@ -177,14 +204,14 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     int barSpacing = 30;
 
     // Barra de Vida
-    drawBar(g, "VIDA", barX, barY, barWidth, barHeight, 
-            player.getCurrentHealth(), player.getMaxHealth(), 
-            Color.RED, Color.DARK_GRAY);
+    drawBar(g, "VIDA", barX, barY, barWidth, barHeight,
+        player.getCurrentHealth(), player.getMaxHealth(),
+        Color.RED, Color.DARK_GRAY);
 
     // Barra de Mana
-    drawBar(g, "MANA", barX, barY + barSpacing, barWidth, barHeight, 
-            player.getCurrentMana(), player.getMaxMana(), 
-            Color.BLUE, Color.DARK_GRAY);
+    drawBar(g, "MANA", barX, barY + barSpacing, barWidth, barHeight,
+        player.getCurrentMana(), player.getMaxMana(),
+        Color.BLUE, Color.DARK_GRAY);
 
     // Classe do jogador abaixo das barras
     g.setFont(new Font("Arial", Font.BOLD, 14));
@@ -195,8 +222,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   /**
    * Desenha uma barra de recurso (vida, mana, etc.)
    */
-  private void drawBar(Graphics2D g, String label, int x, int y, int width, int height, 
-                       int current, int max, Color fillColor, Color bgColor) {
+  private void drawBar(Graphics2D g, String label, int x, int y, int width, int height,
+      int current, int max, Color fillColor, Color bgColor) {
     // Fundo da barra
     g.setColor(bgColor);
     g.fillRect(x, y, width, height);

@@ -162,7 +162,7 @@ public class CharacterStats {
   // Calcular vida baseada na classe e constituição
   public int getMaxHealth() {
     int baseHealth;
-    
+
     // Vida base por classe
     switch (playerClass.toLowerCase()) {
       case "warrior":
@@ -178,7 +178,7 @@ public class CharacterStats {
         baseHealth = 15; // valor padrão
         break;
     }
-    
+
     // Bônus de constituição
     int constitutionBonus = (constitution - BASE_ATTRIBUTE) * 5; // 5 pontos por nível
     return baseHealth + constitutionBonus;
@@ -187,7 +187,7 @@ public class CharacterStats {
   // Calcular mana baseada na inteligência
   public int getMaxMana() {
     int baseMana;
-    
+
     // Mana base por classe
     switch (playerClass.toLowerCase()) {
       case "mage":
@@ -203,7 +203,7 @@ public class CharacterStats {
         baseMana = 15; // valor padrão
         break;
     }
-    
+
     // Bônus de inteligência
     int intelligenceBonus = (intelligence - BASE_ATTRIBUTE) * 5; // 5 pontos por nível
     return baseMana + intelligenceBonus;

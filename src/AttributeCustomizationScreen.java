@@ -352,8 +352,8 @@ public class AttributeCustomizationScreen extends JPanel implements ActionListen
     // Atualizar bônus/efeitos
     bonusLabels[0].setText("Dano: +" + Math.max(0, stats.getStrength() - 5));
     bonusLabels[1].setText("Dano: +" + Math.max(0, stats.getDexterity() - 5));
-    bonusLabels[2].setText("Dano: +" + Math.max(0, stats.getIntelligence() - 5) 
-                           + " | Mana: " + stats.getMaxMana());
+    bonusLabels[2].setText("Dano: +" + Math.max(0, stats.getIntelligence() - 5)
+        + " | Mana: " + stats.getMaxMana());
     bonusLabels[3].setText(String.format("Visão/XP: +%.0f%%", (stats.getWisdom() - 5) / 2.0f));
     bonusLabels[4].setText("Interação com NPCs");
     bonusLabels[5].setText("Vida: " + stats.getMaxHealth() + " HP");

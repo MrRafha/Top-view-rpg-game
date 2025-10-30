@@ -165,6 +165,17 @@ public class Projectile {
     return active;
   }
 
+  public int getSize() {
+    return size;
+  }
+
+  /**
+   * Retorna o retângulo de colisão do projétil.
+   */
+  public Rectangle getBounds() {
+    return new Rectangle((int) x - size / 2, (int) y - size / 2, size, size);
+  }
+
   // Setter
   public void setActive(boolean active) {
     this.active = active;

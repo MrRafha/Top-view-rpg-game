@@ -87,6 +87,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
 
   /**
    * Construtor da tela de criação de personagem.
+   * 
    * @param parentFrame frame pai da aplicação
    */
   public CombinedCharacterScreen(JFrame parentFrame) {
@@ -571,15 +572,15 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     }
 
     // Atualizar bônus
-    bonusLabels[0].setText("Dano: +" + Math.max(0, stats.getStrength() - 5) 
+    bonusLabels[0].setText("Dano: +" + Math.max(0, stats.getStrength() - 5)
         + " | Slots: " + stats.getInventorySlots());
-    bonusLabels[1].setText("Dano: +" + Math.max(0, stats.getDexterity() - 5) 
+    bonusLabels[1].setText("Dano: +" + Math.max(0, stats.getDexterity() - 5)
         + " | Evasão: " + String.format("%.0f%%", stats.getEvasionChance() * 100));
-    bonusLabels[2].setText("Dano: +" + Math.max(0, stats.getIntelligence() - 5) 
+    bonusLabels[2].setText("Dano: +" + Math.max(0, stats.getIntelligence() - 5)
         + " | Mana: " + stats.getMaxMana());
     bonusLabels[3].setText("XP: +" + String.format("%.0f%%", (stats.getXpMultiplier() - 1) * 100));
     bonusLabels[4].setText("Intimidação (futuro)");
-    bonusLabels[5].setText("Vida: " + stats.getMaxHealth() + "HP | Def: -" 
+    bonusLabels[5].setText("Vida: " + stats.getMaxHealth() + "HP | Def: -"
         + String.format("%.0f%%", stats.getDamageReduction() * 100));
 
     // Atualizar pontos restantes
@@ -595,7 +596,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
 
     // Habilitar/desabilitar botões
     for (int i = 0; i < 6; i++) {
-      plusButtons[i].setEnabled(remaining > 0 
+      plusButtons[i].setEnabled(remaining > 0
           && getCurrentAttributeValue(i) < CharacterStats.MAX_ATTRIBUTE);
       minusButtons[i].setEnabled(getCurrentAttributeValue(i) > CharacterStats.MIN_ATTRIBUTE);
     }

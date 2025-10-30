@@ -42,6 +42,7 @@ public class Game {
 
   /**
    * Método principal para iniciar a aplicação.
+   * 
    * @param args argumentos da linha de comando
    */
   public static void main(String[] args) {
