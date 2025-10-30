@@ -218,9 +218,14 @@ public class AttributeCustomizationScreen extends JPanel implements ActionListen
   }
 
   private JPanel createBottomPanel() {
-    JPanel panel = new JPanel(new FlowLayout());
-    panel.setBackground(BACKGROUND_COLOR);
-    panel.setBorder(BorderFactory.createEmptyBorder(10, 20, 20, 20));
+    // Container principal com BorderLayout para controlar posição
+    JPanel container = new JPanel(new BorderLayout());
+    container.setBackground(BACKGROUND_COLOR);
+    container.setPreferredSize(new Dimension(0, 80)); // Altura fixa menor
+
+    // Painel dos botões posicionado no topo do container
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+    buttonPanel.setBackground(BACKGROUND_COLOR);
 
     // Botão Reset
     resetButton = new JButton("RESETAR");
@@ -230,10 +235,7 @@ public class AttributeCustomizationScreen extends JPanel implements ActionListen
     resetButton.setActionCommand("reset");
     resetButton.setBackground(WARNING_COLOR);
     resetButton.setForeground(Color.WHITE);
-    panel.add(resetButton);
-
-    // Espaço
-    panel.add(Box.createRigidArea(new Dimension(20, 0)));
+    buttonPanel.add(resetButton);
 
     // Botão Confirmar
     confirmButton = new JButton("CONFIRMAR E JOGAR");
@@ -243,9 +245,12 @@ public class AttributeCustomizationScreen extends JPanel implements ActionListen
     confirmButton.setActionCommand("confirm");
     confirmButton.setBackground(ACCENT_COLOR);
     confirmButton.setForeground(Color.WHITE);
-    panel.add(confirmButton);
+    buttonPanel.add(confirmButton);
 
-    return panel;
+    // Adicionar o painel de botões no topo do container
+    container.add(buttonPanel, BorderLayout.NORTH);
+
+    return container;
   }
 
   @Override

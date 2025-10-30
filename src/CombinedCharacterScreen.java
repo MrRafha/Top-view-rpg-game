@@ -130,16 +130,21 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     JPanel leftPanel = createClassSelectionPanel();
     centerPanel.add(leftPanel, BorderLayout.WEST);
 
-    // Painel direito - atributos
+    // Painel direito - atributos com botões integrados no centro
+    JPanel rightPanel = new JPanel(new BorderLayout());
+    rightPanel.setBackground(backgroundColor);
+
     attributesPanel = createAttributesPanel();
     attributesPanel.setVisible(false); // Inicialmente escondido
-    centerPanel.add(attributesPanel, BorderLayout.CENTER);
+    rightPanel.add(attributesPanel, BorderLayout.NORTH); // Atributos no topo
+
+    // Painel de botões no centro (meio da tela)
+    JPanel buttonPanel = createCenterButtonPanel();
+    rightPanel.add(buttonPanel, BorderLayout.CENTER); // Centro vertical
+
+    centerPanel.add(rightPanel, BorderLayout.CENTER);
 
     add(centerPanel, BorderLayout.CENTER);
-
-    // Painel inferior com botões
-    JPanel bottomPanel = createBottomPanel();
-    add(bottomPanel, BorderLayout.SOUTH);
   }
 
   private JPanel createTopPanel() {
@@ -276,13 +281,13 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
   private JPanel createAttributesPanel() {
     JPanel mainPanel = new JPanel(new BorderLayout());
     mainPanel.setBackground(backgroundColor);
-    mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+    mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20)); // Padding mínimo
 
     // Título da seção
     JLabel attrTitle = new JLabel("DISTRIBUIÇÃO DE ATRIBUTOS", SwingConstants.CENTER);
     attrTitle.setFont(new Font("Arial", Font.BOLD, 18));
     attrTitle.setForeground(textColor);
-    attrTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0));
+    attrTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0)); // Espaço mínimo
     mainPanel.add(attrTitle, BorderLayout.NORTH);
 
     // Painel dos atributos
@@ -389,37 +394,42 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     panel.add(bonusLabels[index], gbc);
   }
 
-  private JPanel createBottomPanel() {
-    JPanel panel = new JPanel(new FlowLayout());
-    panel.setBackground(backgroundColor);
-    panel.setBorder(BorderFactory.createEmptyBorder(15, 20, 25, 20));
+  private JPanel createCenterButtonPanel() {
+    // Painel para os botões no centro da tela
+    JPanel container = new JPanel(new BorderLayout());
+    container.setBackground(backgroundColor);
+    // Sem altura fixa - vai ocupar o espaço central disponível
+
+    // Painel dos botões centralizado
+    JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 20));
+    buttonPanel.setBackground(backgroundColor);
 
     // Botão Reset (inicialmente escondido)
     resetButton = new JButton("RESETAR");
-    resetButton.setFont(new Font("Arial", Font.BOLD, 12));
-    resetButton.setPreferredSize(new Dimension(100, 35));
+    resetButton.setFont(new Font("Arial", Font.BOLD, 14));
+    resetButton.setPreferredSize(new Dimension(120, 40));
     resetButton.addActionListener(this);
     resetButton.setActionCommand("reset");
     resetButton.setBackground(warningColor);
     resetButton.setForeground(Color.WHITE);
     resetButton.setVisible(false);
-    panel.add(resetButton);
-
-    // Espaço
-    panel.add(Box.createRigidArea(new Dimension(20, 0)));
+    buttonPanel.add(resetButton);
 
     // Botão Confirmar (inicialmente escondido)
     confirmButton = new JButton("INICIAR AVENTURA");
-    confirmButton.setFont(new Font("Arial", Font.BOLD, 12));
-    confirmButton.setPreferredSize(new Dimension(150, 35));
+    confirmButton.setFont(new Font("Arial", Font.BOLD, 14));
+    confirmButton.setPreferredSize(new Dimension(180, 40));
     confirmButton.addActionListener(this);
     confirmButton.setActionCommand("confirm");
     confirmButton.setBackground(accentColor);
     confirmButton.setForeground(Color.WHITE);
     confirmButton.setVisible(false);
-    panel.add(confirmButton);
+    buttonPanel.add(confirmButton);
 
-    return panel;
+    // Centralizar os botões no meio do espaço disponível
+    container.add(buttonPanel, BorderLayout.CENTER);
+
+    return container;
   }
 
   @Override

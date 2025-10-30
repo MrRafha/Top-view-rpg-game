@@ -80,9 +80,10 @@ public class CharacterCreationScreen extends JPanel implements ActionListener {
     // Painel das classes
     JPanel classesPanel = createClassesPanel();
 
-    // Botão de continuar
+    // Botão de continuar (movido 15px para cima)
     JPanel buttonPanel = new JPanel();
     buttonPanel.setBackground(BACKGROUND_COLOR);
+    buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0)); // Movido para cima
     startGameButton = new JButton("CUSTOMIZAR ATRIBUTOS");
     startGameButton.setFont(new Font("Arial", Font.BOLD, 20));
     startGameButton.setPreferredSize(new Dimension(250, 50));
@@ -192,8 +193,9 @@ public class CharacterCreationScreen extends JPanel implements ActionListener {
     panel.add(spriteLabel);
     panel.add(Box.createRigidArea(new Dimension(0, 10)));
     panel.add(descArea);
-    panel.add(Box.createRigidArea(new Dimension(0, 15)));
+    panel.add(Box.createRigidArea(new Dimension(0, 0))); // Reduzido de 15 para 0
     panel.add(selectButton);
+    panel.add(Box.createRigidArea(new Dimension(0, 15))); // Adicionar espaço após o botão
     panel.add(Box.createVerticalGlue());
 
     return panel;

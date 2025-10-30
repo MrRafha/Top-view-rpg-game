@@ -482,4 +482,26 @@ public class Player {
     return tileX >= 0 && tileX < GamePanel.MAP_WIDTH &&
         tileY >= 0 && tileY < GamePanel.MAP_HEIGHT;
   }
+
+  /**
+   * Atualiza vida e mana máximas baseado nos novos atributos.
+   */
+  public void updateStatsFromAttributes() {
+    int newMaxHealth = stats.getMaxHealth();
+    int newMaxMana = stats.getMaxMana();
+
+    // Manter proporção da vida/mana atual
+    double healthRatio = (double) currentHealth / maxHealth;
+    double manaRatio = (double) currentMana / maxMana;
+
+    maxHealth = newMaxHealth;
+    maxMana = newMaxMana;
+
+    // Aplicar proporção aos valores atuais (não pode exceder o novo máximo)
+    currentHealth = Math.min(maxHealth, (int) (maxHealth * healthRatio));
+    currentMana = Math.min(maxMana, (int) (maxMana * manaRatio));
+
+    System.out.println("Stats atualizados - Vida: " + currentHealth + "/" + maxHealth +
+        " | Mana: " + currentMana + "/" + maxMana);
+  }
 }

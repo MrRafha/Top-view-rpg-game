@@ -21,6 +21,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private Camera camera;
   private EnemyManager enemyManager;
 
+  // Telas do jogo
+  private CharacterScreen characterScreen;
+  private boolean showingCharacterScreen = false;
+
   // FPS
   private final int FPS = 60;
   private final long TARGET_TIME = 1000000000 / FPS;
@@ -32,36 +36,32 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     addKeyListener(this);
     addMouseListener(this);
 
+    // Garantir que use layout null por padrão para renderização custom
+    setLayout(null);
+
     // Garantir que o painel receba foco
     requestFocusInWindow();
 
     initializeGame();
-    startGameLoop();
+    // startGameLoop() será chamado quando setPlayerClass for executado
   }
 
   private void initializeGame() {
     // Criar o mapa de tiles
     tileMap = new TileMap();
 
-    // Encontrar uma posição centrada de grama para spawn do jogador
-    Point spawnPosition = tileMap.getCenteredGrassPosition(33, 48); // Tamanho do player
-    player = new Player(spawnPosition.x, spawnPosition.y, "sprites/WarriorPlayer.png");
-
-    // Conectar o mapa ao jogador para verificação de colisão
-    player.setTileMap(tileMap);
-
     // Criar a câmera
     camera = new Camera(0, 0);
 
-    // Criar o gerenciador de inimigos
-    enemyManager = new EnemyManager(player, tileMap);
-    enemyManager.spawnInitialEnemies(tileMap);
+    // Não criar player aqui - será criado quando setPlayerClass for chamado
+    // Isso evita conflitos quando o jogo é iniciado através da tela de criação de
+    // personagem
 
-    System.out.println("=== JOGO INICIALIZADO ===");
-    System.out.println("Tamanho do player: " + player.getWidth() + "x" + player.getHeight());
+    System.out.println("=== SISTEMA INICIALIZADO ===");
+    System.out.println("TileMap criado");
     System.out.println("Tamanho dos tiles: " + TILE_SIZE + "px");
     System.out.println("Mapa: " + MAP_WIDTH + "x" + MAP_HEIGHT + " tiles");
-    System.out.println("Controles: WASD ou setas para mover, ESPAÇO para atacar");
+    System.out.println("Aguardando criação do personagem...");
     System.out.println("========================");
   }
 
@@ -86,25 +86,39 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   public void setPlayerClass(String playerClass, String spritePath, CharacterStats stats) {
     // Conectar o mapa ao jogador para verificação de colisão
     if (tileMap != null) {
-      // Encontrar uma posição aleatória de grama para spawn do jogador (centralizada no tile)
+      // Encontrar uma posição aleatória de grama para spawn do jogador (centralizada
+      // no tile)
       Point spawnPosition = tileMap.getCenteredGrassPosition(33, 48); // Player dimensions
       player = new Player(spawnPosition.x, spawnPosition.y, spritePath, playerClass, stats);
       player.setTileMap(tileMap);
 
-      // Reinicializar o gerenciador de inimigos com o novo player
+      // Criar o gerenciador de inimigos com o novo player
       enemyManager = new EnemyManager(player, tileMap);
       enemyManager.spawnInitialEnemies(tileMap);
+
+      // Iniciar o loop do jogo se ainda não estiver rodando
+      if (gameThread == null || !gameThread.isAlive()) {
+        startGameLoop();
+      }
+
+      System.out.println("=== PERSONAGEM CRIADO ===");
+      System.out.println("Classe: " + playerClass);
+      System.out.println("Stats: " + stats.toString());
+      System.out.println("Posição: " + spawnPosition.x + ", " + spawnPosition.y);
+      System.out.println("Controles: WASD para mover, ESPAÇO para atacar, C para características");
+      System.out.println("========================");
     } else {
-      // Fallback para posição central se tileMap ainda não foi inicializado
-      player = new Player(360, 360, spritePath, playerClass, stats);
-      System.out.println("Aviso: TileMap ainda não foi inicializado quando setPlayerClass(com stats) foi chamado");
+      System.err.println("ERRO: TileMap não foi inicializado!");
     }
   }
 
   private void startGameLoop() {
-    gameThread = new Thread(this);
-    running = true;
-    gameThread.start();
+    if (gameThread == null || !gameThread.isAlive()) {
+      gameThread = new Thread(this);
+      running = true;
+      gameThread.start();
+      System.out.println("Game loop iniciado");
+    }
   }
 
   @Override
@@ -131,6 +145,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   }
 
   private void update() {
+    // Só atualizar se o player foi criado e não estiver na tela de características
+    if (player == null || showingCharacterScreen)
+      return;
+
     player.update();
 
     // Atualizar inimigos
@@ -149,6 +167,21 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   @Override
   protected void paintComponent(Graphics g) {
     super.paintComponent(g);
+
+    // Se estiver mostrando a tela de características, não renderizar o jogo
+    if (showingCharacterScreen) {
+      return;
+    }
+
+    // Se player ainda não foi criado, mostrar tela de loading
+    if (player == null) {
+      Graphics2D g2d = (Graphics2D) g;
+      g2d.setColor(Color.WHITE);
+      g2d.setFont(new Font("Arial", Font.BOLD, 24));
+      g2d.drawString("Aguardando criação do personagem...", 300, 400);
+      return;
+    }
+
     Graphics2D g2d = (Graphics2D) g;
 
     // Aplicar antialiasing
@@ -222,7 +255,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     g.setColor(Color.WHITE);
     g.drawString("Classe: " + player.getPlayerClass() + " | Nível: " + expSys.getCurrentLevel(),
         barX, barY + (barSpacing * 3) + 5);
-    
+
     // Informação de inimigos (debug)
     if (enemyManager != null) {
       g.setFont(new Font("Arial", Font.PLAIN, 10));
@@ -295,12 +328,32 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
   @Override
   public void keyPressed(KeyEvent e) {
+    // Se estiver mostrando tela de características, passa o evento para ela
+    if (showingCharacterScreen && characterScreen != null) {
+      characterScreen.keyPressed(e);
+      return;
+    }
+
+    // Se player ainda não foi criado, ignorar input
+    if (player == null) {
+      return;
+    }
+
+    // Tecla C para abrir tela de características
+    if (e.getKeyCode() == KeyEvent.VK_C) {
+      openCharacterScreen();
+      return;
+    }
+
     player.keyPressed(e);
   }
 
   @Override
   public void keyReleased(KeyEvent e) {
-    player.keyReleased(e);
+    // Se player ainda não foi criado, ignorar input
+    if (player != null) {
+      player.keyReleased(e);
+    }
   }
 
   @Override
@@ -333,5 +386,62 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   // Getter para o mapa (usado pelo Player para verificar colisões)
   public TileMap getTileMap() {
     return tileMap;
+  }
+
+  /**
+   * Abre a tela de características do personagem.
+   */
+  public void openCharacterScreen() {
+    if (player != null && !showingCharacterScreen) {
+      // Criar e configurar a tela de características
+      characterScreen = new CharacterScreen(this, player);
+      showingCharacterScreen = true;
+
+      // Mostrar a tela (não pausar o thread do jogo)
+      removeAll();
+      setLayout(new BorderLayout());
+      add(characterScreen, BorderLayout.CENTER);
+      revalidate();
+      repaint();
+
+      // Dar foco para a tela de características
+      SwingUtilities.invokeLater(() -> {
+        characterScreen.requestFocusInWindow();
+      });
+
+      System.out.println("Tela de características aberta - jogo pausado");
+    }
+  }
+
+  /**
+   * Fecha a tela de características e volta ao jogo.
+   */
+  public void closeCharacterScreen() {
+    if (showingCharacterScreen) {
+      showingCharacterScreen = false;
+
+      // Remover a tela de características
+      removeAll();
+
+      // Restaurar layout null para renderização custom do jogo
+      setLayout(null);
+
+      // Limpar referência primeiro
+      characterScreen = null;
+
+      // Revalidar e repintar para voltar ao jogo normal
+      revalidate();
+      repaint();
+
+      // Dar foco de volta ao painel do jogo - importante para capturar teclas
+      SwingUtilities.invokeLater(() -> {
+        setFocusable(true);
+        requestFocusInWindow();
+        grabFocus();
+        setFocusable(true);
+      });
+
+      System.out.println("Tela de características fechada - foco restaurado");
+    }
   }
 }

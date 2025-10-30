@@ -194,7 +194,7 @@ public class TileMap {
     // Centralizar o objeto no tile considerando seu tamanho
     int centerX = selectedTile.x * TILE_SIZE + (TILE_SIZE - objectWidth) / 2;
     int centerY = selectedTile.y * TILE_SIZE + (TILE_SIZE - objectHeight) / 2;
-    
+
     return new Point(centerX, centerY);
   }
 }

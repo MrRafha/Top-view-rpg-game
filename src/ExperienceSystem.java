@@ -5,10 +5,12 @@ public class ExperienceSystem {
   private int currentLevel;
   private int currentXp;
   private int xpToNextLevel;
+  private int availableAttributePoints;
 
   // Configurações do sistema
   private static final int BASE_XP_REQUIRED = 50;
   private static final double XP_MULTIPLIER = 0.20; // 20%
+  private static final int LEVELS_PER_ATTRIBUTE_POINT = 2; // 1 ponto a cada 2 níveis
 
   /**
    * Construtor do sistema de experiência.
@@ -17,6 +19,7 @@ public class ExperienceSystem {
     this.currentLevel = 1;
     this.currentXp = 0;
     this.xpToNextLevel = BASE_XP_REQUIRED;
+    this.availableAttributePoints = 0;
   }
 
   /**
@@ -43,6 +46,12 @@ public class ExperienceSystem {
     currentXp -= xpToNextLevel; // XP excedente vai para o próximo nível
     currentLevel++;
 
+    // A cada 2 níveis, ganha 1 ponto de atributo
+    if (currentLevel % LEVELS_PER_ATTRIBUTE_POINT == 0) {
+      availableAttributePoints++;
+      System.out.println("Ponto de atributo ganho! Total disponível: " + availableAttributePoints);
+    }
+
     // Calcular XP necessário para o próximo nível
     // Fórmula: XP anterior + 20% do XP anterior
     xpToNextLevel = (int) Math.ceil(xpToNextLevel * (1 + XP_MULTIPLIER));
@@ -62,8 +71,9 @@ public class ExperienceSystem {
    * Calcula XP necessário baseado no nível.
    */
   public static int calculateXpRequired(int level) {
-    if (level <= 1)
+    if (level <= 1) {
       return BASE_XP_REQUIRED;
+    }
 
     int xp = BASE_XP_REQUIRED;
     for (int i = 2; i <= level; i++) {
@@ -85,6 +95,13 @@ public class ExperienceSystem {
     return xpToNextLevel;
   }
 
+  public int getAvailableAttributePoints() {
+    return availableAttributePoints;
+  }
+
+  /**
+   * Calcula o XP total acumulado pelo jogador.
+   */
   public int getTotalXpForCurrentLevel() {
     // XP total que o jogador já teve (incluindo níveis anteriores)
     int totalXp = currentXp;
@@ -96,6 +113,24 @@ public class ExperienceSystem {
     }
 
     return totalXp;
+  }
+
+  /**
+   * Gasta um ponto de atributo.
+   */
+  public boolean spendAttributePoint() {
+    if (availableAttributePoints > 0) {
+      availableAttributePoints--;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Adiciona pontos de atributo (para testes ou debug).
+   */
+  public void addAttributePoints(int points) {
+    availableAttributePoints += points;
   }
 
   // Para debugging

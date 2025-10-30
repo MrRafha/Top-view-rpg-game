@@ -9,7 +9,7 @@ public class EnemyManager {
   private ArrayList<Enemy> enemies;
   private Player player;
   private TileMap tileMap;
-  
+
   // Controle de população
   private static final int MIN_ENEMIES = 1;
   private static final int MAX_ENEMIES = 4;
@@ -48,28 +48,28 @@ public class EnemyManager {
   public void spawnGoblinOnGrass(TileMap tileMap) {
     Point grassPosition;
     int attempts = 0;
-    
+
     do {
       // Usar spawn centrado considerando tamanho do Goblin (32x32 pixels)
       grassPosition = tileMap.getCenteredGrassPosition(32, 32);
       attempts++;
     } while (isTooCloseToPlayer(grassPosition.x, grassPosition.y) && attempts < 10);
-    
+
     // Se após 10 tentativas ainda está perto, spawnar mesmo assim
     spawnGoblin(grassPosition.x, grassPosition.y);
   }
-  
+
   /**
    * Verifica se uma posição está muito perto do jogador.
    */
   private boolean isTooCloseToPlayer(double x, double y) {
-    if (player == null) return false;
-    
+    if (player == null)
+      return false;
+
     double distance = Math.sqrt(
-        Math.pow(player.getX() - x, 2) + 
-        Math.pow(player.getY() - y, 2)
-    );
-    
+        Math.pow(player.getX() - x, 2) +
+            Math.pow(player.getY() - y, 2));
+
     return distance < 150; // Mínimo 150 pixels de distância
   }
 
@@ -89,17 +89,17 @@ public class EnemyManager {
         System.out.println("Inimigo removido da lista");
       }
     }
-    
+
     // Sistema de respawn automático
     manageEnemyPopulation();
   }
-  
+
   /**
    * Gerencia a população de inimigos no mapa.
    */
   private void manageEnemyPopulation() {
     int currentCount = getAliveCount();
-    
+
     // Se tem menos que o mínimo, fazer respawn imediato
     if (currentCount < MIN_ENEMIES) {
       spawnGoblinOnGrass(tileMap);
@@ -107,18 +107,18 @@ public class EnemyManager {
       System.out.println("Respawn imediato! Inimigos: " + (currentCount + 1));
       return;
     }
-    
+
     // Se tem menos que o máximo, considerar respawn após delay
     if (currentCount < MAX_ENEMIES) {
       respawnTimer--;
-      
+
       if (respawnTimer <= 0) {
         // 50% de chance de spawnar a cada cycle do timer
         if (Math.random() < 0.5) {
           spawnGoblinOnGrass(tileMap);
           System.out.println("Respawn programado! Inimigos: " + (currentCount + 1));
         }
-        
+
         // Reset timer
         respawnTimer = RESPAWN_DELAY;
       }
@@ -245,15 +245,15 @@ public class EnemyManager {
    */
   public void spawnInitialEnemies(TileMap tileMap) {
     // Spawnar número inicial de Goblins (entre MIN e MAX)
-    int initialCount = MIN_ENEMIES + (int)(Math.random() * (MAX_ENEMIES - MIN_ENEMIES + 1));
-    
+    int initialCount = MIN_ENEMIES + (int) (Math.random() * (MAX_ENEMIES - MIN_ENEMIES + 1));
+
     for (int i = 0; i < initialCount; i++) {
       spawnGoblinOnGrass(tileMap);
     }
-    
+
     // Inicializar timer de respawn
     respawnTimer = RESPAWN_DELAY;
-    
+
     System.out.println("Inimigos iniciais spawnados: " + initialCount);
   }
 
