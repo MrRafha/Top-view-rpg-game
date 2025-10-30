@@ -38,6 +38,7 @@ public class Player {
   private int maxHealth;
   private int currentMana;
   private int maxMana;
+  private ExperienceSystem experienceSystem;
 
   // Direção atual (para ataques direcionais)
   private double facing = 0; // 0 = direita, PI/2 = baixo, PI = esquerda, 3*PI/2 = cima
@@ -61,6 +62,7 @@ public class Player {
     this.currentHealth = maxHealth;
     this.maxMana = stats.getMaxMana();
     this.currentMana = maxMana;
+    this.experienceSystem = new ExperienceSystem();
     this.projectiles = new ArrayList<>();
     this.floatingTexts = new ArrayList<>();
     loadSprite(spritePath);
@@ -75,6 +77,7 @@ public class Player {
     this.currentHealth = maxHealth;
     this.maxMana = stats.getMaxMana();
     this.currentMana = maxMana;
+    this.experienceSystem = new ExperienceSystem();
     this.speed = 3.0; // Velocidade base fixa
     this.projectiles = new ArrayList<>();
     this.floatingTexts = new ArrayList<>();
@@ -341,6 +344,34 @@ public class Player {
 
   public int getMaxMana() {
     return maxMana;
+  }
+
+  public ExperienceSystem getExperienceSystem() {
+    return experienceSystem;
+  }
+
+  public void gainExperience(int xp) {
+    boolean leveledUp = experienceSystem.addExperience(xp);
+
+    if (leveledUp) {
+      // Mostrar texto de level up
+      FloatingText levelUpText = new FloatingText(x + WIDTH / 2, y - 20,
+          "LEVEL UP!", Color.YELLOW);
+      floatingTexts.add(levelUpText);
+
+      // Atualizar vida e mana máximas baseadas nos novos stats
+      maxHealth = stats.getMaxHealth();
+      maxMana = stats.getMaxMana();
+
+      // Restaurar vida e mana completamente ao subir de nível
+      currentHealth = maxHealth;
+      currentMana = maxMana;
+    }
+
+    // Mostrar XP ganho
+    FloatingText xpText = new FloatingText(x + WIDTH / 2, y - 10,
+        "+" + xp + " XP", Color.GREEN);
+    floatingTexts.add(xpText);
   }
 
   public ArrayList<Projectile> getProjectiles() {

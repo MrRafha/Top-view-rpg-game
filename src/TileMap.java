@@ -164,4 +164,37 @@ public class TileMap {
     return new Point(selectedTile.x * TILE_SIZE + TILE_SIZE / 2,
         selectedTile.y * TILE_SIZE + TILE_SIZE / 2);
   }
+
+  /**
+   * Obtém posição centrada no tile considerando o tamanho do objeto
+   */
+  public Point getCenteredGrassPosition(int objectWidth, int objectHeight) {
+    java.util.List<Point> grassTiles = new java.util.ArrayList<>();
+
+    // Encontrar todos os tiles de grama
+    for (int y = 0; y < MAP_HEIGHT; y++) {
+      for (int x = 0; x < MAP_WIDTH; x++) {
+        if (map[y][x] == TileType.GRASS) {
+          grassTiles.add(new Point(x, y));
+        }
+      }
+    }
+
+    // Se não encontrou grama, retorna uma posição padrão
+    if (grassTiles.isEmpty()) {
+      int centerX = (MAP_WIDTH / 2) * TILE_SIZE + (TILE_SIZE - objectWidth) / 2;
+      int centerY = (MAP_HEIGHT / 2) * TILE_SIZE + (TILE_SIZE - objectHeight) / 2;
+      return new Point(centerX, centerY);
+    }
+
+    // Escolher uma posição aleatória
+    java.util.Random random = new java.util.Random();
+    Point selectedTile = grassTiles.get(random.nextInt(grassTiles.size()));
+
+    // Centralizar o objeto no tile considerando seu tamanho
+    int centerX = selectedTile.x * TILE_SIZE + (TILE_SIZE - objectWidth) / 2;
+    int centerY = selectedTile.y * TILE_SIZE + (TILE_SIZE - objectHeight) / 2;
+    
+    return new Point(centerX, centerY);
+  }
 }

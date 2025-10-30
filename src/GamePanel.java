@@ -43,8 +43,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Criar o mapa de tiles
     tileMap = new TileMap();
 
-    // Encontrar uma posição aleatória de grama para spawn do jogador
-    Point spawnPosition = tileMap.getRandomGrassPosition();
+    // Encontrar uma posição centrada de grama para spawn do jogador
+    Point spawnPosition = tileMap.getCenteredGrassPosition(33, 48); // Tamanho do player
     player = new Player(spawnPosition.x, spawnPosition.y, "sprites/WarriorPlayer.png");
 
     // Conectar o mapa ao jogador para verificação de colisão
@@ -68,11 +68,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   public void setPlayerClass(String playerClass, String spritePath) {
     // Verificar se o tileMap já foi inicializado antes de criar o player
     if (tileMap != null) {
-      // Encontrar uma posição aleatória de grama para spawn do jogador
-      Point spawnPosition = tileMap.getRandomGrassPosition();
+      // Encontrar uma posição centrada de grama para spawn do jogador
+      Point spawnPosition = tileMap.getCenteredGrassPosition(33, 48); // Tamanho do player
       player = new Player(spawnPosition.x, spawnPosition.y, spritePath);
       player.setTileMap(tileMap);
-      
+
       // Reinicializar o gerenciador de inimigos com o novo player
       enemyManager = new EnemyManager(player, tileMap);
       enemyManager.spawnInitialEnemies(tileMap);
@@ -86,11 +86,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   public void setPlayerClass(String playerClass, String spritePath, CharacterStats stats) {
     // Conectar o mapa ao jogador para verificação de colisão
     if (tileMap != null) {
-      // Encontrar uma posição aleatória de grama para spawn do jogador
-      Point spawnPosition = tileMap.getRandomGrassPosition();
+      // Encontrar uma posição aleatória de grama para spawn do jogador (centralizada no tile)
+      Point spawnPosition = tileMap.getCenteredGrassPosition(33, 48); // Player dimensions
       player = new Player(spawnPosition.x, spawnPosition.y, spritePath, playerClass, stats);
       player.setTileMap(tileMap);
-      
+
       // Reinicializar o gerenciador de inimigos com o novo player
       enemyManager = new EnemyManager(player, tileMap);
       enemyManager.spawnInitialEnemies(tileMap);
@@ -136,7 +136,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Atualizar inimigos
     if (enemyManager != null) {
       enemyManager.update();
-      
+
       // Verificar colisões
       enemyManager.checkProjectileCollisions(player.getProjectiles());
       enemyManager.checkPlayerCollisions();
@@ -213,10 +213,23 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
         player.getCurrentMana(), player.getMaxMana(),
         Color.BLUE, Color.DARK_GRAY);
 
-    // Classe do jogador abaixo das barras
-    g.setFont(new Font("Arial", Font.BOLD, 14));
+    // Barra de XP
+    ExperienceSystem expSys = player.getExperienceSystem();
+    drawXpBar(g, barX, barY + (barSpacing * 2), barWidth, barHeight - 5, expSys);
+
+    // Classe e nível do jogador abaixo das barras
+    g.setFont(new Font("Arial", Font.BOLD, 12));
     g.setColor(Color.WHITE);
-    g.drawString("Classe: " + player.getPlayerClass(), barX, barY + (barSpacing * 2) + 15);
+    g.drawString("Classe: " + player.getPlayerClass() + " | Nível: " + expSys.getCurrentLevel(),
+        barX, barY + (barSpacing * 3) + 5);
+    
+    // Informação de inimigos (debug)
+    if (enemyManager != null) {
+      g.setFont(new Font("Arial", Font.PLAIN, 10));
+      g.setColor(Color.LIGHT_GRAY);
+      g.drawString("Inimigos: " + enemyManager.getAliveCount() + "/4",
+          barX, barY + (barSpacing * 3) + 25);
+    }
   }
 
   /**
@@ -243,6 +256,37 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     g.setFont(new Font("Arial", Font.BOLD, 12));
     g.setColor(Color.WHITE);
     String text = label + ": " + current + "/" + max;
+    FontMetrics fm = g.getFontMetrics();
+    int textX = x + (width - fm.stringWidth(text)) / 2;
+    int textY = y + (height + fm.getAscent()) / 2 - 2;
+    g.drawString(text, textX, textY);
+  }
+
+  /**
+   * Desenha a barra de experiência
+   */
+  private void drawXpBar(Graphics2D g, int x, int y, int width, int height,
+      ExperienceSystem expSys) {
+    // Fundo da barra
+    g.setColor(Color.DARK_GRAY);
+    g.fillRect(x, y, width, height);
+
+    // Borda da barra
+    g.setColor(Color.WHITE);
+    g.drawRect(x, y, width, height);
+
+    // Preenchimento da barra baseado na porcentagem
+    float progress = expSys.getProgressPercentage();
+    int fillWidth = (int) (progress * width);
+
+    // Cor do XP (dourado)
+    g.setColor(new Color(255, 215, 0)); // Dourado
+    g.fillRect(x + 1, y + 1, fillWidth - 1, height - 2);
+
+    // Texto da barra
+    g.setFont(new Font("Arial", Font.BOLD, 10));
+    g.setColor(Color.WHITE);
+    String text = "XP: " + expSys.getCurrentXp() + "/" + expSys.getXpToNextLevel();
     FontMetrics fm = g.getFontMetrics();
     int textX = x + (width - fm.stringWidth(text)) / 2;
     int textY = y + (height + fm.getAscent()) / 2 - 2;
