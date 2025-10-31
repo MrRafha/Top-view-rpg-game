@@ -14,7 +14,18 @@ public class Player {
   private double dx, dy;
   private double speed;
 
-  private BufferedImage sprite;
+  // Sistema de sprites para animação
+  private BufferedImage currentSprite;
+  private BufferedImage spriteRight1, spriteRight2;
+  private BufferedImage spriteLeft1, spriteLeft2;
+
+  // Controle de animação
+  private int animationFrame = 0;
+  private int animationTimer = 0;
+  private final int ANIMATION_SPEED = 15; // frames por troca de sprite
+  private boolean facingLeft = false; // direção que o player está olhando
+  private boolean isMoving = false;
+
   private final int WIDTH = 33; // Tamanho visual do sprite
   private final int HEIGHT = 48; // Tamanho visual do sprite
 
@@ -86,24 +97,56 @@ public class Player {
 
   private void loadSprite(String path) {
     try {
-      // Tentar primeiro o caminho original
-      sprite = ImageIO.read(new File(path));
-    } catch (IOException e1) {
+      // Carregar sprites de animação baseado na classe
+      String baseClass = playerClass.toLowerCase();
+      String spritesPath = "sprites/";
+
+      // Tentar primeiro o caminho relativo da pasta src
       try {
-        // Tentar caminho relativo da pasta src
-        String alternatePath = "../" + path;
-        sprite = ImageIO.read(new File(alternatePath));
+        String alternatePath = "../" + spritesPath;
+        loadAnimationSprites(alternatePath, baseClass);
+      } catch (IOException e1) {
+        // Tentar caminho direto
+        loadAnimationSprites(spritesPath, baseClass);
+      }
+
+      // Definir sprite inicial (direita)
+      currentSprite = spriteRight1;
+
+    } catch (IOException e) {
+      System.err.println("Erro ao carregar sprites de animação do jogador: " + playerClass);
+      e.printStackTrace();
+      // Tentar carregar sprite original como fallback
+      try {
+        currentSprite = ImageIO.read(new File(path));
+        // Usar o mesmo sprite para todas as direções como fallback
+        spriteRight1 = spriteRight2 = spriteLeft1 = spriteLeft2 = currentSprite;
       } catch (IOException e2) {
-        System.err.println("Erro ao carregar sprite do jogador: " + path);
-        e2.printStackTrace();
-        // Criar um retângulo simples como fallback
-        sprite = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
-        Graphics g = sprite.getGraphics();
+        System.err.println("Erro ao carregar sprite fallback: " + path);
+        // Criar um retângulo simples como fallback final
+        currentSprite = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
+        Graphics g = currentSprite.getGraphics();
         g.setColor(Color.BLUE);
         g.fillRect(0, 0, WIDTH, HEIGHT);
         g.dispose();
+        spriteRight1 = spriteRight2 = spriteLeft1 = spriteLeft2 = currentSprite;
       }
     }
+  }
+
+  private void loadAnimationSprites(String basePath, String className) throws IOException {
+    // Nomes dos arquivos baseados na classe
+    String classCapitalized = className.substring(0, 1).toUpperCase() + className.substring(1);
+
+    // Sprites para direita
+    spriteRight1 = ImageIO.read(new File(basePath + classCapitalized + "Player.png"));
+    spriteRight2 = ImageIO.read(new File(basePath + classCapitalized + "Player2.png"));
+
+    // Sprites para esquerda
+    spriteLeft1 = ImageIO.read(new File(basePath + classCapitalized + "PlayerLeft.png"));
+    spriteLeft2 = ImageIO.read(new File(basePath + classCapitalized + "PlayerLeft2.png"));
+
+    System.out.println("Sprites de animação carregados para " + className);
   }
 
   public void update() {
@@ -116,15 +159,35 @@ public class Player {
       dy = -speed;
     if (down)
       dy = speed;
-    if (left)
+    if (left) {
       dx = -speed;
-    if (right)
+      facingLeft = true; // Virado para a esquerda
+    }
+    if (right) {
       dx = speed;
+      facingLeft = false; // Virado para a direita
+    }
 
     // Movimento diagonal (normalizar velocidade)
     if ((up || down) && (left || right)) {
       dx *= 0.707; // sqrt(2)/2
       dy *= 0.707;
+    }
+
+    // Verificar se está se movendo
+    isMoving = (dx != 0 || dy != 0);
+
+    // Atualizar animação
+    if (isMoving) {
+      animationFrame++;
+      // Alternar entre frame 1 e 2 a cada 10 updates (velocidade da animação)
+      int frameIndex = (animationFrame / 10) % 2;
+
+      if (facingLeft) {
+        currentSprite = (frameIndex == 0) ? spriteLeft1 : spriteLeft2;
+      } else {
+        currentSprite = (frameIndex == 0) ? spriteRight1 : spriteRight2;
+      }
     }
 
     // Atualizar direção baseada no movimento
@@ -174,8 +237,9 @@ public class Player {
     // Só renderizar se estiver na tela
     if (screenX > -WIDTH && screenX < Game.SCREEN_WIDTH &&
         screenY > -HEIGHT && screenY < Game.SCREEN_HEIGHT) {
-      // Renderizar sprite com tamanho correto
-      g.drawImage(sprite, screenX, screenY, WIDTH, HEIGHT, null);
+      // Renderizar sprite atual com tamanho correto
+      BufferedImage spriteToRender = (currentSprite != null) ? currentSprite : spriteRight1;
+      g.drawImage(spriteToRender, screenX, screenY, WIDTH, HEIGHT, null);
 
       // DEBUG: Visualizar hitbox (descomente para debug)
       // g.setColor(Color.RED);
