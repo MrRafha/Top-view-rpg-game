@@ -1,7 +1,10 @@
+package com.rpggame.core;
+
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
+import com.rpggame.ui.CombinedCharacterScreen;
 
 /**
  * Classe principal do jogo RPG 2.5D.

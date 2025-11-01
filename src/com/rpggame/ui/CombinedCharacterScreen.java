@@ -168,8 +168,6 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     panel.add(titleLabel);
     panel.add(Box.createRigidArea(new Dimension(0, 5)));
     panel.add(classLabel);
-    panel.add(Box.createRigidArea(new Dimension(0, 5)));
-    panel.add(pointsLabel);
 
     return panel;
   }
@@ -251,12 +249,12 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     infoPanel.add(Box.createVerticalGlue());
 
     // Botão de seleção
-    JButton selectButton = new JButton("Escolher");
+    JButton selectButton = new JButton("Selecionar");
     selectButton.setActionCommand(className);
     selectButton.addActionListener(this);
     selectButton.setBackground(accentColor);
     selectButton.setForeground(Color.WHITE);
-    selectButton.setPreferredSize(new Dimension(80, 30));
+    selectButton.setPreferredSize(new Dimension(120, 35));
 
     // Armazenar referência aos botões
     if (className.equals("GUERREIRO")) {
@@ -283,12 +281,35 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     mainPanel.setBackground(backgroundColor);
     mainPanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 0, 20)); // Padding mínimo
 
+    // Painel superior com título e informações de pontos
+    JPanel topPanel = new JPanel();
+    topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
+    topPanel.setBackground(backgroundColor);
+    
     // Título da seção
     JLabel attrTitle = new JLabel("DISTRIBUIÇÃO DE ATRIBUTOS", SwingConstants.CENTER);
     attrTitle.setFont(new Font("Arial", Font.BOLD, 18));
     attrTitle.setForeground(textColor);
-    attrTitle.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0)); // Espaço mínimo
-    mainPanel.add(attrTitle, BorderLayout.NORTH);
+    attrTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+    topPanel.add(attrTitle);
+    
+    // Espaçamento
+    topPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+    
+    // Painel de pontos (será usado o pointsLabel existente, mas reposicionado)
+    pointsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+    topPanel.add(pointsLabel);
+    
+    // Aviso sobre pontos não utilizados
+    JLabel warningLabel = new JLabel("⚠️ Pontos não utilizados serão perdidos!", SwingConstants.CENTER);
+    warningLabel.setFont(new Font("Arial", Font.ITALIC, 12));
+    warningLabel.setForeground(warningColor);
+    warningLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+    topPanel.add(warningLabel);
+    
+    topPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+    
+    mainPanel.add(topPanel, BorderLayout.NORTH);
 
     // Painel dos atributos
     JPanel attributesGrid = new JPanel(new GridBagLayout());
@@ -352,13 +373,14 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     panel.add(namePanel, gbc);
 
     // Botão -
-    minusButtons[index] = new JButton("-");
-    minusButtons[index].setPreferredSize(new Dimension(30, 25));
+    minusButtons[index] = new JButton("−");
+    minusButtons[index].setPreferredSize(new Dimension(35, 30));
     minusButtons[index].setActionCommand("minus_" + index);
     minusButtons[index].addActionListener(this);
     minusButtons[index].setBackground(warningColor);
     minusButtons[index].setForeground(Color.WHITE);
-    minusButtons[index].setFont(new Font("Arial", Font.BOLD, 12));
+    minusButtons[index].setFont(new Font("Arial", Font.BOLD, 18));
+    minusButtons[index].setMargin(new Insets(0, 0, 0, 0));
     gbc.gridx = 1;
     gbc.anchor = GridBagConstraints.CENTER;
     panel.add(minusButtons[index], gbc);
@@ -376,12 +398,13 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
 
     // Botão +
     plusButtons[index] = new JButton("+");
-    plusButtons[index].setPreferredSize(new Dimension(30, 25));
+    plusButtons[index].setPreferredSize(new Dimension(35, 30));
     plusButtons[index].setActionCommand("plus_" + index);
     plusButtons[index].addActionListener(this);
     plusButtons[index].setBackground(accentColor);
     plusButtons[index].setForeground(Color.WHITE);
-    plusButtons[index].setFont(new Font("Arial", Font.BOLD, 12));
+    plusButtons[index].setFont(new Font("Arial", Font.BOLD, 18));
+    plusButtons[index].setMargin(new Insets(0, 0, 0, 0));
     gbc.gridx = 3;
     panel.add(plusButtons[index], gbc);
 
@@ -480,8 +503,8 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     resetButton.setVisible(true);
     confirmButton.setVisible(true);
 
-    // Atualizar labels
-    classLabel.setText("Classe selecionada: " + className.toUpperCase());
+    // Ocultar indicador de classe selecionada
+    classLabel.setVisible(false);
     pointsLabel.setVisible(true);
 
     updateInterface();

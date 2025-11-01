@@ -1,4 +1,10 @@
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Sistema de mapeamento com diferentes tipos de tiles e suporte a mapas
@@ -14,8 +20,15 @@ public class TileMap {
 
   // Sistema de fog of war
   private FogOfWar fogOfWar;
+  
+  // Cache de sprites dos tiles
+  private Map<TileType, BufferedImage> tileSprites;
 
   public TileMap() {
+    // Inicializar cache de sprites
+    tileSprites = new HashMap<>();
+    loadTileSprites();
+
     // Tentar carregar mapa personalizado, senão usar o padrão
     loadMap();
 
@@ -26,11 +39,52 @@ public class TileMap {
     MapLoader.createExampleMap();
   }
 
+  /**
+   * Carrega os sprites dos tiles da pasta sprites
+   */
+  private void loadTileSprites() {
+    String[] spriteFiles = {"GRASS.png", "STONE.png", "BORDER.png", "WATER.png"};
+    TileType[] tileTypes = {TileType.GRASS, TileType.STONE, TileType.WALL, TileType.WATER};
+    
+    for (int i = 0; i < spriteFiles.length; i++) {
+      try {
+        String spritePath = "sprites/" + spriteFiles[i];
+        File spriteFile = new File(spritePath);
+        
+        if (spriteFile.exists()) {
+          BufferedImage sprite = ImageIO.read(spriteFile);
+          // Redimensionar para o tamanho do tile
+          BufferedImage scaledSprite = new BufferedImage(TILE_SIZE, TILE_SIZE, BufferedImage.TYPE_INT_ARGB);
+          Graphics2D g2d = scaledSprite.createGraphics();
+          g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+          g2d.drawImage(sprite, 0, 0, TILE_SIZE, TILE_SIZE, null);
+          g2d.dispose();
+          
+          tileSprites.put(tileTypes[i], scaledSprite);
+          System.out.println("Sprite carregado: " + spriteFiles[i] + " para " + tileTypes[i]);
+        } else {
+          System.out.println("Sprite não encontrado: " + spritePath + " - usando cor padrão");
+        }
+      } catch (IOException e) {
+        System.err.println("Erro ao carregar sprite " + spriteFiles[i] + ": " + e.getMessage());
+      }
+    }
+  }
+
   private void loadMap() {
-    // Tentar carregar o novo mapa 15x15 - verificar múltiplos caminhos
-    map = MapLoader.loadMapFromFile("../maps/new_map_15x15.txt");
+    // Tentar carregar o novo mapa de territórios de goblins 25x25
+    map = MapLoader.loadMapFromFile("maps/goblin_territories_25x25.txt");
+    if (map == null) {
+      map = MapLoader.loadMapFromFile("maps/enhanced_map_15x15.txt");
+    }
     if (map == null) {
       map = MapLoader.loadMapFromFile("maps/new_map_15x15.txt");
+    }
+    if (map == null) {
+      map = MapLoader.loadMapFromFile("../maps/new_map_15x15.txt");
+    }
+    if (map == null) {
+      map = MapLoader.loadMapFromFile("maps/example.txt");
     }
 
     // Se não conseguiu carregar, tentar mapa personalizado
@@ -65,16 +119,22 @@ public class TileMap {
         // Obter tipo do tile
         TileType tileType = map[tileY][tileX];
 
-        // Escolher cor baseada no tipo
-        Color tileColor = getTileColor(tileType, tileX, tileY);
+        // Verificar se existe sprite para este tipo de tile
+        BufferedImage tileSprite = tileSprites.get(tileType);
+        
+        if (tileSprite != null) {
+          // Usar sprite se disponível
+          g.drawImage(tileSprite, screenX, screenY, null);
+        } else {
+          // Fallback para cores sólidas se sprite não estiver disponível
+          Color tileColor = getTileColor(tileType, tileX, tileY);
+          g.setColor(tileColor);
+          g.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
 
-        // Desenhar o tile
-        g.setColor(tileColor);
-        g.fillRect(screenX, screenY, TILE_SIZE, TILE_SIZE);
-
-        // Adicionar bordas para definir melhor os tiles
-        g.setColor(getTileBorderColor(tileType));
-        g.drawRect(screenX, screenY, TILE_SIZE - 1, TILE_SIZE - 1);
+          // Adicionar bordas para definir melhor os tiles
+          g.setColor(getTileBorderColor(tileType));
+          g.drawRect(screenX, screenY, TILE_SIZE - 1, TILE_SIZE - 1);
+        }
       }
     }
 
@@ -85,14 +145,17 @@ public class TileMap {
   private Color getTileColor(TileType tileType, int x, int y) {
     switch (tileType) {
       case GRASS:
-        // Variação sutil de cor para grama
+        // Variação sutil de cor para grama (GRASS)
         return (x + y) % 2 == 0 ? new Color(34, 139, 34) : new Color(0, 100, 0);
       case STONE:
-        return new Color(105, 105, 105); // Cinza escuro
+        // Pedra cinza com textura rochosa (STONE - não caminhável)
+        return (x + y) % 2 == 0 ? new Color(128, 128, 128) : new Color(105, 105, 105);
       case WALL:
-        return new Color(139, 69, 19); // Marrom
+        // Borda/Parede mais escura e sólida (BORDER)
+        return new Color(64, 64, 64); // Cinza escuro para bordas
       case WATER:
-        return new Color(0, 100, 200); // Azul
+        // Água com variação azul (mantém como WATER)
+        return (x + y) % 2 == 0 ? new Color(0, 100, 200) : new Color(0, 120, 220);
       case DIRT:
         return new Color(101, 67, 33); // Marrom terra
       case SAND:
@@ -105,13 +168,13 @@ public class TileMap {
   private Color getTileBorderColor(TileType tileType) {
     switch (tileType) {
       case GRASS:
-        return new Color(0, 80, 0);
+        return new Color(0, 80, 0); // Borda verde escura para grama
       case STONE:
-        return new Color(80, 80, 80);
+        return new Color(70, 70, 70); // Borda cinza mais escura para pedras
       case WALL:
-        return new Color(100, 50, 10);
+        return new Color(32, 32, 32); // Borda preta para bordas/paredes
       case WATER:
-        return new Color(0, 70, 140);
+        return new Color(0, 70, 140); // Borda azul escura para água
       case DIRT:
         return new Color(80, 50, 20);
       case SAND:
@@ -196,5 +259,26 @@ public class TileMap {
     int centerY = selectedTile.y * TILE_SIZE + (TILE_SIZE - objectHeight) / 2;
 
     return new Point(centerX, centerY);
+  }
+  
+  /**
+   * Getters para dimensões do mapa
+   */
+  public int getWidth() {
+    return MAP_WIDTH;
+  }
+  
+  public int getHeight() {
+    return MAP_HEIGHT;
+  }
+  
+  /**
+   * Retorna o tipo de tile em uma coordenada específica
+   */
+  public TileType getTileAt(int x, int y) {
+    if (x >= 0 && x < MAP_WIDTH && y >= 0 && y < MAP_HEIGHT) {
+      return map[y][x];
+    }
+    return TileType.WALL; // Retorna parede se fora dos limites
   }
 }

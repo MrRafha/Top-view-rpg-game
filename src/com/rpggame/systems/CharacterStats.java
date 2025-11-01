@@ -46,12 +46,23 @@ public class CharacterStats {
   }
 
   public void resetToDefault() {
-    strength = BASE_ATTRIBUTE;
-    dexterity = BASE_ATTRIBUTE;
-    intelligence = BASE_ATTRIBUTE;
-    wisdom = BASE_ATTRIBUTE;
-    charisma = BASE_ATTRIBUTE;
-    constitution = BASE_ATTRIBUTE;
+    if (playerClass.equalsIgnoreCase("mage")) {
+      // Mago com foco em Carisma e Destreza para testar mecânicas
+      strength = BASE_ATTRIBUTE;
+      dexterity = BASE_ATTRIBUTE + 3; // 8 destreza = 15% chance evasão
+      intelligence = BASE_ATTRIBUTE + 2; 
+      wisdom = BASE_ATTRIBUTE;
+      charisma = BASE_ATTRIBUTE + 5; // 10 carisma = forte intimidação
+      constitution = BASE_ATTRIBUTE;
+    } else {
+      // Outras classes mantêm padrão
+      strength = BASE_ATTRIBUTE;
+      dexterity = BASE_ATTRIBUTE;
+      intelligence = BASE_ATTRIBUTE;
+      wisdom = BASE_ATTRIBUTE;
+      charisma = BASE_ATTRIBUTE;
+      constitution = BASE_ATTRIBUTE;
+    }
   }
 
   // Getters

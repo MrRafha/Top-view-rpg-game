@@ -44,10 +44,13 @@ public class MapLoader {
         }
       }
 
+      System.out.println("Mapa carregado com sucesso: " + filePath);
+      System.out.println("Dimensões: " + height + "x" + width);
       return map;
 
     } catch (IOException e) {
       System.err.println("Erro ao carregar mapa: " + filePath);
+      System.err.println("Motivo: " + e.getMessage());
       System.err.println("Gerando mapa padrão...");
       return generateDefaultMap();
     }

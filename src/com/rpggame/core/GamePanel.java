@@ -1,3 +1,5 @@
+package com.rpggame.core;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
@@ -5,13 +7,18 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseEvent;
 
+import com.rpggame.entities.Player;
+import com.rpggame.world.*;
+import com.rpggame.systems.*;
+import com.rpggame.ui.CharacterScreen;
+
 /**
  * Painel principal onde o jogo é renderizado
  */
 public class GamePanel extends JPanel implements KeyListener, MouseListener, Runnable {
   public static final int TILE_SIZE = 48; // Aumentado para dar zoom
-  public static final int MAP_WIDTH = 15; // Novo mapa 15x15
-  public static final int MAP_HEIGHT = 15; // Novo mapa 15x15
+  public static final int MAP_WIDTH = 25; // Mapa maior 25x25 para territórios distantes
+  public static final int MAP_HEIGHT = 25; // Novo mapa 15x15
 
   private Thread gameThread;
   private boolean running = false;
@@ -24,6 +31,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   // Telas do jogo
   private CharacterScreen characterScreen;
   private boolean showingCharacterScreen = false;
+
+  // Debug - Visualização de campo de visão
+  private boolean showVisionCones = false;
 
   // FPS
   private final int FPS = 60;
@@ -75,7 +85,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
       // Reinicializar o gerenciador de inimigos com o novo player
       enemyManager = new EnemyManager(player, tileMap);
-      enemyManager.spawnInitialEnemies(tileMap);
+      player.setEnemyManager(enemyManager); // Conectar player ao enemy manager
+      enemyManager.initializeGoblinFamilies(tileMap);
     } else {
       // Fallback para posição central se tileMap ainda não foi inicializado
       player = new Player(360, 360, spritePath);
@@ -94,7 +105,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
       // Criar o gerenciador de inimigos com o novo player
       enemyManager = new EnemyManager(player, tileMap);
-      enemyManager.spawnInitialEnemies(tileMap);
+      player.setEnemyManager(enemyManager); // Conectar player ao enemy manager
+      enemyManager.initializeGoblinFamilies(tileMap);
 
       // Iniciar o loop do jogo se ainda não estiver rodando
       if (gameThread == null || !gameThread.isAlive()) {
@@ -190,9 +202,19 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Renderizar o mapa
     tileMap.render(g2d, camera, player);
 
+    // Renderizar estruturas (cabanas)
+    if (enemyManager != null) {
+      enemyManager.renderStructures(g2d, camera);
+    }
+
     // Renderizar inimigos (apenas os visíveis)
     if (enemyManager != null) {
       enemyManager.render(g2d, camera, tileMap.getFogOfWar());
+    }
+
+    // Renderizar cones de visão (debug)
+    if (showVisionCones && enemyManager != null) {
+      enemyManager.renderVisionCones(g2d, camera);
     }
 
     // Renderizar o jogador
@@ -209,21 +231,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Barras de vida e mana (canto superior esquerdo)
     drawHealthAndManaBars(g, player);
 
-    // Instruções de controle (canto inferior direito)
-    String[] instructions = {
-        "WASD - Movimento",
-        "ESPAÇO - Atacar"
-    };
-
-    g.setFont(new Font("Arial", Font.PLAIN, 12));
-    g.setColor(new Color(200, 200, 200));
-
-    int instrX = Game.SCREEN_WIDTH - 150;
-    int instrY = Game.SCREEN_HEIGHT - 50;
-
-    for (int i = 0; i < instructions.length; i++) {
-      g.drawString(instructions[i], instrX, instrY + (i * 15));
-    }
+    // Instruções de controle removidas para interface mais limpa
   }
 
   /**
@@ -342,6 +350,13 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Tecla C para abrir tela de características
     if (e.getKeyCode() == KeyEvent.VK_C) {
       openCharacterScreen();
+      return;
+    }
+
+    // Tecla V para ativar/desativar visualização de campo de visão (debug)
+    if (e.getKeyCode() == KeyEvent.VK_V) {
+      showVisionCones = !showVisionCones;
+      System.out.println("👁 Visualização de campo de visão: " + (showVisionCones ? "ATIVADA" : "DESATIVADA"));
       return;
     }
 

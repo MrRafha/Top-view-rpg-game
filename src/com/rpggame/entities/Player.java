@@ -1,8 +1,15 @@
+package com.rpggame.entities;
+
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.File;
+import java.util.ArrayList;
+
+import com.rpggame.world.*;
+import com.rpggame.systems.*;
+import com.rpggame.core.GamePanel;
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -50,6 +57,7 @@ public class Player {
   private int currentMana;
   private int maxMana;
   private ExperienceSystem experienceSystem;
+  private int lastLevelCheck; // Para detectar level ups
 
   // Direção atual (para ataques direcionais)
   private double facing = 0; // 0 = direita, PI/2 = baixo, PI = esquerda, 3*PI/2 = cima
@@ -62,6 +70,9 @@ public class Player {
 
   // Referência para o mapa (para verificação de colisão)
   private TileMap tileMap;
+  
+  // Referência para o gerenciador de inimigos (para atacar estruturas)
+  private EnemyManager enemyManager;
 
   public Player(double x, double y, String spritePath) {
     this.x = x;
@@ -74,6 +85,7 @@ public class Player {
     this.maxMana = stats.getMaxMana();
     this.currentMana = maxMana;
     this.experienceSystem = new ExperienceSystem();
+    this.lastLevelCheck = 1; // Começar no nível 1
     this.projectiles = new ArrayList<>();
     this.floatingTexts = new ArrayList<>();
     loadSprite(spritePath);
@@ -228,6 +240,29 @@ public class Player {
         floatingTexts.remove(i);
       }
     }
+    
+    // Verificar level up e restaurar vida
+    checkLevelUpAndRestoreHealth();
+  }
+  
+  /**
+   * Verifica se houve level up e restaura a vida ao máximo
+   */
+  private void checkLevelUpAndRestoreHealth() {
+    if (experienceSystem.shouldRestoreHealth(lastLevelCheck)) {
+      currentHealth = maxHealth; // Restaurar vida ao máximo
+      lastLevelCheck = experienceSystem.getCurrentLevel();
+      
+      // Mostrar texto de level up
+      FloatingText levelUpText = new FloatingText(x + WIDTH / 2, y - 20, 
+          "LEVEL UP!", Color.YELLOW);
+      floatingTexts.add(levelUpText);
+      
+      // Mostrar texto de vida restaurada
+      FloatingText healText = new FloatingText(x + WIDTH / 2, y - 35, 
+          "VIDA RESTAURADA!", Color.GREEN);
+      floatingTexts.add(healText);
+    }
   }
 
   public void render(Graphics2D g, Camera camera) {
@@ -314,6 +349,59 @@ public class Player {
 
     if (projectile != null) {
       projectiles.add(projectile);
+    }
+    
+    // Verificar se há estruturas vulneráveis próximas para atacar diretamente
+    checkAndAttackNearbyStructures(totalDamage);
+  }
+  
+  /**
+   * Verifica e ataca estruturas vulneráveis próximas
+   */
+  private void checkAndAttackNearbyStructures(int damage) {
+    if (enemyManager == null) return;
+    
+    // Alcance de ataque corpo a corpo para estruturas
+    double structureAttackRange = 80.0;
+    
+    // Verificar estruturas próximas
+    for (Structure structure : enemyManager.getStructures()) {
+      if (structure.isVulnerable() && !structure.isDestroyed()) {
+        double distance = structure.distanceTo(x + WIDTH/2, y + HEIGHT/2);
+        
+        if (distance <= structureAttackRange) {
+          // Atacar a estrutura
+          boolean destroyed = structure.takeDamage(damage);
+          
+          // Criar texto de dano
+          FloatingText damageText = new FloatingText(
+            structure.getX() + structure.getWidth()/2, 
+            structure.getY() + structure.getHeight()/2, 
+            "-" + damage, Color.ORANGE);
+          floatingTexts.add(damageText);
+          
+          if (destroyed) {
+            // Dar XP por destruir a cabana
+            int xpReward = 100; // XP por destruir cabana
+            boolean leveledUp = experienceSystem.addExperience(xpReward);
+            
+            // Mostrar XP ganho
+            FloatingText xpText = new FloatingText(
+              structure.getX() + structure.getWidth()/2,
+              structure.getY() + structure.getHeight()/2 - 20,
+              "+" + xpReward + " XP", Color.CYAN);
+            floatingTexts.add(xpText);
+            
+            System.out.println("Cabana destruída! +" + xpReward + " XP");
+            
+            if (leveledUp) {
+              System.out.println("Level up ao destruir cabana!");
+            }
+          }
+          
+          break; // Atacar apenas uma estrutura por vez
+        }
+      }
     }
   }
 
@@ -473,6 +561,10 @@ public class Player {
 
   public void setTileMap(TileMap tileMap) {
     this.tileMap = tileMap;
+  }
+  
+  public void setEnemyManager(EnemyManager enemyManager) {
+    this.enemyManager = enemyManager;
   }
 
   private void updatePositionWithCollision(double dx, double dy) {

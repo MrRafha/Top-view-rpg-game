@@ -2,10 +2,10 @@
  * Enumeração dos diferentes tipos de tiles no jogo
  */
 public enum TileType {
-  GRASS(0, "Grama", true),
-  STONE(1, "Pedra", false),
-  WALL(2, "Parede", false),
-  WATER(3, "Água", false),
+  GRASS(0, "Grass", true),
+  STONE(1, "Stone", false),
+  WALL(2, "Border", false),
+  WATER(3, "Water", false),
   DIRT(4, "Terra", true),
   SAND(5, "Areia", true);
 

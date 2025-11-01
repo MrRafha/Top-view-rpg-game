@@ -56,8 +56,16 @@ public class ExperienceSystem {
     // Fórmula: XP anterior + 20% do XP anterior
     xpToNextLevel = (int) Math.ceil(xpToNextLevel * (1 + XP_MULTIPLIER));
 
-    System.out.println("LEVEL UP! Nível " + currentLevel + " alcançado!");
+    System.out.println("✨ LEVEL UP! Nível " + currentLevel + " alcançado!");
+    System.out.println("❤️ Vida restaurada ao máximo!");
     System.out.println("XP necessário para próximo nível: " + xpToNextLevel);
+  }
+  
+  /**
+   * Retorna se houve level up recente (para notificar o Player)
+   */
+  public boolean shouldRestoreHealth(int lastCheckedLevel) {
+    return currentLevel > lastCheckedLevel;
   }
 
   /**
