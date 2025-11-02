@@ -12,7 +12,7 @@ Um RPG 2D em Java com sistema de combate, exploração e progressão de personag
 
 **Baixe e jogue em segundos:**
 
-1. **Baixe** o arquivo `RPG-2D-Game-v1.0.zip`
+1. **Baixe** o arquivo `RPG-2D-Game-v1.1-FIXED.zip`
 2. **Extraia** o conteúdo em qualquer pasta
 3. **Execute**:
    - **Windows**: Duplo-clique em `RPG-Game.exe.bat`
@@ -115,7 +115,7 @@ java -cp build com.rpggame.core.Game
 │
 ├── 🎨 sprites/               # Imagens e sprites
 ├── 🗺️ maps/                 # Mapas personalizados
-└── 📦 RPG-2D-Game-v1.0.zip  # Pacote de distribuição
+└── 📦 RPG-2D-Game-v1.1-FIXED.zip  # Pacote de distribuição
 ```
 
 ## 🛠️ Requisitos Técnicos
@@ -133,12 +133,20 @@ java -cp build com.rpggame.core.Game
 
 ## 📈 Changelog
 
-### v1.0 (Atual)
-- ✅ Sistema de combate com efeitos visuais
-- ✅ IA de goblins com personalidades
+### v1.1 (Atual)
+- ✅ **Sistema ResourceResolver**: Carregamento inteligente de recursos
+- ✅ **Correção crítica**: Sprites e mapas funcionando no executável
+- ✅ **Efeitos visuais de combate**: Animações e telegraphing dos goblins
+- ✅ **IA avançada**: 4 personalidades de goblins únicas
+- ✅ **Sistema de territórios**: Famílias de goblins e guerras
+- ✅ **Estrutura organizada**: Pacotes Java modulares
+- ✅ **Executável corrigido**: Cross-platform totalmente funcional
+
+### v1.0
+- ✅ Sistema de combate básico
+- ✅ IA de goblins inicial
 - ✅ Sistema de atributos completo
 - ✅ Fog of war implementado
-- ✅ Executável cross-platform
 - ✅ Mapas customizáveis
 - ✅ Interface unificada
 
