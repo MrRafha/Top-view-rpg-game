@@ -1,4 +1,8 @@
+package com.rpggame.systems;
+
 import java.awt.*;
+import com.rpggame.world.Camera;
+import com.rpggame.core.Game;
 
 /**
  * Classe para representar texto flutuante temporário (evasão, dano, etc.)

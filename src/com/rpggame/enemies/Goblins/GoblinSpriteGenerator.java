@@ -1,3 +1,5 @@
+package com.rpggame.enemies.Goblins;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
@@ -70,7 +72,7 @@ public class GoblinSpriteGenerator {
 
     // Salvar o sprite
     try {
-      File outputFile = new File("enemies/Goblins/goblin_sprite.png");
+      File outputFile = new File("sprites/goblin_sprite.png");
       outputFile.getParentFile().mkdirs();
       ImageIO.write(sprite, "PNG", outputFile);
       System.out.println("Sprite do Goblin criado com sucesso!");

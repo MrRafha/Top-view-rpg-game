@@ -1,4 +1,10 @@
+package com.rpggame.world;
+
 import java.awt.*;
+import com.rpggame.entities.Player;
+import com.rpggame.core.GamePanel;
+import com.rpggame.core.Game;
+import com.rpggame.systems.CharacterStats;
 
 /**
  * Sistema de Fog of War - controla a visibilidade dos tiles baseado na posição

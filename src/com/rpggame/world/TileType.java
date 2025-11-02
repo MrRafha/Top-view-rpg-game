@@ -1,3 +1,5 @@
+package com.rpggame.world;
+
 /**
  * Enumeração dos diferentes tipos de tiles no jogo
  */

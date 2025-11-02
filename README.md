@@ -1,268 +1,181 @@
-# Top-View RPG Game 🎮
+# Top-view RPG Game 🎮
 
-Um RPG 2.5D top-down desenvolvido em Java usando Swing, com sistema de classes, combate, fog of war e mapas customizáveis.
+Um RPG 2D em Java com sistema de combate, exploração e progressão de personagem.
 
-![Java](https://img.shields.io/badge/Java-21-orange)
-![Swing](https://img.shields.io/badge/GUI-Java%20Swing-blue)
-![License](https://img.shields.io/badge/License-MIT-green)
-![GitHub](https://img.shields.io/badge/GitHub-MrRafha-blue)
+![Java](https://img.shields.io/badge/Java-8+-orange)
+![Status](https://img.shields.io/badge/Status-Complete-green)
+![License](https://img.shields.io/badge/License-MIT-blue)
 
-## 📋 Sumário
+## 🚀 Como Jogar
 
-- [Características](#-características)
-- [Capturas de Tela](#-capturas-de-tela)
-- [Instalação](#-instalação)
-- [Como Jogar](#-como-jogar)
-- [Estrutura do Projeto](#-estrutura-do-projeto)
-- [Sistema de Classes](#-sistema-de-classes)
-- [Mapas Customizáveis](#-mapas-customizáveis)
-- [Desenvolvimento](#-desenvolvimento)
-- [Contribuição](#-contribuição)
-- [Licença](#-licença)
+### 📦 Versão Executável (Recomendado)
 
-## 🚀 Características
+**Baixe e jogue em segundos:**
 
-### ⚔️ **Sistema de Combate**
-- 3 classes jogáveis: Guerreiro, Mago e Caçador
-- Sistema de projéteis com diferentes tipos de ataque
-- Sistema de evasão baseado em destreza
-- Textos flutuantes para feedback visual
-- Cooldown de ataques balanceado
+1. **Baixe** o arquivo `RPG-2D-Game-v1.0.zip`
+2. **Extraia** o conteúdo em qualquer pasta
+3. **Execute**:
+   - **Windows**: Duplo-clique em `RPG-Game.exe.bat`
+   - **Linux/Mac**: `chmod +x RPG-Game.sh && ./RPG-Game.sh`
+   - **Manual**: `java -cp "lib:resources" com.rpggame.core.Game`
 
-### 📊 **Sistema de Atributos**
-- **Força**: Aumenta dano de ataques
-- **Destreza**: Aumenta taxa de evasão
-- **Inteligência**: Aumenta dano mágico
-- **Sabedoria**: Aumenta alcance de visão
-- **Carisma**: Reduz cooldown de ataques
-- **Constituição**: Aumenta vida e reduz dano recebido
+**✅ Requisito único**: Java 8 ou superior instalado
 
-### 🗺️ **Sistema de Mapas**
-- Mapas 15x15 com tiles de 48px
-- 6 tipos de terreno diferentes
-- Sistema de colisão robusto
-- Carregamento de mapas via arquivos .txt
-- Geração procedural como fallback
+### 🛠️ Desenvolvimento (Código Fonte)
 
-### 👁️ **Fog of War**
-- Sistema de visibilidade baseado em linha de visão
-- Alcance determinado pelo atributo Sabedoria
-- Algoritmo de Bresenham para cálculos precisos
-- Renderização em tempo real
+Para desenvolvedores que querem modificar o código:
 
-### 🎨 **Visual e Interface**
-- Resolução 1024x800 otimizada
-- Sistema de câmera suave
-- Sprites redimensionáveis
-- Interface de criação de personagem unificada
-- Barras de vida dinâmicas
-
-## 🎯 Como Jogar
-
-### Controles
-- **WASD** ou **Setas**: Movimento
-- **ESPAÇO**: Atacar
-- **Mouse**: Clique para focar a janela
-
-### Objetivo
-1. Crie seu personagem escolhendo classe e atributos
-2. Explore o mapa evitando obstáculos
-3. Use o sistema de combate para enfrentar desafios
-4. Navegue usando o fog of war para descobrir áreas
-
-## 🛠️ Instalação
-
-### Pré-requisitos
-- Java 8 ou superior
-- Sistema operacional: Windows, macOS ou Linux
-
-### Passos para Instalação
-
-1. **Clone o repositório**
 ```bash
+# Clone o repositório
 git clone https://github.com/MrRafha/Top-view-rpg-game.git
 cd Top-view-rpg-game
+
+# Compile
+javac -encoding UTF-8 -d build -cp . src/com/rpggame/**/*.java
+
+# Execute  
+java -cp build com.rpggame.core.Game
 ```
 
-2. **Compile o projeto**
-```bash
-# Windows
-compile.bat
+## 🎮 Controles
 
-# Linux/macOS
-chmod +x compile.sh
-./compile.sh
+| Tecla | Ação |
+|-------|------|
+| **WASD** | Movimentação do personagem |
+| **Espaço** | Atacar inimigos |
+| **C** | Abrir tela de características |
+| **ESC** | Sair do jogo |
 
-# Ou manualmente:
-cd src
-javac *.java
+## ⚔️ Características do Jogo
+
+### 🛡️ Sistema de Classes
+
+| Classe | Especialidade | Vantagens |
+|--------|---------------|-----------|
+| **🗡️ Guerreiro** | Combate corpo a corpo | Alta resistência e força |
+| **🧙 Mago** | Artes arcanas | Dano mágico e mana elevada |
+| **🏹 Caçador** | Ataques à distância | Agilidade e precisão |
+
+### 📊 Sistema de Atributos
+
+| Atributo | Código | Efeito |
+|----------|--------|--------|
+| **Força** | STR | ⚔️ Aumenta dano corpo a corpo |
+| **Destreza** | DEX | 🏃 Aumenta dano à distância e velocidade |
+| **Inteligência** | INT | 🧠 Aumenta dano mágico e mana máxima |
+| **Sabedoria** | WIS | 👁️ Aumenta experiência ganha e visão |
+| **Carisma** | CHA | 💬 Afeta interações sociais |
+| **Constituição** | CON | ❤️ Aumenta vida máxima |
+
+### 👹 Sistema de Inimigos Inteligente
+
+**🧌 Goblins com IA Avançada:**
+
+- **Comum**: Comportamento padrão, balanceado
+- **Agressivo**: Mais forte e persistente nos ataques
+- **Tímido**: Mais rápido mas foge quando ferido
+- **Líder**: Comanda outros goblins em grupo
+
+### ✨ Efeitos Visuais de Combate
+
+- **⚠️ Preparação de Ataque**: Aviso visual 0.75s antes do ataque
+- **💥 Efeito de Slash**: Animação visual durante ataques
+- **📡 Sistema de Telegraphing**: Permite reação aos ataques inimigos
+- **🎯 Feedback Visual**: Textos flutuantes para dano e ações
+
+## 🗺️ Sistema de Mundo
+
+### 🌫️ Fog of War
+- **Visibilidade realista** baseada em linha de visão
+- **Exploração dinâmica** do mapa
+- **Alcance determinado** pelo atributo Sabedoria
+
+### 🗃️ Mapas Customizáveis
+- **Formato simples**: Arquivos `.txt` editáveis
+- **Tiles variados**: 6 tipos diferentes de terreno
+- **Colisão inteligente**: Sistema robusto de física
+- **Mapas inclusos**: Vários mapas pré-criados
+
+## 🏗️ Estrutura do Projeto
+
+```
+📁 Top-view-rpg-game/
+├── 📦 dist/                    # Versão executável
+│   ├── 📚 lib/                # Classes compiladas (.class)
+│   ├── 🎨 resources/          # Assets (sprites, mapas)
+│   ├── 🖥️ RPG-Game.exe.bat   # Executável Windows
+│   └── 🐧 RPG-Game.sh         # Executável Linux/Mac
+│
+├── 💻 src/com/rpggame/        # Código fonte Java
+│   ├── 🎯 core/              # Engine principal
+│   ├── 👤 entities/          # Jogador, inimigos, objetos
+│   ├── ⚙️ systems/           # Sistemas (XP, stats, combate)
+│   ├── 🖼️ ui/                # Interface do usuário
+│   └── 🗺️ world/             # Mundo (tiles, câmera, mapas)
+│
+├── 🎨 sprites/               # Imagens e sprites
+├── 🗺️ maps/                 # Mapas personalizados
+└── 📦 RPG-2D-Game-v1.0.zip  # Pacote de distribuição
 ```
 
-3. **Execute o jogo**
-```bash
-# Windows
-run.bat
+## 🛠️ Requisitos Técnicos
 
-# Linux/macOS
-chmod +x run.sh
-./run.sh
+### Mínimos
+- **Java**: 8 ou superior
+- **SO**: Windows 7+, macOS 10.12+, Linux (qualquer distro)
+- **RAM**: 256MB livres
+- **Espaço**: 50MB
 
-# Ou manualmente:
-cd src
-java Game
-```
+### Recomendados  
+- **Java**: 11 ou superior
+- **RAM**: 512MB livres
+- **CPU**: Dual-core 2GHz+
 
-### Execução Alternativa
-Se preferir, use um IDE como IntelliJ IDEA, Eclipse ou VS Code com extensão Java.
+## 📈 Changelog
 
-## 📁 Estrutura do Projeto
-
-```
-rpg-2d-java/
-├── src/                     # Código fonte Java
-│   ├── Game.java           # Classe principal
-│   ├── GamePanel.java      # Loop principal e renderização
-│   ├── Player.java         # Lógica do jogador
-│   ├── TileMap.java        # Sistema de mapas
-│   ├── FogOfWar.java       # Sistema de visibilidade
-│   ├── Camera.java         # Sistema de câmera
-│   ├── CharacterStats.java # Sistema de atributos
-│   ├── CombinedCharacterScreen.java # Interface de criação
-│   ├── TileType.java       # Tipos de terreno
-│   ├── MapLoader.java      # Carregador de mapas
-│   ├── Projectile.java     # Sistema de projéteis
-│   └── FloatingText.java   # Textos flutuantes
-├── maps/                   # Mapas customizáveis
-│   ├── new_map_15x15.txt  # Mapa principal
-│   └── example.txt        # Mapa de exemplo
-├── sprites/               # Assets visuais (se houver)
-├── docs/                  # Documentação adicional
-└── README.md             # Este arquivo
-```
-
-## 🏛️ Sistema de Classes
-
-### 🛡️ Guerreiro (Warrior)
-- **Especialidade**: Combate corpo a corpo
-- **Ataque**: Golpe de espada em área
-- **Bônus**: +2 Força, +1 Constituição
-- **Estilo**: Tank/DPS físico
-
-### 🧙‍♂️ Mago (Mage)  
-- **Especialidade**: Magia e conhecimento
-- **Ataque**: Projétil mágico
-- **Bônus**: +2 Inteligência, +1 Sabedoria
-- **Estilo**: DPS mágico/Suporte
-
-### 🏹 Caçador (Hunter)
-- **Especialidade**: Agilidade e precisão
-- **Ataque**: Flecha direcionada
-- **Bônus**: +2 Destreza, +1 Sabedoria
-- **Estilo**: DPS à distância/Mobilidade
-
-## 🗺️ Mapas Customizáveis
-
-### Formato de Arquivo (.txt)
-```
-WWWWWWWWWWWWWWW
-WGGGGGGGGGGGGGW  
-WGGGGGTTTTGGGGG
-WGGGGGTTTTGGGGG
-WWWWWWWWWWWWWWW
-```
-
-### Tipos de Tile
-- **W** = Parede (Wall) - Não caminhável
-- **G** = Grama (Grass) - Caminhável  
-- **T** = Água (Water) - Não caminhável
-- **S** = Pedra (Stone) - Não caminhável
-- **D** = Terra (Dirt) - Caminhável
-- **A** = Areia (Sand) - Caminhável
-
-### Criando Mapas
-1. Crie um arquivo .txt na pasta `maps/`
-2. Use os caracteres acima para definir o terreno
-3. Mantenha dimensões 15x15 para compatibilidade
-4. O jogo carregará automaticamente
-
-## 🔧 Desenvolvimento
-
-### Arquitetura
-- **Padrão MVC**: Separação clara entre lógica e apresentação
-- **Component-Based**: Sistemas modulares e reutilizáveis
-- **Event-Driven**: Input handling baseado em eventos
-- **Data-Driven**: Mapas e configurações externalizadas
-
-### Principais Classes
-- `Game`: Ponto de entrada e configuração da janela
-- `GamePanel`: Loop principal, renderização e input
-- `Player`: Lógica do jogador, movimento e combate
-- `TileMap`: Sistema de mundo e colisões
-- `FogOfWar`: Sistema de visibilidade
-
-### Adicionando Funcionalidades
-1. **Novos Tipos de Tile**: Edite `TileType.java`
-2. **Novas Classes**: Modifique `CharacterStats.java`
-3. **Novos Mapas**: Adicione arquivos .txt em `maps/`
-4. **Novos Projéteis**: Estenda `Projectile.java`
+### v1.0 (Atual)
+- ✅ Sistema de combate com efeitos visuais
+- ✅ IA de goblins com personalidades
+- ✅ Sistema de atributos completo
+- ✅ Fog of war implementado
+- ✅ Executável cross-platform
+- ✅ Mapas customizáveis
+- ✅ Interface unificada
 
 ## 🤝 Contribuição
 
-Contribuições são bem-vindas! Para contribuir:
+Quer ajudar a melhorar o jogo? Siga estes passos:
 
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+1. **Fork** este repositório
+2. **Crie** uma branch (`git checkout -b feature/nova-feature`)
+3. **Commit** suas mudanças (`git commit -m 'Adiciona nova feature'`)
+4. **Push** para a branch (`git push origin feature/nova-feature`)
+5. **Abra** um Pull Request
 
-### Issues e Sugestões
-- Use as [Issues](../../issues) para reportar bugs
-- Sugira melhorias através de [Discussions](../../discussions)
-- Siga o template de issue quando disponível
+### 🐛 Reportar Bugs
+Encontrou um bug? [Abra uma issue](https://github.com/MrRafha/Top-view-rpg-game/issues) com:
+- Descrição detalhada do problema
+- Passos para reproduzir
+- Sistema operacional e versão do Java
+- Screenshots (se aplicável)
 
-## 📈 Roadmap
+## 📄 Licença
 
-### Versão Atual (v1.0)
-- [x] Sistema básico de movimento
-- [x] Classes de personagem
-- [x] Sistema de combate
-- [x] Fog of War
-- [x] Mapas customizáveis
-- [x] Sistema de colisão
+Este projeto está sob a **Licença MIT**. Consulte o arquivo [`LICENSE`](LICENSE) para mais detalhes.
 
-### Próximas Versões
-- [ ] NPCs e diálogos
-- [ ] Sistema de inventário
-- [ ] Múltiplos níveis/mapas
-- [ ] Sistema de save/load
-- [ ] Efeitos sonoros
-- [ ] Animações de sprites
-- [ ] Multiplayer local
-- [ ] Editor de mapas in-game
+## 📞 Contato
 
-## 🐛 Problemas Conhecidos
-
-- Sprites são gerados proceduralmente (sem assets gráficos)
-- Sistema de save não implementado
-- Balanceamento de classes pode precisar ajustes
-
-## 📝 Licença
-
-Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
-
-## 👨‍💻 Autores
-
-- **MrRafha** - *Desenvolvedor Principal* - [GitHub](https://github.com/MrRafha)
-
-## 🙏 Agradecimentos
-
-- Comunidade Java por recursos e tutoriais
-- Inspiração em RPGs clássicos top-down
-- Feedback da comunidade de desenvolvedores
+- **GitHub**: [@MrRafha](https://github.com/MrRafha)
+- **Issues**: [Reporte problemas aqui](https://github.com/MrRafha/Top-view-rpg-game/issues)
 
 ---
 
-⭐ **Se este projeto foi útil para você, considere dar uma estrela!** ⭐
+<div align="center">
 
-� **Repositório**: [Top-view RPG Game](https://github.com/MrRafha/Top-view-rpg-game)
+**🎮 Divirta-se jogando!**
+
+*Desenvolvido com ❤️ em Java*
+
+![Game Preview](https://img.shields.io/badge/Ready%20to%20Play-🎯-success)
+
+</div>

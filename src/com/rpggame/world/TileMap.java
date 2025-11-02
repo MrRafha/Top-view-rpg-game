@@ -1,3 +1,5 @@
+package com.rpggame.world;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -5,6 +7,9 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import java.util.HashMap;
 import java.util.Map;
+import com.rpggame.core.GamePanel;
+import com.rpggame.core.Game;
+import com.rpggame.entities.Player;
 
 /**
  * Sistema de mapeamento com diferentes tipos de tiles e suporte a mapas
@@ -39,6 +44,8 @@ public class TileMap {
     MapLoader.createExampleMap();
   }
 
+
+
   /**
    * Carrega os sprites dos tiles da pasta sprites
    */
@@ -48,7 +55,7 @@ public class TileMap {
     
     for (int i = 0; i < spriteFiles.length; i++) {
       try {
-        String spritePath = "sprites/" + spriteFiles[i];
+        String spritePath = ResourceResolver.getResourcePath("sprites/" + spriteFiles[i]);
         File spriteFile = new File(spritePath);
         
         if (spriteFile.exists()) {
@@ -72,19 +79,22 @@ public class TileMap {
   }
 
   private void loadMap() {
-    // Tentar carregar o novo mapa de territórios de goblins 25x25
-    map = MapLoader.loadMapFromFile("maps/goblin_territories_25x25.txt");
-    if (map == null) {
-      map = MapLoader.loadMapFromFile("maps/enhanced_map_15x15.txt");
-    }
-    if (map == null) {
-      map = MapLoader.loadMapFromFile("maps/new_map_15x15.txt");
-    }
-    if (map == null) {
-      map = MapLoader.loadMapFromFile("../maps/new_map_15x15.txt");
-    }
-    if (map == null) {
-      map = MapLoader.loadMapFromFile("maps/example.txt");
+    // Lista de mapas para tentar carregar em ordem de preferência
+    String[] mapFiles = {
+      "maps/goblin_territories_25x25.txt",
+      "maps/enhanced_map_15x15.txt", 
+      "maps/new_map_15x15.txt",
+      "maps/example.txt"
+    };
+    
+    // Tentar carregar cada mapa usando o sistema de resolução de caminho
+    for (String mapFile : mapFiles) {
+      String resolvedPath = ResourceResolver.getResourcePath(mapFile);
+      map = MapLoader.loadMapFromFile(resolvedPath);
+      if (map != null) {
+        System.out.println("Mapa carregado com sucesso: " + resolvedPath);
+        break;
+      }
     }
 
     // Se não conseguiu carregar, tentar mapa personalizado

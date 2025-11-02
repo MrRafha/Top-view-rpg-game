@@ -1,4 +1,6 @@
-import java.awt.*;
+package com.rpggame.enemies.Goblins;
+
+import com.rpggame.entities.Enemy;
 
 /**
  * Classe do inimigo Goblin - inimigo básico corpo a corpo

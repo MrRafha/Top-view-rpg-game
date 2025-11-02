@@ -1,4 +1,8 @@
-import java.awt.*;
+package com.rpggame.world;
+
+import com.rpggame.entities.Player;
+import com.rpggame.core.Game;
+import com.rpggame.core.GamePanel;
 
 /**
  * Sistema de câmera para seguir o jogador

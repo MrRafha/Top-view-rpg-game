@@ -10,8 +10,8 @@ import java.util.ArrayList;
 import com.rpggame.world.*;
 import com.rpggame.systems.*;
 import com.rpggame.core.GamePanel;
+import com.rpggame.core.Game;
 import java.io.IOException;
-import java.util.ArrayList;
 
 /**
  * Classe que representa o jogador
@@ -28,8 +28,8 @@ public class Player {
 
   // Controle de animação
   private int animationFrame = 0;
-  private int animationTimer = 0;
-  private final int ANIMATION_SPEED = 15; // frames por troca de sprite
+  // private int animationTimer = 0; // TODO: Implementar animação
+  // private final int ANIMATION_SPEED = 15; // TODO: frames por troca de sprite
   private boolean facingLeft = false; // direção que o player está olhando
   private boolean isMoving = false;
 
@@ -111,16 +111,10 @@ public class Player {
     try {
       // Carregar sprites de animação baseado na classe
       String baseClass = playerClass.toLowerCase();
-      String spritesPath = "sprites/";
+      String spritesPath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/");
 
-      // Tentar primeiro o caminho relativo da pasta src
-      try {
-        String alternatePath = "../" + spritesPath;
-        loadAnimationSprites(alternatePath, baseClass);
-      } catch (IOException e1) {
-        // Tentar caminho direto
-        loadAnimationSprites(spritesPath, baseClass);
-      }
+      // Usar o sistema de resolução de caminho
+      loadAnimationSprites(spritesPath, baseClass);
 
       // Definir sprite inicial (direita)
       currentSprite = spriteRight1;
@@ -295,6 +289,8 @@ public class Player {
     }
   }
 
+  // TODO: Implementar renderização de barra de vida
+  /* 
   private void renderHealthBar(Graphics2D g, int screenX, int screenY) {
     int barWidth = WIDTH;
     int barHeight = 4;
@@ -313,6 +309,7 @@ public class Player {
     g.setColor(Color.WHITE);
     g.drawRect(screenX, barY, barWidth, barHeight);
   }
+  */
 
   private void attack() {
     if (!canAttack)

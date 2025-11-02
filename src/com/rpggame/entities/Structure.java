@@ -1,7 +1,10 @@
+package com.rpggame.entities;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.File;
+import com.rpggame.world.Camera;
 
 /**
  * Representa uma estrutura no mapa (como cabanas de goblins)
@@ -44,7 +47,8 @@ public class Structure {
      */
     private void loadSprite(String spritePath) {
         try {
-            File spriteFile = new File(spritePath);
+            String resolvedPath = com.rpggame.world.ResourceResolver.getResourcePath(spritePath);
+            File spriteFile = new File(resolvedPath);
             if (spriteFile.exists()) {
                 BufferedImage originalSprite = ImageIO.read(spriteFile);
                 
@@ -56,7 +60,7 @@ public class Structure {
                 g2d.drawImage(originalSprite, 0, 0, width, height, null);
                 g2d.dispose();
                 
-                System.out.println("Estrutura carregada: " + spritePath);
+                System.out.println("Estrutura carregada: " + resolvedPath);
             } else {
                 System.out.println("Sprite de estrutura não encontrado: " + spritePath);
             }

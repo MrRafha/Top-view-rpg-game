@@ -1,7 +1,5 @@
 package com.rpggame.core;
 
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import com.rpggame.ui.CombinedCharacterScreen;
@@ -15,7 +13,7 @@ public class Game {
   public static final String GAME_TITLE = "RPG 2.5D - Open World";
 
   private JFrame frame;
-  private GamePanel gamePanel;
+  // private GamePanel gamePanel; // TODO: Implementar se necessário
 
   /**
    * Construtor da classe Game.

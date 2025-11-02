@@ -1,3 +1,5 @@
+package com.rpggame.ui;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -12,7 +14,7 @@ import java.io.IOException;
  */
 public class CharacterCreationScreen extends JPanel implements ActionListener {
   private JFrame parentFrame;
-  private GamePanel gamePanel;
+  // private GamePanel gamePanel; // TODO: Implementar se necessário
 
   // Componentes da interface
   private JLabel titleLabel;
@@ -20,7 +22,7 @@ public class CharacterCreationScreen extends JPanel implements ActionListener {
   private JButton warriorButton;
   private JButton mageButton;
   private JButton hunterButton;
-  private JButton startGameButton;
+  private JButton continueButton;
 
   // Sprites das classes
   private BufferedImage warriorSprite;
@@ -29,7 +31,7 @@ public class CharacterCreationScreen extends JPanel implements ActionListener {
 
   // Classe selecionada
   private String selectedClass = "";
-  private BufferedImage selectedSprite;
+  // private BufferedImage selectedSprite; // TODO: Implementar se necessário
 
   // Cores do tema
   private final Color BACKGROUND_COLOR = new Color(20, 30, 40);
@@ -45,9 +47,13 @@ public class CharacterCreationScreen extends JPanel implements ActionListener {
 
   private void loadSprites() {
     try {
-      warriorSprite = ImageIO.read(new File("sprites/WarriorPlayer.png"));
-      mageSprite = ImageIO.read(new File("sprites/MagePlayer.png"));
-      hunterSprite = ImageIO.read(new File("sprites/HunterPlayer.png"));
+      String warriorPath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/WarriorPlayer.png");
+      String magePath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/MagePlayer.png");
+      String hunterPath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/HunterPlayer.png");
+      
+      warriorSprite = ImageIO.read(new File(warriorPath));
+      mageSprite = ImageIO.read(new File(magePath));
+      hunterSprite = ImageIO.read(new File(hunterPath));
     } catch (IOException e) {
       System.err.println("Erro ao carregar sprites das classes");
       e.printStackTrace();
@@ -84,14 +90,14 @@ public class CharacterCreationScreen extends JPanel implements ActionListener {
     JPanel buttonPanel = new JPanel();
     buttonPanel.setBackground(BACKGROUND_COLOR);
     buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 15, 0)); // Movido para cima
-    startGameButton = new JButton("CUSTOMIZAR ATRIBUTOS");
-    startGameButton.setFont(new Font("Arial", Font.BOLD, 20));
-    startGameButton.setPreferredSize(new Dimension(250, 50));
-    startGameButton.addActionListener(this);
-    startGameButton.setEnabled(false);
-    startGameButton.setBackground(ACCENT_COLOR);
-    startGameButton.setForeground(Color.WHITE);
-    buttonPanel.add(startGameButton);
+    continueButton = new JButton("CUSTOMIZAR ATRIBUTOS");
+    continueButton.setFont(new Font("Arial", Font.BOLD, 20));
+    continueButton.setPreferredSize(new Dimension(250, 50));
+    continueButton.addActionListener(this);
+    continueButton.setEnabled(false);
+    continueButton.setBackground(ACCENT_COLOR);
+    continueButton.setForeground(Color.WHITE);
+    buttonPanel.add(continueButton);
 
     // Adicionar componentes
     add(titlePanel, BorderLayout.NORTH);
@@ -207,15 +213,15 @@ public class CharacterCreationScreen extends JPanel implements ActionListener {
 
     if (command.equals("GUERREIRO")) {
       selectedClass = "Warrior";
-      selectedSprite = warriorSprite;
+      // selectedSprite = warriorSprite; // TODO: Implementar se necessário
       updateButtonStates();
     } else if (command.equals("MAGO")) {
       selectedClass = "Mage";
-      selectedSprite = mageSprite;
+      // selectedSprite = mageSprite; // TODO: Implementar se necessário
       updateButtonStates();
     } else if (command.equals("CAÇADOR")) {
       selectedClass = "Hunter";
-      selectedSprite = hunterSprite;
+      // selectedSprite = hunterSprite; // TODO: Implementar se necessário
       updateButtonStates();
     } else if (command.equals("CUSTOMIZAR ATRIBUTOS")) {
       startGame();
@@ -238,7 +244,7 @@ public class CharacterCreationScreen extends JPanel implements ActionListener {
     }
 
     // Habilitar botão de iniciar
-    startGameButton.setEnabled(true);
+    continueButton.setEnabled(true);
 
     // Atualizar instrução
     instructionLabel.setText("Classe " + selectedClass + " selecionada!");
@@ -246,7 +252,7 @@ public class CharacterCreationScreen extends JPanel implements ActionListener {
 
   private void startGame() {
     // Criar o caminho do sprite da classe selecionada
-    String spritePath = "sprites/" + selectedClass + "Player.png";
+    String spritePath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/" + selectedClass + "Player.png");
 
     // Remover a tela de criação
     parentFrame.getContentPane().removeAll();

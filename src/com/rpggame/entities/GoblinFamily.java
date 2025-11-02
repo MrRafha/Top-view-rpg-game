@@ -1,3 +1,5 @@
+package com.rpggame.entities;
+
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;

@@ -1,6 +1,9 @@
+package com.rpggame.world;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import com.rpggame.core.GamePanel;
 
 /**
  * Classe para carregar e gerenciar mapas personalizados

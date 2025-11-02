@@ -1,4 +1,9 @@
+package com.rpggame.entities;
+
 import java.awt.*;
+import com.rpggame.core.GamePanel;
+import com.rpggame.core.Game;
+import com.rpggame.world.Camera;
 
 /**
  * Classe para representar projéteis no jogo

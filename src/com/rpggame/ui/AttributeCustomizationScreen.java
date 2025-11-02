@@ -1,7 +1,11 @@
+package com.rpggame.ui;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import com.rpggame.systems.CharacterStats;
+import com.rpggame.core.GamePanel;
 
 /**
  * Tela de customização de atributos do personagem
@@ -42,7 +46,7 @@ public class AttributeCustomizationScreen extends JPanel implements ActionListen
 
   // Cores do tema
   private final Color BACKGROUND_COLOR = new Color(20, 30, 40);
-  private final Color PANEL_COLOR = new Color(40, 50, 60);
+  // private final Color PANEL_COLOR = new Color(40, 50, 60); // TODO: Usar se necessário
   private final Color TEXT_COLOR = new Color(220, 220, 220);
   private final Color ACCENT_COLOR = new Color(100, 150, 200);
   private final Color PRIMARY_COLOR = new Color(255, 215, 0); // Dourado para atributo principal

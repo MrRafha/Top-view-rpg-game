@@ -216,6 +216,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (showVisionCones && enemyManager != null) {
       enemyManager.renderVisionCones(g2d, camera);
     }
+    
+    // Renderizar efeitos visuais de ataque dos goblins
+    if (enemyManager != null) {
+      enemyManager.renderAttackEffects(g2d, camera);
+    }
 
     // Renderizar o jogador
     player.render(g2d, camera);

@@ -1,3 +1,5 @@
+package com.rpggame.systems;
+
 /**
  * Sistema de experiência e níveis do jogador.
  */

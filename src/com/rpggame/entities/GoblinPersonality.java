@@ -1,3 +1,5 @@
+package com.rpggame.entities;
+
 /**
  * Enum que define os tipos de personalidade dos goblins
  */

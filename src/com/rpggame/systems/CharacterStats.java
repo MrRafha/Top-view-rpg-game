@@ -1,3 +1,5 @@
+package com.rpggame.systems;
+
 /**
  * Classe para gerenciar os atributos/estatísticas do personagem
  * 

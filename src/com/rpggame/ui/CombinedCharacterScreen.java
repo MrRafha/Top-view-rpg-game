@@ -1,3 +1,5 @@
+package com.rpggame.ui;
+
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -6,7 +8,6 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
@@ -18,13 +19,13 @@ import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
+import com.rpggame.core.GamePanel;
+import com.rpggame.systems.CharacterStats;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
 import javax.swing.JTextArea;
 import javax.swing.SwingConstants;
 
@@ -99,15 +100,13 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
 
   private void loadSprites() {
     try {
-      // Tenta primeiro o caminho relativo da pasta src
-      File spritesDir = new File("../sprites/");
-      if (!spritesDir.exists()) {
-        spritesDir = new File("sprites/");
-      }
-
-      warriorSprite = ImageIO.read(new File(spritesDir, "WarriorPlayer.png"));
-      mageSprite = ImageIO.read(new File(spritesDir, "MagePlayer.png"));
-      hunterSprite = ImageIO.read(new File(spritesDir, "HunterPlayer.png"));
+      String warriorPath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/WarriorPlayer.png");
+      String magePath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/MagePlayer.png");
+      String hunterPath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/HunterPlayer.png");
+      
+      warriorSprite = ImageIO.read(new File(warriorPath));
+      mageSprite = ImageIO.read(new File(magePath));
+      hunterSprite = ImageIO.read(new File(hunterPath));
     } catch (IOException e) {
       System.err.println("Erro ao carregar sprites das classes");
       e.printStackTrace();
@@ -657,7 +656,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
   }
 
   private void startGame() {
-    String spritePath = "sprites/" + selectedClass + "Player.png";
+    String spritePath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/" + selectedClass + "Player.png");
 
     // Remover a tela atual
     parentFrame.getContentPane().removeAll();

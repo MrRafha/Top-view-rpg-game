@@ -1,8 +1,13 @@
+package com.rpggame.entities;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
+import com.rpggame.core.GamePanel;
+import com.rpggame.world.Camera;
+import com.rpggame.world.TileMap;
 
 /**
  * Classe base para todos os inimigos do jogo
@@ -59,39 +64,30 @@ public abstract class Enemy {
    */
   private void loadSprite() {
     System.out.println("Tentando carregar sprite: " + spritePath);
-
-    // Lista de caminhos possíveis para tentar
-    String[] possiblePaths = {
-        spritePath,
-        "../" + spritePath,
-        "../../" + spritePath,
-        "./" + spritePath
-    };
-
+    
     boolean loaded = false;
 
-    for (String path : possiblePaths) {
-      try {
-        File spriteFile = new File(path);
-        System.out.println("Tentando caminho: " + spriteFile.getAbsolutePath());
+    try {
+      // Usar o sistema de resolução de caminho
+      String resolvedPath = com.rpggame.world.ResourceResolver.getResourcePath(spritePath);
+      File spriteFile = new File(resolvedPath);
+      System.out.println("Tentando caminho resolvido: " + spriteFile.getAbsolutePath());
 
-        if (spriteFile.exists()) {
-          sprite = ImageIO.read(spriteFile);
-          if (sprite != null) {
-            width = sprite.getWidth();
-            height = sprite.getHeight();
-            loaded = true;
-            System.out.println("Sprite carregado com sucesso: " + path);
-            break;
-          }
+      if (spriteFile.exists()) {
+        sprite = ImageIO.read(spriteFile);
+        if (sprite != null) {
+          width = sprite.getWidth();
+          height = sprite.getHeight();
+          loaded = true;
+          System.out.println("Sprite carregado com sucesso: " + resolvedPath);
         }
-      } catch (IOException e) {
-        System.out.println("Falha ao carregar de: " + path);
       }
+    } catch (IOException e) {
+      System.out.println("Falha ao carregar sprite: " + e.getMessage());
     }
 
     if (!loaded) {
-      System.err.println("ERRO: Não foi possível carregar sprite do inimigo de nenhum caminho!");
+      System.err.println("ERRO: Não foi possível carregar sprite do inimigo!");
       System.err.println("Sprite solicitado: " + spritePath);
       createDefaultSprite();
     }

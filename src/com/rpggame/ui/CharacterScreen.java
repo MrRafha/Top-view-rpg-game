@@ -1,6 +1,11 @@
+package com.rpggame.ui;
+
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
+import com.rpggame.core.GamePanel;
+import com.rpggame.entities.Player;
+import com.rpggame.systems.CharacterStats;
 
 /**
  * Tela de características do personagem onde o jogador pode distribuir pontos

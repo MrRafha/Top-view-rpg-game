@@ -1,7 +1,12 @@
+package com.rpggame.systems;
+
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
+import com.rpggame.entities.*;
+import com.rpggame.world.*;
+import com.rpggame.core.GamePanel;
 
 /**
  * Gerenciador de inimigos do jogo.
@@ -188,6 +193,17 @@ public class EnemyManager {
     for (Enemy enemy : enemies) {
       if (enemy instanceof Goblin && enemy.isAlive()) {
         ((Goblin) enemy).renderVisionCone(g, camera);
+      }
+    }
+  }
+  
+  /**
+   * Renderiza efeitos visuais de ataque dos goblins
+   */
+  public void renderAttackEffects(Graphics2D g, Camera camera) {
+    for (Enemy enemy : enemies) {
+      if (enemy instanceof Goblin && enemy.isAlive()) {
+        ((Goblin) enemy).renderAttackEffects(g, camera);
       }
     }
   }
