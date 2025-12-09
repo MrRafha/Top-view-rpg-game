@@ -85,12 +85,16 @@ public class FogOfWar {
     int y = y0;
 
     while (true) {
-      // Se chegou ao destino, há linha de visão
+      // Se chegou ao destino, verificar se o tile de destino é uma parede
       if (x == x1 && y == y1) {
+        // Não pode ver através de paredes, mesmo que seja o tile de destino
+        if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
+          return map[y][x].isWalkable();
+        }
         return true;
       }
-
-      // Se encontrou uma parede, bloqueia a visão
+      
+      // Se encontrou uma parede (exceto na posição inicial), bloqueia a visão
       if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
         if (!map[y][x].isWalkable() && !(x == x0 && y == y0)) {
           return false;

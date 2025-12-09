@@ -2,6 +2,7 @@ package com.rpggame.entities;
 
 import java.awt.*;
 import com.rpggame.world.Camera;
+import com.rpggame.core.GamePanel;
 
 /**
  * Classe do inimigo Goblin - inimigo básico corpo a corpo
@@ -52,6 +53,11 @@ public class Goblin extends Enemy {
   private double slashStartAngle = 0.0;
   private double slashEndAngle = 0.0;
   private int slashRadius = 40;
+  
+  // Sistema de spawn safety (evitar spawnar preso em paredes)
+  private boolean inSpawnSafety = true;
+  private int spawnSafetyTimer = 0;
+  private static final int SPAWN_SAFETY_DURATION = 60; // 1 segundo a 60 FPS
 
   /**
    * Construtor do Goblin com personalidade
@@ -71,6 +77,10 @@ public class Goblin extends Enemy {
 
     // Definir primeiro alvo de patrulha
     setNewPatrolTarget();
+    
+    // Iniciar spawn safety
+    this.inSpawnSafety = true;
+    this.spawnSafetyTimer = SPAWN_SAFETY_DURATION;
   }
   
   /**
@@ -210,6 +220,15 @@ public class Goblin extends Enemy {
    */
   @Override
   public void update(Player player) {
+    // Processar spawn safety primeiro
+    if (inSpawnSafety) {
+      handleSpawnSafety();
+      spawnSafetyTimer--;
+      if (spawnSafetyTimer <= 0) {
+        inSpawnSafety = false;
+      }
+    }
+    
     // Chamar update da classe pai
     super.update(player);
     
@@ -628,6 +647,13 @@ public class Goblin extends Enemy {
   }
   
   /**
+   * Retorna se o goblin está em período de spawn safety
+   */
+  public boolean isInSpawnSafety() {
+    return inSpawnSafety;
+  }
+  
+  /**
    * Move em direção a um goblin inimigo
    */
   private void moveTowardsEnemyGoblin(Goblin enemy) {
@@ -921,6 +947,63 @@ public class Goblin extends Enemy {
       int particleY = centerY + (int)(Math.sin(particleAngle) * particleDistance);
       
       g.fillOval(particleX - 2, particleY - 2, 4, 4);
+    }
+  }
+  
+  /**
+   * Lida com o período de spawn safety onde o goblin pode atravessar paredes
+   * e se move automaticamente para longe delas
+   */
+  private void handleSpawnSafety() {
+    if (tileMap == null) return;
+    
+    // Verificar tiles ao redor para detectar paredes próximas
+    int tileSize = GamePanel.TILE_SIZE;
+    int currentTileX = (int)(x / tileSize);
+    int currentTileY = (int)(y / tileSize);
+    
+    // Direção de escape (vetor que aponta para longe de paredes)
+    double escapeX = 0.0;
+    double escapeY = 0.0;
+    
+    // Verificar tiles em um raio de 2 tiles ao redor
+    for (int dy = -2; dy <= 2; dy++) {
+      for (int dx = -2; dx <= 2; dx++) {
+        int checkX = currentTileX + dx;
+        int checkY = currentTileY + dy;
+        
+        if (!tileMap.isWalkable(checkX, checkY)) {
+          // Encontrou uma parede, calcular vetor de repulsão
+          double wallCenterX = checkX * tileSize + tileSize / 2.0;
+          double wallCenterY = checkY * tileSize + tileSize / 2.0;
+          
+          double deltaX = x - wallCenterX;
+          double deltaY = y - wallCenterY;
+          double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+          
+          if (distance > 0 && distance < tileSize * 2) {
+            // Peso inversamente proporcional à distância (mais forte quando mais perto)
+            double weight = (tileSize * 2 - distance) / (tileSize * 2);
+            escapeX += (deltaX / distance) * weight;
+            escapeY += (deltaY / distance) * weight;
+          }
+        }
+      }
+    }
+    
+    // Se detectou paredes próximas, mover para longe delas
+    if (escapeX != 0.0 || escapeY != 0.0) {
+      double magnitude = Math.sqrt(escapeX * escapeX + escapeY * escapeY);
+      if (magnitude > 0) {
+        // Normalizar e aplicar velocidade de escape (mais rápido que velocidade normal)
+        double escapeSpeed = speed * 3.0; // 3x mais rápido durante spawn safety
+        dx = (escapeX / magnitude) * escapeSpeed;
+        dy = (escapeY / magnitude) * escapeSpeed;
+        
+        // Aplicar movimento (sem verificação de colisão durante spawn safety)
+        x += dx;
+        y += dy;
+      }
     }
   }
 }

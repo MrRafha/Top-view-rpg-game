@@ -221,6 +221,10 @@ public class Player {
     for (int i = projectiles.size() - 1; i >= 0; i--) {
       Projectile p = projectiles.get(i);
       p.update();
+      // Verificar colisão com paredes
+      if (tileMap != null) {
+        p.checkWallCollision(tileMap);
+      }
       if (!p.isActive()) {
         projectiles.remove(i);
       }
