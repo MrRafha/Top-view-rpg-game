@@ -43,6 +43,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private DialogBox dialogBox;
   private NPC currentTalkingNPC = null;
   private boolean showingDialog = false;
+  
+  // Sistema de mapas e transições
+  private MapManager mapManager;
+  private MapTransition mapTransition;
 
   // Debug - Visualização de campo de visão
   private boolean showVisionCones = false;
@@ -78,6 +82,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Inicializar sistema de diálogos
     dialogBox = new DialogBox();
     npcs = new java.util.ArrayList<>();
+    
+    // Inicializar sistema de mapas e transições
+    mapManager = new MapManager();
+    mapTransition = new MapTransition();
     
     // Criar NPCs de exemplo
     createExampleNPCs();
@@ -180,6 +188,21 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (player == null || showingCharacterScreen)
       return;
 
+    // Atualizar transição de mapa
+    if (mapTransition.isTransitioning()) {
+      boolean shouldChangeMap = mapTransition.update();
+      
+      if (shouldChangeMap) {
+        // Momento de trocar o mapa (tela totalmente preta)
+        changeMap(mapTransition.getTargetMapPath(), 
+                  mapTransition.getPlayerSpawnX(), 
+                  mapTransition.getPlayerSpawnY());
+      }
+      
+      // Não atualizar gameplay durante transição
+      return;
+    }
+
     player.update();
 
     // Atualizar NPCs
@@ -196,6 +219,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Atualizar câmera para seguir o jogador
     camera.centerOnPlayer(player);
+    
+    // Verificar se player está sobre um portal
+    checkPortalCollision();
   }
 
   @Override
@@ -256,6 +282,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Renderizar DialogBox se estiver mostrando
     if (showingDialog && dialogBox != null && currentTalkingNPC != null) {
       dialogBox.render(g2d, currentTalkingNPC.getName(), getWidth(), getHeight());
+    }
+    
+    // Renderizar transição de mapa (sempre por último, em cima de tudo)
+    if (mapTransition != null && mapTransition.isTransitioning()) {
+      mapTransition.render(g2d, getWidth(), getHeight());
     }
   }
 
@@ -600,7 +631,79 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     showingDialog = false;
     currentTalkingNPC = null;
     dialogBox.reset();
-    System.out.println("?? Conversa encerrada");
+    System.out.println("💬 Conversa encerrada");
+  }
+  
+  /**
+   * Verifica se o jogador está sobre um portal
+   */
+  private void checkPortalCollision() {
+    if (player == null || tileMap == null || mapTransition.isTransitioning()) {
+      return;
+    }
+    
+    // Calcular posição do jogador em tiles
+    int playerTileX = (int)(player.getX() / TILE_SIZE);
+    int playerTileY = (int)(player.getY() / TILE_SIZE);
+    
+    // Verificar se há portal nesta posição
+    Portal portal = tileMap.getPortalAt(playerTileX, playerTileY);
+    
+    if (portal != null) {
+      System.out.println("🚪 Player entrou no portal: " + portal.getName());
+      triggerPortalTransition(portal);
+    }
+  }
+  
+  /**
+   * Inicia transição para outro mapa via portal
+   */
+  private void triggerPortalTransition(Portal portal) {
+    // Verificar se o mapa de destino existe
+    if (!mapManager.hasMap(portal.getTargetMapId())) {
+      System.err.println("❌ Mapa de destino não encontrado: " + portal.getTargetMapId());
+      return;
+    }
+    
+    // Obter dados do mapa de destino
+    MapManager.MapData targetMap = mapManager.getMap(portal.getTargetMapId());
+    
+    // Iniciar transição
+    mapTransition.startTransition(
+      targetMap.getFilePath(),
+      portal.getTargetX(),
+      portal.getTargetY()
+    );
+  }
+  
+  /**
+   * Troca efetivamente o mapa (chamado no meio da transição)
+   */
+  private void changeMap(String mapPath, int playerX, int playerY) {
+    System.out.println("🔄 Trocando mapa...");
+    
+    // Recarregar mapa
+    tileMap.reloadMap(mapPath);
+    
+    // Reposicionar player
+    if (player != null) {
+      player.setPosition(playerX, playerY);
+    }
+    
+    // Reinicializar fog of war
+    tileMap.getFogOfWar().resetFog();
+    
+    // Reinicializar inimigos
+    if (enemyManager != null) {
+      enemyManager.clearAllEnemies();
+      enemyManager.initializeGoblinFamilies(tileMap);
+    }
+    
+    // Limpar NPCs antigos e criar novos
+    npcs.clear();
+    createExampleNPCs();
+    
+    System.out.println("✅ Mapa trocado com sucesso!");
   }
 
 }
