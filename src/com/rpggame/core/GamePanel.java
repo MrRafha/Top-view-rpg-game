@@ -8,9 +8,15 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseEvent;
 
 import com.rpggame.entities.Player;
+import com.rpggame.npcs.NPC;
+import com.rpggame.npcs.MerchantNPC;
+import com.rpggame.npcs.GuardNPC;
+import com.rpggame.npcs.VillagerNPC;
+import com.rpggame.npcs.WiseManNPC;
 import com.rpggame.world.*;
 import com.rpggame.systems.*;
 import com.rpggame.ui.CharacterScreen;
+import com.rpggame.ui.DialogBox;
 
 /**
  * Painel principal onde o jogo é renderizado
@@ -31,6 +37,12 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   // Telas do jogo
   private CharacterScreen characterScreen;
   private boolean showingCharacterScreen = false;
+  
+  // Sistema de NPCs e diálogos
+  private java.util.ArrayList<NPC> npcs;
+  private DialogBox dialogBox;
+  private NPC currentTalkingNPC = null;
+  private boolean showingDialog = false;
 
   // Debug - Visualização de campo de visão
   private boolean showVisionCones = false;
@@ -62,6 +74,13 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Criar a câmera
     camera = new Camera(0, 0);
+    
+    // Inicializar sistema de diálogos
+    dialogBox = new DialogBox();
+    npcs = new java.util.ArrayList<>();
+    
+    // Criar NPCs de exemplo
+    createExampleNPCs();
 
     // Não criar player aqui - será criado quando setPlayerClass for chamado
     // Isso evita conflitos quando o jogo é iniciado através da tela de criação de
@@ -163,6 +182,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     player.update();
 
+    // Atualizar NPCs
+    updateNPCs();
+
     // Atualizar inimigos
     if (enemyManager != null) {
       enemyManager.update();
@@ -222,11 +244,19 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       enemyManager.renderAttackEffects(g2d, camera);
     }
 
+    // Renderizar NPCs
+    renderNPCs(g2d);
+
     // Renderizar o jogador
     player.render(g2d, camera);
 
     // Renderizar UI
     renderUI(g2d);
+    
+    // Renderizar DialogBox se estiver mostrando
+    if (showingDialog && dialogBox != null && currentTalkingNPC != null) {
+      dialogBox.render(g2d, currentTalkingNPC.getName(), getWidth(), getHeight());
+    }
   }
 
   private void renderUI(Graphics2D g) {
@@ -373,6 +403,12 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       return;
     }
 
+    // Tecla E para interagir com NPCs
+    if (e.getKeyCode() == KeyEvent.VK_E) {
+      interactWithNearbyNPC();
+      return;
+    }
+
     // Tecla C para abrir tela de características
     if (e.getKeyCode() == KeyEvent.VK_C) {
       openCharacterScreen();
@@ -485,4 +521,86 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       System.out.println("Tela de características fechada - foco restaurado");
     }
   }
+  
+  /**
+   * Cria NPCs de exemplo
+   */
+  private void createExampleNPCs() {
+    // Criar NPCs usando as novas subclasses - simples e fácil!
+    npcs.add(new MerchantNPC(500, 400));
+    npcs.add(new GuardNPC(700, 600));
+    npcs.add(new VillagerNPC(300, 300));
+    npcs.add(new WiseManNPC(900, 500));
+    
+    System.out.println("✅ NPCs criados: " + npcs.size());
+  }
+  
+  /**
+   * Atualiza NPCs
+   */
+  private void updateNPCs() {
+    for (NPC npc : npcs) {
+      npc.update(player);
+    }
+    
+    if (showingDialog && dialogBox != null) {
+      dialogBox.update();
+    }
+  }
+  
+  /**
+   * Renderiza NPCs
+   */
+  private void renderNPCs(Graphics2D g) {
+    for (NPC npc : npcs) {
+      npc.render(g, camera);
+    }
+  }
+  
+  /**
+   * Tenta interagir com NPCs pr�ximos
+   */
+  private void interactWithNearbyNPC() {
+    if (showingDialog) {
+      if (dialogBox.isTextComplete()) {
+        boolean hasMore = currentTalkingNPC.nextDialog();
+        if (hasMore) {
+          dialogBox.setText(currentTalkingNPC.getCurrentDialog());
+        } else {
+          endDialog();
+        }
+      } else {
+        dialogBox.skipAnimation();
+      }
+    } else {
+      for (NPC npc : npcs) {
+        if (npc.canInteract()) {
+          startDialog(npc);
+          break;
+        }
+      }
+    }
+  }
+  
+  /**
+   * Inicia di�logo com NPC
+   */
+  private void startDialog(NPC npc) {
+    currentTalkingNPC = npc;
+    showingDialog = true;
+    npc.resetDialog();
+    dialogBox.setText(npc.getCurrentDialog());
+    System.out.println("?? Iniciando conversa com: " + npc.getName());
+  }
+  
+  /**
+   * Encerra di�logo
+   */
+  private void endDialog() {
+    showingDialog = false;
+    currentTalkingNPC = null;
+    dialogBox.reset();
+    System.out.println("?? Conversa encerrada");
+  }
+
 }

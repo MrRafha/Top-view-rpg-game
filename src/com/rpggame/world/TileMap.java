@@ -76,6 +76,12 @@ public class TileMap {
         System.err.println("Erro ao carregar sprite " + spriteFiles[i] + ": " + e.getMessage());
       }
     }
+    
+    // PORTAL usa o mesmo sprite da GRASS
+    if (tileSprites.containsKey(TileType.GRASS)) {
+      tileSprites.put(TileType.PORTAL, tileSprites.get(TileType.GRASS));
+      System.out.println("✅ Tile PORTAL configurado (usa sprite GRASS)");
+    }
   }
 
   private void loadMap() {

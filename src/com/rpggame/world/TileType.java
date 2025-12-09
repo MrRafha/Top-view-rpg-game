@@ -9,7 +9,8 @@ public enum TileType {
   WALL(2, "Border", false),
   WATER(3, "Water", false),
   DIRT(4, "Terra", true),
-  SAND(5, "Areia", true);
+  SAND(5, "Areia", true),
+  PORTAL(6, "Portal", true); // Tile de transição entre mapas
 
   private final int id;
   private final String name;
@@ -63,6 +64,9 @@ public enum TileType {
       case 's':
       case 'A':
         return SAND;
+      case 'P':
+      case 'p':
+        return PORTAL;
       default:
         return GRASS;
     }
@@ -83,6 +87,8 @@ public enum TileType {
         return 'd';
       case SAND:
         return 's';
+      case PORTAL:
+        return 'P';
       default:
         return '.';
     }
