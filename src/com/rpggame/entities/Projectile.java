@@ -82,6 +82,22 @@ public class Projectile {
       active = false;
     }
   }
+  
+  /**
+   * Verifica se o projétil colidiu com uma parede
+   */
+  public boolean checkWallCollision(com.rpggame.world.TileMap tileMap) {
+    if (!active) return false;
+    
+    int tileX = (int)(x / GamePanel.TILE_SIZE);
+    int tileY = (int)(y / GamePanel.TILE_SIZE);
+    
+    if (!tileMap.isWalkable(tileX, tileY)) {
+      active = false;
+      return true;
+    }
+    return false;
+  }
 
   public void render(Graphics2D g, Camera camera) {
     if (!active)

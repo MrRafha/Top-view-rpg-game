@@ -33,7 +33,7 @@ public class EnemyManager {
   // Sistema de respawn de famílias
   private java.util.Set<String> usedFamilyNames;
   private int familyRespawnTimer = 0;
-  private static final int FAMILY_RESPAWN_DELAY = 10800; // 3 minutos (60fps * 60s * 3)
+  private static final int FAMILY_RESPAWN_DELAY = 3600; // 1 minuto (60fps * 60s)
 
   /**
    * Construtor do EnemyManager.
@@ -777,5 +777,49 @@ public class EnemyManager {
       goblin.setAllGoblins(allGoblins);
       goblin.setGoblinCouncil(goblinCouncil);
     }
+  }
+  
+  /**
+   * Verifica se há linha de visão entre dois pontos (sem paredes no caminho)
+   */
+  private boolean hasLineOfSight(double x1, double y1, double x2, double y2) {
+    int tileX1 = (int)(x1 / GamePanel.TILE_SIZE);
+    int tileY1 = (int)(y1 / GamePanel.TILE_SIZE);
+    int tileX2 = (int)(x2 / GamePanel.TILE_SIZE);
+    int tileY2 = (int)(y2 / GamePanel.TILE_SIZE);
+    
+    // Algoritmo de Bresenham para traçar linha entre os pontos
+    int dx = Math.abs(tileX2 - tileX1);
+    int dy = Math.abs(tileY2 - tileY1);
+    int sx = tileX1 < tileX2 ? 1 : -1;
+    int sy = tileY1 < tileY2 ? 1 : -1;
+    int err = dx - dy;
+    int x = tileX1;
+    int y = tileY1;
+    
+    while (true) {
+      // Verificar se o tile atual é uma parede (exceto origem e destino)
+      if ((x != tileX1 || y != tileY1) && (x != tileX2 || y != tileY2)) {
+        if (!tileMap.isWalkable(x, y)) {
+          return false; // Há uma parede no caminho
+        }
+      }
+      
+      if (x == tileX2 && y == tileY2) {
+        break; // Chegou ao destino
+      }
+      
+      int e2 = 2 * err;
+      if (e2 > -dy) {
+        err -= dy;
+        x += sx;
+      }
+      if (e2 < dx) {
+        err += dx;
+        y += sy;
+      }
+    }
+    
+    return true; // Linha de visão clara
   }
 }

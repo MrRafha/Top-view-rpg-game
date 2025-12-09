@@ -333,8 +333,15 @@ public abstract class Enemy {
    * Atualiza a posição do inimigo com verificação de colisão
    */
   private void updatePosition() {
-    if (tileMap == null) {
-      // Se não há mapa, mover sem restrições
+    // Verificar se é um Goblin em spawn safety
+    boolean skipCollision = false;
+    if (this instanceof Goblin) {
+      Goblin goblin = (Goblin) this;
+      skipCollision = goblin.isInSpawnSafety();
+    }
+    
+    if (tileMap == null || skipCollision) {
+      // Se não há mapa ou está em spawn safety, mover sem restrições
       x += dx;
       y += dy;
       return;
