@@ -1,55 +1,40 @@
-# RPG 2D Java - Versão Executável
+# RPG 2D Game - v1.2 Release
 
-## Como Jogar
+## Executável
+- `RPG-Game-v1.2.jar` - Executável cross-platform
 
-### Requisitos
-- Java 8 ou superior instalado no sistema
+## Como Executar
 
-### Executando o Jogo
-
-#### Windows:
-1. Duplo clique em `jogar.bat`
-OU
-2. Abra o terminal e execute: `java -jar game.jar`
-
-#### Linux/Mac:
-```bash
-java -jar game.jar
+### Windows
+```
+java -jar RPG-Game-v1.2.jar
 ```
 
+### Linux/macOS
+```bash
+java -jar RPG-Game-v1.2.jar
+```
+
+## Requisitos
+- Java 11 ou superior
+- 512MB RAM mínimo
+- Resolução mínima: 1024x800
+
+## Novidades da v1.2
+- 🏛️ Sistema de Conselho Goblin com decisões estratégicas
+- 👑 Hierarquia de clãs com líderes
+- 🔄 Respawn automático de famílias
+- 20 nomes únicos de clãs
+- Interface visual melhorada
+- Sistema de intimidação por carisma
+
+Veja `RELEASE-NOTES-v1.2.md` para detalhes completos.
+
 ## Controles
+- **WASD** - Movimento
+- **Setas** - Ataque direcional
+- **C** - Tela de personagem
+- **V** - Toggle campo de visão (debug)
 
-### Movimento:
-- **W/A/S/D** - Mover o personagem (com animação!)
-- **Setas direcionais** - Movimento alternativo
-
-### Combate:
-- **Espaço** - Atacar inimigos próximos
-- **Q** - Usar magia (requer mana)
-
-### Interface:
-- **C** - Abrir tela de características (distribuir pontos de atributo)
-- **ESC** - Pausar/Despausar o jogo
-
-## Características do Jogo
-
-### Sistema de Personagens:
-- **3 Classes**: Warrior, Mage, Archer
-- **Atributos**: Força, Destreza, Inteligência, Vitalidade
-- **Sistema de Experiência**: Ganhe pontos de atributo ao subir de nível
-
-### Sistema de Animação:
-- Sprites direcionais para movimento
-- Animação fluida ao andar
-
-### Sistema de Combate:
-- Ataques corpo a corpo e à distância
-- Sistema de mana para magias
-- Diferentes tipos de inimigos
-
-## Versão Atual
-- **Data**: Outubro 2025
-- **Novidades**: Sistema de animação do player implementado!
-
----
-*Desenvolvido em Java com Swing*
+## Suporte
+GitHub: https://github.com/MrRafha/Top-view-rpg-game
