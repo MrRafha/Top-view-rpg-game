@@ -18,6 +18,7 @@ public class EnemyManager {
   private Player player;
   private TileMap tileMap;
   private Random random;
+  private GoblinCouncil goblinCouncil;
 
   // Controle de população
   private static final int MIN_ENEMIES = 1;
@@ -28,6 +29,11 @@ public class EnemyManager {
   // Sistema de famílias
   private static final int MAX_FAMILIES = 3;
   private boolean familiesInitialized = false;
+  
+  // Sistema de respawn de famílias
+  private java.util.Set<String> usedFamilyNames;
+  private int familyRespawnTimer = 0;
+  private static final int FAMILY_RESPAWN_DELAY = 10800; // 3 minutos (60fps * 60s * 3)
 
   /**
    * Construtor do EnemyManager.
@@ -39,6 +45,8 @@ public class EnemyManager {
     this.player = player;
     this.tileMap = tileMap;
     this.random = new Random();
+    this.goblinCouncil = new GoblinCouncil();
+    this.usedFamilyNames = new java.util.HashSet<>();
   }
 
   /**
@@ -93,6 +101,30 @@ public class EnemyManager {
    * Atualiza todos os inimigos.
    */
   public void update() {
+    // Atualizar conselho goblin
+    goblinCouncil.update();
+    
+    // Verificar se é hora de convocar reunião
+    if (goblinCouncil.shouldConveneCouncil(goblinFamilies)) {
+      goblinCouncil.conveneCouncil(goblinFamilies);
+    }
+    
+    // Atualizar timer de respawn de famílias
+    if (familyRespawnTimer > 0) {
+      familyRespawnTimer--;
+      
+      // Debug: mostrar tempo restante a cada 60 frames (1 segundo)
+      if (familyRespawnTimer % 60 == 0) {
+        int secondsRemaining = familyRespawnTimer / 60;
+        System.out.println("⏱️ Nova família em " + secondsRemaining + " segundos... (Famílias atuais: " + goblinFamilies.size() + "/" + MAX_FAMILIES + ")");
+      }
+      
+      if (familyRespawnTimer == 0 && goblinFamilies.size() < MAX_FAMILIES) {
+        System.out.println("🎯 Timer zerou! Chamando spawnNewFamily()...");
+        spawnNewFamily();
+      }
+    }
+    
     // Atualizar lista de goblins para guerra
     updateGoblinWarLists();
     
@@ -531,21 +563,106 @@ public class EnemyManager {
   }
   
   /**
-   * Gera nome para família
+   * Spawna uma nova família após uma ser derrotada
+   */
+  private void spawnNewFamily() {
+    System.out.println("\n🔔 spawnNewFamily() CHAMADO! Famílias atuais: " + goblinFamilies.size() + "/" + MAX_FAMILIES);
+    
+    if (goblinFamilies.size() >= MAX_FAMILIES) {
+      System.out.println("❌ Já temos " + MAX_FAMILIES + " famílias. Cancelando spawn.");
+      return;
+    }
+    
+    System.out.println("\n🆕 ===== NOVA FAMÍLIA GOBLIN CHEGANDO =====");
+    
+    // Encontrar posição para nova cabana
+    ArrayList<Point> existingPositions = new ArrayList<>();
+    for (GoblinFamily family : goblinFamilies) {
+      existingPositions.add(family.getHutPosition());
+    }
+    
+    ArrayList<Point> newHutPositions = findGoodHutPositions(tileMap, 1);
+    
+    if (newHutPositions.isEmpty()) {
+      System.out.println("⚠️ Não foi possível encontrar posição válida para nova família");
+      familyRespawnTimer = 600; // Tentar novamente em 10 segundos
+      return;
+    }
+    
+    Point hutPos = newHutPositions.get(0);
+    
+    // Criar cabana
+    Structure hut = new Structure(hutPos.x, hutPos.y, "GoblinHut", "sprites/goblinHut.png");
+    structures.add(hut);
+    
+    // Criar família com nome único
+    String familyName = getFamilyName(goblinFamilies.size());
+    GoblinFamily family = new GoblinFamily(hutPos, familyName);
+    goblinFamilies.add(family);
+    
+    // Spawnar membros da família
+    spawnFamilyMembers(family, tileMap);
+    
+    System.out.println("🏕️ " + familyName + " estabeleceu território em (" + hutPos.x + ", " + hutPos.y + ")");
+    System.out.println("==========================================\n");
+    
+    // Pequena chance de começar em guerra com família existente (20%)
+    if (!goblinFamilies.isEmpty() && random.nextDouble() < 0.2) {
+      GoblinFamily enemy = goblinFamilies.get(random.nextInt(goblinFamilies.size()));
+      if (enemy != family) {
+        family.declareWarAgainst(enemy);
+        System.out.println("⚔️ " + familyName + " já chegou em conflito com " + enemy.getFamilyName() + "!");
+      }
+    }
+  }
+  
+  /**
+   * Gera nome para família de forma aleatória sem repetição
    */
   private String getFamilyName(int index) {
-    String[] names = {
+    String[] allNames = {
       "Clã Pedra Negra",
       "Tribo Dente Afiado", 
       "Família Garra Suja",
       "Bando Olho Vermelho",
-      "Clã Sombra Verde"
+      "Clã Sombra Verde",
+      "Horda Osso Quebrado",
+      "Tribo Sangue Podre",
+      "Clã Veneno Noturno",
+      "Bando Fogo Negro",
+      "Família Lâmina Enferrujada",
+      "Tribo Cranêo Rachado",
+      "Clã Língua Venenosa",
+      "Horda Grito Selvagem",
+      "Bando Lua Sangrenta",
+      "Família Espinho Negro",
+      "Tribo Pântano Escuro",
+      "Clã Chifre Retorcido",
+      "Horda Presa Afiada",
+      "Bando Cinza Sombria",
+      "Família Caverna Profunda"
     };
     
-    if (index < names.length) {
-      return names[index];
+    // Tentar encontrar um nome não usado
+    java.util.List<String> availableNames = new java.util.ArrayList<>();
+    for (String name : allNames) {
+      if (!usedFamilyNames.contains(name)) {
+        availableNames.add(name);
+      }
     }
-    return "Família " + (index + 1);
+    
+    // Se todos os nomes foram usados, resetar a lista
+    if (availableNames.isEmpty()) {
+      usedFamilyNames.clear();
+      for (String name : allNames) {
+        availableNames.add(name);
+      }
+    }
+    
+    // Escolher nome aleatório da lista disponível
+    String chosenName = availableNames.get(random.nextInt(availableNames.size()));
+    usedFamilyNames.add(chosenName);
+    return chosenName;
   }
   
   /**
@@ -572,16 +689,71 @@ public class EnemyManager {
   }
   
   /**
+   * Retorna o conselho goblin
+   */
+  public GoblinCouncil getGoblinCouncil() {
+    return goblinCouncil;
+  }
+  
+  /**
+   * Callback quando uma estrutura é destruída pelo player
+   */
+  public void onStructureDestroyed(Structure structure) {
+    Point structurePos = new Point((int)structure.getX(), (int)structure.getY());
+    
+    // Procurar qual família tinha cabana nesta posição
+    for (GoblinFamily family : new java.util.ArrayList<>(goblinFamilies)) {
+      Point hutPos = family.getHutPosition();
+      if (hutPos.x == structurePos.x && hutPos.y == structurePos.y) {
+        System.out.println("🏚️ Cabana de " + family.getFamilyName() + " foi destruída pelo jogador!");
+        
+        // Matar todos os goblins da família
+        java.util.List<com.rpggame.entities.Goblin> familyMembers = new java.util.ArrayList<>();
+        for (Enemy enemy : enemies) {
+          if (enemy instanceof com.rpggame.entities.Goblin) {
+            com.rpggame.entities.Goblin goblin = (com.rpggame.entities.Goblin) enemy;
+            if (goblin.getFamily() == family) {
+              familyMembers.add(goblin);
+            }
+          }
+        }
+        
+        // Remover goblins da família
+        for (com.rpggame.entities.Goblin goblin : familyMembers) {
+          goblin.takeDamage(9999); // Matar instantaneamente
+        }
+        
+        // Chamar handleFamilyDefeated
+        handleFamilyDefeated(family);
+        break;
+      }
+    }
+  }
+  
+  /**
    * Lida com família derrotada - torna a cabana vulnerável
    */
   private void handleFamilyDefeated(GoblinFamily family) {
     System.out.println("🏴 " + family.getFamilyName() + " foi completamente derrotada!");
     
-    // Encontrar a cabana desta família e torná-la vulnerável
+    // Notificar o conselho goblin
+    goblinCouncil.registerFamilyDestroyed();
+    
+    // Remover família da lista
+    goblinFamilies.remove(family);
+    
+    // Iniciar timer de respawn de nova família (3 minutos)
+    if (goblinFamilies.size() < MAX_FAMILIES) {
+      familyRespawnTimer = FAMILY_RESPAWN_DELAY;
+      System.out.println("⏳ Nova família goblin aparecerá em 3 minutos...");
+    }
+    
+    // Encontrar a cabana desta família e torná-la vulnerável (se ainda não foi destruída)
     Point hutPos = family.getHutPosition();
     for (Structure structure : structures) {
-      if (structure.getX() == hutPos.x && structure.getY() == hutPos.y) {
+      if (structure.getX() == hutPos.x && structure.getY() == hutPos.y && !structure.isDestroyed()) {
         structure.makeVulnerable();
+        System.out.println("🏚️ A cabana de " + family.getFamilyName() + " agora está vulnerável!");
         break;
       }
     }
@@ -600,9 +772,10 @@ public class EnemyManager {
       }
     }
     
-    // Passar a lista para cada goblin
+    // Passar a lista e o conselho para cada goblin
     for (Goblin goblin : allGoblins) {
       goblin.setAllGoblins(allGoblins);
+      goblin.setGoblinCouncil(goblinCouncil);
     }
   }
 }

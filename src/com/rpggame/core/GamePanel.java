@@ -275,6 +275,27 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       g.setColor(Color.LIGHT_GRAY);
       g.drawString("Inimigos: " + enemyManager.getAliveCount() + "/4",
           barX, barY + (barSpacing * 3) + 25);
+      
+      // Mostrar decisão do conselho goblin se houver
+      com.rpggame.systems.GoblinCouncil council = enemyManager.getGoblinCouncil();
+      if (council != null) {
+        int yOffset = barY + (barSpacing * 3) + 45;
+        
+        if (council.isAllianceAgainstPlayerActive()) {
+          g.setFont(new Font("Arial", Font.BOLD, 12));
+          g.setColor(new Color(255, 100, 100));
+          int timeLeft = council.getAllianceTimeRemaining() / 60; // Converter frames para segundos
+          g.drawString("⚔️ ALIANÇA GOBLIN ATIVA! (" + timeLeft + "s)", barX, yOffset);
+        } else if (council.isGoblinEmpireActive()) {
+          g.setFont(new Font("Arial", Font.BOLD, 12));
+          g.setColor(new Color(255, 215, 0));
+          g.drawString("👑 IMPÉRIO GOBLIN FORMADO!", barX, yOffset);
+        } else if (council.isTechnologicalAdvanceActive()) {
+          g.setFont(new Font("Arial", Font.BOLD, 12));
+          g.setColor(new Color(100, 255, 100));
+          g.drawString("🔧 AVANÇO TECNOLÓGICO ATIVO! (x2 Força)", barX, yOffset);
+        }
+      }
     }
   }
 

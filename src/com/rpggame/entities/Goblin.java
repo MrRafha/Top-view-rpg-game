@@ -36,6 +36,9 @@ public class Goblin extends Enemy {
   // Lista de todos os goblins (para guerra)
   private java.util.List<Goblin> allGoblins;
   
+  // Referência ao conselho goblin
+  private com.rpggame.systems.GoblinCouncil goblinCouncil;
+  
   // Sistema de efeitos visuais de ataque
   private boolean isPreparingAttack = false;
   private int attackPreparationTimer = 0;
@@ -247,7 +250,27 @@ public class Goblin extends Enemy {
     // Atualizar timers
     allyCheckTimer--;
     
-    // Verificar se há guerra e inimigos próximos
+    // Verificar decisões do conselho goblin
+    boolean allianceActive = goblinCouncil != null && goblinCouncil.isAllianceAgainstPlayerActive();
+    
+    // Se aliança contra player está ativa, ignorar guerras entre famílias
+    if (allianceActive) {
+      // Focar apenas no player durante a aliança
+      boolean playerDetected = detectPlayer();
+      if (playerDetected && target != null) {
+        double distanceToPlayer = Math.sqrt(
+            Math.pow(target.getX() - x, 2) +
+                Math.pow(target.getY() - y, 2));
+        
+        aggressive = true;
+        engagePlayer(distanceToPlayer);
+      } else {
+        patrol();
+      }
+      return;
+    }
+    
+    // Verificar se há guerra e inimigos próximos (apenas se não houver aliança contra player)
     if (family != null && family.isAtWar()) {
       Goblin nearestEnemy = findNearestEnemyGoblin();
       if (nearestEnemy != null) {
@@ -302,6 +325,18 @@ public class Goblin extends Enemy {
   private void updateTimidBehavior(double distanceToPlayer) {
     boolean hasNearbyAllies = hasNearbyAllies();
     
+    // Se tem família, seguir decisão do líder
+    if (family != null) {
+      boolean shouldEngage = family.shouldPursuePlayer((Player)target);
+      
+      if (!shouldEngage) {
+        // Líder decidiu não perseguir
+        fleeing = true;
+        aggressive = false;
+        return;
+      }
+    }
+    
     // Player já foi detectado pelo sistema de visão
     if (!hasNearbyAllies) {
       // Sozinho: fugir!
@@ -332,7 +367,21 @@ public class Goblin extends Enemy {
    * Comportamento do goblin agressivo
    */
   private void updateAggressiveBehavior(double distanceToPlayer) {
-    // Mais agressivo que o normal - player já foi detectado
+    // Se tem família, considerar decisão do líder (mas é mais teimoso)
+    if (family != null) {
+      boolean shouldEngage = family.shouldPursuePlayer((Player)target);
+      
+      if (!shouldEngage && !family.isPlayerInTerritory((Player)target)) {
+        // Fora do território e líder decidiu não perseguir
+        // Agressivo persegue um pouco mais, mas eventualmente desiste
+        if (distanceToPlayer > detectionRange * 1.5) {
+          aggressive = false;
+          return;
+        }
+      }
+    }
+    
+    // Player já foi detectado pelo sistema de visão
     aggressive = true;
     
     if (aggressive) {
@@ -353,6 +402,12 @@ public class Goblin extends Enemy {
       boolean shouldEngage = family.shouldPursuePlayer((Player)target);
       
       if (shouldEngage) {
+        if (!aggressive) {
+          // Log quando líder decide perseguir
+          boolean inTerritory = family.isPlayerInTerritory((Player)target);
+          System.out.println("⚔️ Líder de " + family.getFamilyName() + " decidiu perseguir o jogador! " + 
+                           (inTerritory ? "(Dentro do território)" : "(Fora do território)"));
+        }
         aggressive = true;
       }
     } else {
@@ -365,6 +420,7 @@ public class Goblin extends Enemy {
       // Líder desiste mais facilmente fora do território
       if (family != null && !family.isPlayerInTerritory((Player)target) && 
           distanceToPlayer > detectionRange * 2) {
+        System.out.println("🏳️ Líder de " + family.getFamilyName() + " desistiu da perseguição (muito longe do território)");
         aggressive = false;
       }
     } else {
@@ -376,13 +432,30 @@ public class Goblin extends Enemy {
    * Comportamento do goblin comum
    */
   private void updateCommonBehavior(double distanceToPlayer) {
-    // Player já foi detectado pelo sistema de visão
-    aggressive = true;
+    // Se tem família, seguir decisão do líder
+    if (family != null) {
+      boolean shouldEngage = family.shouldPursuePlayer((Player)target);
+      
+      if (shouldEngage) {
+        aggressive = true;
+      } else {
+        aggressive = false;
+        patrol();
+        return;
+      }
+    } else {
+      // Sem família, comportamento padrão
+      aggressive = true;
+    }
 
     if (aggressive) {
       engagePlayer(distanceToPlayer);
-      // Desistir se perder totalmente o player
+      // Desistir se perder totalmente o player ou líder decidir recuar
       if (!playerSpotted && alertTimer <= 0) {
+        aggressive = false;
+      }
+      if (family != null && !family.isPlayerInTerritory((Player)target) && 
+          distanceToPlayer > detectionRange * 2) {
         aggressive = false;
       }
     }
@@ -548,6 +621,13 @@ public class Goblin extends Enemy {
   }
   
   /**
+   * Define o conselho goblin (chamado pelo EnemyManager)
+   */
+  public void setGoblinCouncil(com.rpggame.systems.GoblinCouncil council) {
+    this.goblinCouncil = council;
+  }
+  
+  /**
    * Move em direção a um goblin inimigo
    */
   private void moveTowardsEnemyGoblin(Goblin enemy) {
@@ -582,6 +662,21 @@ public class Goblin extends Enemy {
       // Efeito visual do ataque
       System.out.println("*CLASH* " + personality + " goblin ataca goblin inimigo!");
     }
+  }
+  
+  /**
+   * Retorna o dano do goblin (aplicando multiplicador tecnológico se ativo)
+   */
+  @Override
+  public int getDamage() {
+    double baseDamage = damage;
+    
+    // Aplicar multiplicador de avanço tecnológico se ativo
+    if (goblinCouncil != null && goblinCouncil.isTechnologicalAdvanceActive()) {
+      baseDamage *= goblinCouncil.getStrengthMultiplier();
+    }
+    
+    return (int) baseDamage;
   }
   
   /**

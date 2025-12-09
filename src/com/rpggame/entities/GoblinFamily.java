@@ -197,15 +197,28 @@ public class GoblinFamily {
     }
     
     /**
+     * Termina guerra (cessar fogo)
+     */
+    public void endWar() {
+        if (this.atWar && this.enemyFamily != null) {
+            this.enemyFamily.atWar = false;
+            this.enemyFamily.enemyFamily = null;
+        }
+        this.atWar = false;
+        this.enemyFamily = null;
+    }
+    
+    /**
      * Verifica se dois goblins são inimigos (famílias diferentes em guerra)
      */
     public boolean isEnemyOf(GoblinFamily otherFamily) {
         return this.atWar && this.enemyFamily == otherFamily;
     }
     
-    // Getters
+    // Getters e Setters
     public int getFamilyId() { return familyId; }
     public String getFamilyName() { return familyName; }
+    public void setFamilyName(String name) { this.familyName = name; }
     public List<Goblin> getMembers() { return new ArrayList<>(members); }
     public Goblin getLeader() { return leader; }
     public Rectangle getTerritory() { return new Rectangle(territory); }

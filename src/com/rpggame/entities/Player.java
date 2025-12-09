@@ -391,6 +391,9 @@ public class Player {
             
             System.out.println("Cabana destruída! +" + xpReward + " XP");
             
+            // Notificar EnemyManager que a cabana foi destruída
+            enemyManager.onStructureDestroyed(structure);
+            
             if (leveledUp) {
               System.out.println("Level up ao destruir cabana!");
             }
