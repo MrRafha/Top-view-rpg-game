@@ -310,32 +310,38 @@ public class TileMap {
   /**
    * Configura os portais do mapa atual
    */
-  private void setupPortals() {
+  /**
+   * Configura portais do mapa baseado no ID do mapa atual
+   */
+  public void setupPortals(String currentMapId) {
     portals.clear();
     
     // Procurar tiles PORTAL no mapa e criar portais automaticamente
     for (int y = 0; y < MAP_HEIGHT; y++) {
       for (int x = 0; x < MAP_WIDTH; x++) {
         if (map[y][x] == TileType.PORTAL) {
-          // Detectar se é mapa village (tem areia)
-          boolean isVillageMap = hasSignificantSand();
+          // Verificar qual é o mapa atual para definir destino
+          boolean isVillageMap = "village".equals(currentMapId);
           
           if (isVillageMap) {
-            // Village -> Goblin Territories (spawn proporcional invertido)
-            int targetX = x * GamePanel.TILE_SIZE;
-            int targetY = (MAP_HEIGHT - 1 - y) * GamePanel.TILE_SIZE;
-            portals.add(new Portal(x, y, "goblin_territories", targetX, targetY, "Portal dos Territórios"));
-            System.out.println("🌀 Portal Village encontrado em (" + x + ", " + y + ") -> Goblin Territories (" + targetX + ", " + targetY + ")");
+            // Village -> Goblin Territories
+            portals.add(new Portal(x, y, "goblin_territories", 0, 0, "Portal dos Territórios"));
+            System.out.println("🌀 Portal Village encontrado em (" + x + ", " + y + ") -> Goblin Territories");
           } else {
-            // Goblin Territories -> Village (spawn proporcional invertido)
-            int targetX = x * GamePanel.TILE_SIZE;
-            int targetY = (MAP_HEIGHT - 1 - y) * GamePanel.TILE_SIZE;
-            portals.add(new Portal(x, y, "village", targetX, targetY, "Portal da Vila"));
-            System.out.println("🌀 Portal Goblin encontrado em (" + x + ", " + y + ") -> Village (" + targetX + ", " + targetY + ")");
+            // Goblin Territories -> Village
+            portals.add(new Portal(x, y, "village", 0, 0, "Portal da Vila"));
+            System.out.println("🌀 Portal Goblin encontrado em (" + x + ", " + y + ") -> Village");
           }
         }
       }
     }
+  }
+  
+  /**
+   * Versão antiga do setupPortals (sem parâmetro) - chama a nova versão com ID padrão
+   */
+  private void setupPortals() {
+    setupPortals("goblin_territories"); // Mapa inicial padrão
   }
   
   /**
@@ -378,13 +384,13 @@ public class TileMap {
   }
   
   /**
-   * Recarrega o mapa com novo arquivo
+   * Recarrega o mapa com novo arquivo e ID do mapa
    */
-  public void reloadMap(String mapPath) {
+  public void reloadMap(String mapPath, String mapId) {
     try {
       map = MapLoader.loadMapFromFile(mapPath);
       fogOfWar = new FogOfWar(MAP_WIDTH, MAP_HEIGHT);
-      setupPortals();
+      setupPortals(mapId);
       System.out.println("🗺️ Mapa recarregado: " + mapPath);
     } catch (Exception e) {
       System.err.println("❌ Erro ao recarregar mapa: " + e.getMessage());

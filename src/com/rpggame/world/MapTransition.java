@@ -61,7 +61,7 @@ public class MapTransition {
   }
   
   /**
-   * Renderiza o efeito de transição
+   * Renderiza o efeito de transição com círculo fechando
    */
   public void render(Graphics2D g, int screenWidth, int screenHeight) {
     if (!isTransitioning) return;
@@ -69,46 +69,49 @@ public class MapTransition {
     // Salvar configurações originais
     Color originalColor = g.getColor();
     Composite originalComposite = g.getComposite();
+    Shape originalClip = g.getClip();
     
-    // Calcular raio do círculo (começa grande, encolhe até cobrir tudo)
+    // Centro da tela
     int centerX = screenWidth / 2;
     int centerY = screenHeight / 2;
     
-    // Raio máximo que cobre toda a tela (diagonal)
-    double maxRadius = Math.sqrt(screenWidth * screenWidth + screenHeight * screenHeight) / 2;
+    // Raio máximo que cobre toda a tela (diagonal + margem)
+    double maxRadius = Math.sqrt(screenWidth * screenWidth + screenHeight * screenHeight) / 2 + 50;
     
-    // Raio atual (inverte durante fade out)
+    // Raio atual baseado no progresso
     double currentRadius = maxRadius * (1.0 - transitionProgress);
     
-    // Criar máscara circular
-    Shape originalClip = g.getClip();
+    // Desenhar overlay preto sobre tudo
+    g.setColor(Color.BLACK);
     
-    if (currentRadius > 0) {
-      // Desenhar círculo vazado (área visível)
+    if (currentRadius > 5) {
+      // Criar área da tela inteira
+      java.awt.geom.Area fullScreen = new java.awt.geom.Area(
+        new Rectangle(0, 0, screenWidth, screenHeight)
+      );
+      
+      // Criar círculo central (área visível)
       Ellipse2D circle = new Ellipse2D.Double(
         centerX - currentRadius,
         centerY - currentRadius,
         currentRadius * 2,
         currentRadius * 2
       );
-      
-      // Inverter: desenhar tudo preto exceto o círculo
-      g.setColor(Color.BLACK);
-      g.fillRect(0, 0, screenWidth, screenHeight);
-      
-      // Criar área de clipping invertida
-      java.awt.geom.Area screenArea = new java.awt.geom.Area(
-        new Rectangle(0, 0, screenWidth, screenHeight)
-      );
       java.awt.geom.Area circleArea = new java.awt.geom.Area(circle);
-      screenArea.subtract(circleArea);
       
-      g.setClip(screenArea);
-      g.setColor(Color.BLACK);
-      g.fillRect(0, 0, screenWidth, screenHeight);
+      // Subtrair círculo da tela (deixa tudo preto exceto o círculo)
+      fullScreen.subtract(circleArea);
+      
+      // Desenhar a área preta (tudo menos o círculo)
+      g.fill(fullScreen);
+      
+      // Desenhar borda do círculo para efeito visual (opcional)
+      g.setColor(new Color(0, 0, 0, 128));
+      g.setStroke(new BasicStroke(3));
+      g.draw(circle);
+      
     } else {
-      // Tela totalmente preta
-      g.setColor(Color.BLACK);
+      // Tela totalmente preta (círculo muito pequeno)
       g.fillRect(0, 0, screenWidth, screenHeight);
     }
     

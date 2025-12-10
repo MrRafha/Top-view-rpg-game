@@ -568,16 +568,16 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       npcs.add(new WiseManNPC(900, 500));
       System.out.println("🏘️ NPCs da vila criados: " + npcs.size());
     } else if ("goblin_territories".equals(currentMapId)) {
-      // Territórios Goblin: Guards
-      npcs.add(new GuardNPC(700, 600));
-      npcs.add(new GuardNPC(400, 800));
+      // Territórios Goblin: Guards protegendo a entrada da vila (ao redor do spawn tile 12,3)
+      npcs.add(new GuardNPC(480, 144)); // Esquerda do spawn (tile 10, 3)
+      npcs.add(new GuardNPC(672, 144)); // Direita do spawn (tile 14, 3)
       System.out.println("⚔️ Guards dos territórios criados: " + npcs.size());
     }
     // Outros mapas podem não ter NPCs
   }
   
-  /**
-   * Atualiza NPCs
+  /* 
+    Atualiza NPCs
    */
   private void updateNPCs() {
     for (NPC npc : npcs) {
@@ -696,8 +696,20 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private void changeMap(String mapPath, int playerX, int playerY) {
     System.out.println("🔄 Trocando mapa...");
     
-    // Recarregar mapa
-    tileMap.reloadMap(mapPath);
+    // Determinar ID do mapa baseado no caminho
+    String mapId;
+    if (mapPath.contains("village")) {
+      mapId = "village";
+    } else if (mapPath.contains("goblin_territories")) {
+      mapId = "goblin_territories";
+    } else if (mapPath.contains("cave") || mapPath.contains("new_map")) {
+      mapId = "cave";
+    } else {
+      mapId = "goblin_territories"; // Padrão
+    }
+    
+    // Recarregar mapa com ID
+    tileMap.reloadMap(mapPath, mapId);
     
     // Reposicionar player
     if (player != null) {
@@ -708,13 +720,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     tileMap.getFogOfWar().resetFog();
     
     // Atualizar mapa atual no MapManager
-    if (mapPath.contains("village")) {
-      mapManager.setCurrentMap("village");
-    } else if (mapPath.contains("goblin_territories")) {
-      mapManager.setCurrentMap("goblin_territories");
-    } else if (mapPath.contains("cave") || mapPath.contains("new_map")) {
-      mapManager.setCurrentMap("cave");
-    }
+    mapManager.setCurrentMap(mapId);
     
     // Reinicializar inimigos
     if (enemyManager != null) {

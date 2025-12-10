@@ -23,7 +23,7 @@ public class MapManager {
     maps.put("goblin_territories", new MapData(
       "maps/goblin_territories_25x25.txt",
       "Territórios Goblin",
-      12, 12 // Spawn em tile (12, 12) - centro do mapa
+      12, 3 // Spawn em tile (12, 3) - na frente dos portais (que estão em y=0)
     ));
     
     // Vila com praia à esquerda
