@@ -28,17 +28,11 @@ public class TileMap {
   
   // Cache de sprites dos tiles
   private Map<TileType, BufferedImage> tileSprites;
-  
-  // Lista de portais no mapa
-  private java.util.List<Portal> portals;
 
   public TileMap() {
     // Inicializar cache de sprites
     tileSprites = new HashMap<>();
     loadTileSprites();
-
-    // Inicializar lista de portais
-    portals = new java.util.ArrayList<>();
 
     // Tentar carregar mapa personalizado, senão usar o padrão
     loadMap();
@@ -48,9 +42,6 @@ public class TileMap {
 
     // Criar mapa de exemplo se não existir
     MapLoader.createExampleMap();
-    
-    // Configurar portais do mapa
-    setupPortals();
   }
 
 
@@ -305,56 +296,5 @@ public class TileMap {
       return map[y][x];
     }
     return TileType.WALL; // Retorna parede se fora dos limites
-  }
-  
-  /**
-   * Configura os portais do mapa atual
-   */
-  private void setupPortals() {
-    portals.clear();
-    
-    // Procurar tiles PORTAL no mapa e criar portais automaticamente
-    for (int y = 0; y < MAP_HEIGHT; y++) {
-      for (int x = 0; x < MAP_WIDTH; x++) {
-        if (map[y][x] == TileType.PORTAL) {
-          portals.add(new Portal(x, y, "village", 400, 400, "Portal da Vila"));
-          System.out.println("🌀 Portal encontrado em (" + x + ", " + y + ")");
-        }
-      }
-    }
-  }
-  
-  /**
-   * Verifica se o jogador esta sobre um portal
-   */
-  public Portal getPortalAt(int tileX, int tileY) {
-    for (Portal portal : portals) {
-      if (portal.isPlayerOn(tileX, tileY)) {
-        return portal;
-      }
-    }
-    return null;
-  }
-  
-  /**
-   * Adiciona um portal manualmente
-   */
-  public void addPortal(Portal portal) {
-    portals.add(portal);
-    System.out.println("➕ " + portal);
-  }
-  
-  /**
-   * Recarrega o mapa com novo arquivo
-   */
-  public void reloadMap(String mapPath) {
-    try {
-      map = MapLoader.loadMapFromFile(mapPath);
-      fogOfWar = new FogOfWar(MAP_WIDTH, MAP_HEIGHT);
-      setupPortals();
-      System.out.println("🗺️ Mapa recarregado: " + mapPath);
-    } catch (Exception e) {
-      System.err.println("❌ Erro ao recarregar mapa: " + e.getMessage());
-    }
   }
 }

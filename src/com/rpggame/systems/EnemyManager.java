@@ -20,17 +20,17 @@ public class EnemyManager {
   private Random random;
   private GoblinCouncil goblinCouncil;
 
-  // Controle de população
+  // Controle de populaÃ§Ã£o
   private static final int MIN_ENEMIES = 1;
   private static final int MAX_ENEMIES = 4;
   private int respawnTimer = 0;
   private static final int RESPAWN_DELAY = 300; // 5 segundos a 60 FPS
   
-  // Sistema de famílias
+  // Sistema de famÃ­lias
   private static final int MAX_FAMILIES = 3;
   private boolean familiesInitialized = false;
   
-  // Sistema de respawn de famílias
+  // Sistema de respawn de famÃ­lias
   private java.util.Set<String> usedFamilyNames;
   private int familyRespawnTimer = 0;
   private static final int FAMILY_RESPAWN_DELAY = 3600; // 1 minuto (60fps * 60s)
@@ -50,7 +50,7 @@ public class EnemyManager {
   }
 
   /**
-   * Adiciona um inimigo à lista.
+   * Adiciona um inimigo Ã  lista.
    */
   public void addEnemy(Enemy enemy) {
     enemy.setTileMap(tileMap);
@@ -58,7 +58,7 @@ public class EnemyManager {
   }
 
   /**
-   * Spawn de Goblins em posições específicas.
+   * Spawn de Goblins em posiÃ§Ãµes especÃ­ficas.
    */
   public void spawnGoblin(double x, double y) {
     Goblin goblin = new Goblin(x, y);
@@ -67,7 +67,7 @@ public class EnemyManager {
   }
 
   /**
-   * Spawn de Goblin em posição aleatória de grama.
+   * Spawn de Goblin em posiÃ§Ã£o aleatÃ³ria de grama.
    */
   public void spawnGoblinOnGrass(TileMap tileMap) {
     Point grassPosition;
@@ -79,12 +79,12 @@ public class EnemyManager {
       attempts++;
     } while (isTooCloseToPlayer(grassPosition.x, grassPosition.y) && attempts < 10);
 
-    // Se após 10 tentativas ainda está perto, spawnar mesmo assim
+    // Se apÃ³s 10 tentativas ainda estÃ¡ perto, spawnar mesmo assim
     spawnGoblin(grassPosition.x, grassPosition.y);
   }
 
   /**
-   * Verifica se uma posição está muito perto do jogador.
+   * Verifica se uma posiÃ§Ã£o estÃ¡ muito perto do jogador.
    */
   private boolean isTooCloseToPlayer(double x, double y) {
     if (player == null)
@@ -94,7 +94,7 @@ public class EnemyManager {
         Math.pow(player.getX() - x, 2) +
             Math.pow(player.getY() - y, 2));
 
-    return distance < 150; // Mínimo 150 pixels de distância
+    return distance < 150; // MÃ­nimo 150 pixels de distÃ¢ncia
   }
 
   /**
@@ -104,23 +104,23 @@ public class EnemyManager {
     // Atualizar conselho goblin
     goblinCouncil.update();
     
-    // Verificar se é hora de convocar reunião
+    // Verificar se Ã© hora de convocar reuniÃ£o
     if (goblinCouncil.shouldConveneCouncil(goblinFamilies)) {
       goblinCouncil.conveneCouncil(goblinFamilies);
     }
     
-    // Atualizar timer de respawn de famílias
+    // Atualizar timer de respawn de famÃ­lias
     if (familyRespawnTimer > 0) {
       familyRespawnTimer--;
       
       // Debug: mostrar tempo restante a cada 60 frames (1 segundo)
       if (familyRespawnTimer % 60 == 0) {
         int secondsRemaining = familyRespawnTimer / 60;
-        System.out.println("⏱️ Nova família em " + secondsRemaining + " segundos... (Famílias atuais: " + goblinFamilies.size() + "/" + MAX_FAMILIES + ")");
+        System.out.println("â±ï¸ Nova famÃ­lia em " + secondsRemaining + " segundos... (FamÃ­lias atuais: " + goblinFamilies.size() + "/" + MAX_FAMILIES + ")");
       }
       
       if (familyRespawnTimer == 0 && goblinFamilies.size() < MAX_FAMILIES) {
-        System.out.println("🎯 Timer zerou! Chamando spawnNewFamily()...");
+        System.out.println("ðŸŽ¯ Timer zerou! Chamando spawnNewFamily()...");
         spawnNewFamily();
       }
     }
@@ -139,7 +139,7 @@ public class EnemyManager {
         iterator.remove();
         System.out.println("Inimigo removido da lista");
         
-        // Se for um goblin, remover da família
+        // Se for um goblin, remover da famÃ­lia
         if (enemy instanceof Goblin) {
           Goblin goblin = (Goblin) enemy;
           GoblinFamily family = goblin.getFamily();
@@ -153,30 +153,30 @@ public class EnemyManager {
       }
     }
 
-    // Sistema de respawn automático
+    // Sistema de respawn automÃ¡tico
     manageEnemyPopulation();
   }
 
   /**
-   * Gerencia a população de inimigos no mapa.
+   * Gerencia a populaÃ§Ã£o de inimigos no mapa.
    */
   private void manageEnemyPopulation() {
-    // Se o sistema de famílias está ativo, não fazer respawn automático
+    // Se o sistema de famÃ­lias estÃ¡ ativo, nÃ£o fazer respawn automÃ¡tico
     if (familiesInitialized) {
       return;
     }
     
     int currentCount = getAliveCount();
 
-    // Se tem menos que o mínimo, fazer respawn imediato
+    // Se tem menos que o mÃ­nimo, fazer respawn imediato
     if (currentCount < MIN_ENEMIES) {
       spawnGoblinOnGrass(tileMap);
-      respawnTimer = RESPAWN_DELAY; // Reset timer após spawn
+      respawnTimer = RESPAWN_DELAY; // Reset timer apÃ³s spawn
       System.out.println("Respawn imediato! Inimigos: " + (currentCount + 1));
       return;
     }
 
-    // Se tem menos que o máximo, considerar respawn após delay
+    // Se tem menos que o mÃ¡ximo, considerar respawn apÃ³s delay
     if (currentCount < MAX_ENEMIES) {
       respawnTimer--;
 
@@ -191,7 +191,7 @@ public class EnemyManager {
         respawnTimer = RESPAWN_DELAY;
       }
     } else {
-      // Se já tem o máximo, não spawnar mais
+      // Se jÃ¡ tem o mÃ¡ximo, nÃ£o spawnar mais
       respawnTimer = RESPAWN_DELAY;
     }
   }
@@ -208,7 +208,7 @@ public class EnemyManager {
   }
 
   /**
-   * Renderiza apenas inimigos visíveis pelo jogador.
+   * Renderiza apenas inimigos visÃ­veis pelo jogador.
    */
   public void render(Graphics2D g, Camera camera, FogOfWar fogOfWar) {
     for (Enemy enemy : enemies) {
@@ -219,7 +219,7 @@ public class EnemyManager {
   }
 
   /**
-   * Renderiza cones de visão dos goblins (debug)
+   * Renderiza cones de visÃ£o dos goblins (debug)
    */
   public void renderVisionCones(Graphics2D g, Camera camera) {
     for (Enemy enemy : enemies) {
@@ -241,22 +241,22 @@ public class EnemyManager {
   }
 
   /**
-   * Verifica se um inimigo está visível pelo jogador
+   * Verifica se um inimigo estÃ¡ visÃ­vel pelo jogador
    */
   private boolean isEnemyVisible(Enemy enemy, FogOfWar fogOfWar) {
     if (fogOfWar == null)
       return true;
 
-    // Calcular posição do inimigo em tiles
+    // Calcular posiÃ§Ã£o do inimigo em tiles
     int enemyTileX = (int) (enemy.getX() / GamePanel.TILE_SIZE);
     int enemyTileY = (int) (enemy.getY() / GamePanel.TILE_SIZE);
 
-    // Verificar se o tile do inimigo está visível
+    // Verificar se o tile do inimigo estÃ¡ visÃ­vel
     return fogOfWar.isVisible(enemyTileX, enemyTileY);
   }
 
   /**
-   * Verifica colisão dos projéteis do jogador com inimigos.
+   * Verifica colisÃ£o dos projÃ©teis do jogador com inimigos.
    */
   public void checkProjectileCollisions(ArrayList<Projectile> projectiles) {
     for (Enemy enemy : enemies) {
@@ -274,18 +274,18 @@ public class EnemyManager {
           // Dano ao inimigo
           enemy.takeDamage(projectile.getDamage());
 
-          // Remove projétil
+          // Remove projÃ©til
           projIterator.remove();
 
-          System.out.println("Projétil atingiu inimigo!");
-          break; // Projétil só pode atingir um inimigo
+          System.out.println("ProjÃ©til atingiu inimigo!");
+          break; // ProjÃ©til sÃ³ pode atingir um inimigo
         }
       }
     }
   }
 
   /**
-   * Verifica colisão dos inimigos com o jogador.
+   * Verifica colisÃ£o dos inimigos com o jogador.
    */
   public void checkPlayerCollisions() {
     Rectangle playerBounds = new Rectangle(
@@ -310,7 +310,7 @@ public class EnemyManager {
         double distance = Math.sqrt(pushX * pushX + pushY * pushY);
 
         if (distance > 0) {
-          pushX = (pushX / distance) * 20; // força do empurrão
+          pushX = (pushX / distance) * 20; // forÃ§a do empurrÃ£o
           pushY = (pushY / distance) * 20;
 
           // TODO: Aplicar knockback ao jogador
@@ -324,17 +324,17 @@ public class EnemyManager {
    * Spawna inimigos iniciais para teste.
    */
   public void spawnInitialEnemies() {
-    // Spawnar alguns Goblins para teste (posições fixas temporárias)
+    // Spawnar alguns Goblins para teste (posiÃ§Ãµes fixas temporÃ¡rias)
     spawnGoblin(200, 150);
     spawnGoblin(300, 200);
     spawnGoblin(150, 300);
   }
 
   /**
-   * Spawna inimigos iniciais em posições de grama válidas.
+   * Spawna inimigos iniciais em posiÃ§Ãµes de grama vÃ¡lidas.
    */
   public void spawnInitialEnemies(TileMap tileMap) {
-    // Spawnar número inicial de Goblins (entre MIN e MAX)
+    // Spawnar nÃºmero inicial de Goblins (entre MIN e MAX)
     int initialCount = MIN_ENEMIES + (int) (Math.random() * (MAX_ENEMIES - MIN_ENEMIES + 1));
 
     for (int i = 0; i < initialCount; i++) {
@@ -355,7 +355,7 @@ public class EnemyManager {
   }
 
   /**
-   * Retorna o número de inimigos vivos.
+   * Retorna o nÃºmero de inimigos vivos.
    */
   public int getAliveCount() {
     int count = 0;
@@ -368,21 +368,21 @@ public class EnemyManager {
   }
   
   /**
-   * Inicializa sistema de famílias de goblins
+   * Inicializa sistema de famÃ­lias de goblins
    */
   public void initializeGoblinFamilies(TileMap tileMap) {
     if (familiesInitialized) return;
     
-    System.out.println("Inicializando famílias de goblins...");
+    System.out.println("Inicializando famÃ­lias de goblins...");
     
     // Limpar inimigos existentes
     enemies.clear();
     
-    // Encontrar posições para cabanas
+    // Encontrar posiÃ§Ãµes para cabanas
     ArrayList<Point> hutPositions = findGoodHutPositions(tileMap, MAX_FAMILIES);
-    System.out.println("Posições encontradas para cabanas: " + hutPositions.size());
+    System.out.println("PosiÃ§Ãµes encontradas para cabanas: " + hutPositions.size());
     
-    // Criar famílias
+    // Criar famÃ­lias
     for (int i = 0; i < hutPositions.size(); i++) {
       Point hutPos = hutPositions.get(i);
       
@@ -390,36 +390,36 @@ public class EnemyManager {
       Structure hut = new Structure(hutPos.x, hutPos.y, "GoblinHut", "sprites/goblinHut.png");
       structures.add(hut);
       
-      // Criar família
+      // Criar famÃ­lia
       String familyName = getFamilyName(i);
       GoblinFamily family = new GoblinFamily(hutPos, familyName);
       goblinFamilies.add(family);
       
-      // Spawnar membros da família
+      // Spawnar membros da famÃ­lia
       spawnFamilyMembers(family, tileMap);
       
-      System.out.println("Família " + familyName + " criada em (" + hutPos.x + ", " + hutPos.y + ")");
+      System.out.println("FamÃ­lia " + familyName + " criada em (" + hutPos.x + ", " + hutPos.y + ")");
     }
     
-    // Configurar guerras entre famílias (chance aleatória)
+    // Configurar guerras entre famÃ­lias (chance aleatÃ³ria)
     setupFamilyWars();
     
     familiesInitialized = true;
-    System.out.println("Sistema de famílias de goblins inicializado!");
+    System.out.println("Sistema de famÃ­lias de goblins inicializado!");
   }
   
   /**
-   * Encontra boas posições para cabanas de goblins
+   * Encontra boas posiÃ§Ãµes para cabanas de goblins
    */
   private ArrayList<Point> findGoodHutPositions(TileMap tileMap, int count) {
     ArrayList<Point> positions = new ArrayList<>();
     int attempts = 0;
     int maxAttempts = count * 20;
     
-    System.out.println("Procurando " + count + " posições em mapa " + tileMap.getWidth() + "x" + tileMap.getHeight());
+    System.out.println("Procurando " + count + " posiÃ§Ãµes em mapa " + tileMap.getWidth() + "x" + tileMap.getHeight());
     
     while (positions.size() < count && attempts < maxAttempts) {
-      // Posição aleatória alinhada com tiles (evitando bordas)
+      // PosiÃ§Ã£o aleatÃ³ria alinhada com tiles (evitando bordas)
       int tileX = 2 + random.nextInt(tileMap.getWidth() - 6); // 2 tiles de margem de cada lado
       int tileY = 2 + random.nextInt(tileMap.getHeight() - 6);
       
@@ -427,10 +427,10 @@ public class EnemyManager {
       int x = tileX * 48;
       int y = tileY * 48;
       
-      // Verificar se é uma boa posição
+      // Verificar se Ã© uma boa posiÃ§Ã£o
       if (isGoodHutPosition(x, y, positions, tileMap)) {
         positions.add(new Point(x, y));
-        System.out.println("Posição válida encontrada: tile (" + tileX + ", " + tileY + 
+        System.out.println("PosiÃ§Ã£o vÃ¡lida encontrada: tile (" + tileX + ", " + tileY + 
                           ") pixel (" + x + ", " + y + ")");
       }
       attempts++;
@@ -442,10 +442,10 @@ public class EnemyManager {
   }
   
   /**
-   * Verifica se uma posição é boa para uma cabana
+   * Verifica se uma posiÃ§Ã£o Ã© boa para uma cabana
    */
   private boolean isGoodHutPosition(int x, int y, ArrayList<Point> existingPositions, TileMap tileMap) {
-    // Verificar distância de outras cabanas (mínimo 400 pixels para territórios distantes)
+    // Verificar distÃ¢ncia de outras cabanas (mÃ­nimo 400 pixels para territÃ³rios distantes)
     for (Point existing : existingPositions) {
       double distance = Math.sqrt(Math.pow(x - existing.x, 2) + Math.pow(y - existing.y, 2));
       if (distance < 400) {
@@ -453,7 +453,7 @@ public class EnemyManager {
       }
     }
     
-    // Verificar se não está muito perto do player spawn (centro do mapa)
+    // Verificar se nÃ£o estÃ¡ muito perto do player spawn (centro do mapa)
     int centerX = (tileMap.getWidth() * 48) / 2;
     int centerY = (tileMap.getHeight() * 48) / 2;
     double distanceToCenter = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
@@ -461,11 +461,11 @@ public class EnemyManager {
       return false;
     }
     
-    // Verificar se o tile central da cabana (64x64px = ~1.3 tiles) é de grama
+    // Verificar se o tile central da cabana (64x64px = ~1.3 tiles) Ã© de grama
     int tileX = x / 48;
     int tileY = y / 48;
     
-    // Verificar o tile principal onde a cabana será colocada
+    // Verificar o tile principal onde a cabana serÃ¡ colocada
     if (tileX >= 0 && tileX < tileMap.getWidth() && 
         tileY >= 0 && tileY < tileMap.getHeight()) {
       return tileMap.getTileAt(tileX, tileY) == TileType.GRASS;
@@ -475,12 +475,12 @@ public class EnemyManager {
   }
   
   /**
-   * Spawna membros de uma família
+   * Spawna membros de uma famÃ­lia
    */
   private void spawnFamilyMembers(GoblinFamily family, TileMap tileMap) {
     Point hutPos = family.getHutPosition();
     
-    // Definir composição da família
+    // Definir composiÃ§Ã£o da famÃ­lia
     GoblinPersonality[] familyComposition = {
       GoblinPersonality.LEADER,
       GoblinPersonality.AGGRESSIVE,
@@ -492,7 +492,7 @@ public class EnemyManager {
     for (int i = 0; i < 4; i++) {
       Point spawnPos = findValidGrassSpawnPosition(hutPos, tileMap);
       
-      // Criar goblin com personalidade específica
+      // Criar goblin com personalidade especÃ­fica
       Goblin goblin = new Goblin(spawnPos.x, spawnPos.y, familyComposition[i]);
       family.addMember(goblin);
       addEnemy(goblin);
@@ -504,16 +504,16 @@ public class EnemyManager {
   }
   
   /**
-   * Encontra uma posição válida de tile de grama ao redor da cabana
+   * Encontra uma posiÃ§Ã£o vÃ¡lida de tile de grama ao redor da cabana
    */
   private Point findValidGrassSpawnPosition(Point hutPos, TileMap tileMap) {
     int maxAttempts = 50;
     int attempts = 0;
     
     while (attempts < maxAttempts) {
-      // Calcular posição ao redor da cabana
+      // Calcular posiÃ§Ã£o ao redor da cabana
       double angle = random.nextDouble() * 2 * Math.PI;
-      int radiusTiles = 2 + random.nextInt(4); // 2-5 tiles de distância
+      int radiusTiles = 2 + random.nextInt(4); // 2-5 tiles de distÃ¢ncia
       
       // Converter para coordenadas de tile
       int hutTileX = hutPos.x / 48;
@@ -522,13 +522,13 @@ public class EnemyManager {
       int targetTileX = hutTileX + (int)(Math.cos(angle) * radiusTiles);
       int targetTileY = hutTileY + (int)(Math.sin(angle) * radiusTiles);
       
-      // Verificar se está dentro dos limites do mapa
+      // Verificar se estÃ¡ dentro dos limites do mapa
       if (targetTileX >= 0 && targetTileX < tileMap.getWidth() && 
           targetTileY >= 0 && targetTileY < tileMap.getHeight()) {
         
-        // Verificar se é tile de grama
+        // Verificar se Ã© tile de grama
         if (tileMap.getTileAt(targetTileX, targetTileY) == TileType.GRASS) {
-          // Calcular posição central do tile
+          // Calcular posiÃ§Ã£o central do tile
           int centerX = (targetTileX * 48) + 24; // Centro do tile (48/2 = 24)
           int centerY = (targetTileY * 48) + 24;
           
@@ -539,18 +539,18 @@ public class EnemyManager {
       attempts++;
     }
     
-    // Fallback: usar posição da cabana se não encontrar tile válido
-    System.out.println("  Aviso: Não foi possível encontrar tile de grama válido, usando posição da cabana");
+    // Fallback: usar posiÃ§Ã£o da cabana se nÃ£o encontrar tile vÃ¡lido
+    System.out.println("  Aviso: NÃ£o foi possÃ­vel encontrar tile de grama vÃ¡lido, usando posiÃ§Ã£o da cabana");
     return new Point(hutPos.x + 48, hutPos.y + 48);
   }
   
   /**
-   * Configura guerras entre famílias
+   * Configura guerras entre famÃ­lias
    */
   private void setupFamilyWars() {
     for (int i = 0; i < goblinFamilies.size(); i++) {
       for (int j = i + 1; j < goblinFamilies.size(); j++) {
-        // 30% chance de guerra entre duas famílias
+        // 30% chance de guerra entre duas famÃ­lias
         if (random.nextDouble() < 0.3) {
           GoblinFamily family1 = goblinFamilies.get(i);
           GoblinFamily family2 = goblinFamilies.get(j);
@@ -563,19 +563,19 @@ public class EnemyManager {
   }
   
   /**
-   * Spawna uma nova família após uma ser derrotada
+   * Spawna uma nova famÃ­lia apÃ³s uma ser derrotada
    */
   private void spawnNewFamily() {
-    System.out.println("\n🔔 spawnNewFamily() CHAMADO! Famílias atuais: " + goblinFamilies.size() + "/" + MAX_FAMILIES);
+    System.out.println("\nðŸ”” spawnNewFamily() CHAMADO! FamÃ­lias atuais: " + goblinFamilies.size() + "/" + MAX_FAMILIES);
     
     if (goblinFamilies.size() >= MAX_FAMILIES) {
-      System.out.println("❌ Já temos " + MAX_FAMILIES + " famílias. Cancelando spawn.");
+      System.out.println("âŒ JÃ¡ temos " + MAX_FAMILIES + " famÃ­lias. Cancelando spawn.");
       return;
     }
     
-    System.out.println("\n🆕 ===== NOVA FAMÍLIA GOBLIN CHEGANDO =====");
+    System.out.println("\nðŸ†• ===== NOVA FAMÃLIA GOBLIN CHEGANDO =====");
     
-    // Encontrar posição para nova cabana
+    // Encontrar posiÃ§Ã£o para nova cabana
     ArrayList<Point> existingPositions = new ArrayList<>();
     for (GoblinFamily family : goblinFamilies) {
       existingPositions.add(family.getHutPosition());
@@ -584,7 +584,7 @@ public class EnemyManager {
     ArrayList<Point> newHutPositions = findGoodHutPositions(tileMap, 1);
     
     if (newHutPositions.isEmpty()) {
-      System.out.println("⚠️ Não foi possível encontrar posição válida para nova família");
+      System.out.println("âš ï¸ NÃ£o foi possÃ­vel encontrar posiÃ§Ã£o vÃ¡lida para nova famÃ­lia");
       familyRespawnTimer = 600; // Tentar novamente em 10 segundos
       return;
     }
@@ -595,55 +595,55 @@ public class EnemyManager {
     Structure hut = new Structure(hutPos.x, hutPos.y, "GoblinHut", "sprites/goblinHut.png");
     structures.add(hut);
     
-    // Criar família com nome único
+    // Criar famÃ­lia com nome Ãºnico
     String familyName = getFamilyName(goblinFamilies.size());
     GoblinFamily family = new GoblinFamily(hutPos, familyName);
     goblinFamilies.add(family);
     
-    // Spawnar membros da família
+    // Spawnar membros da famÃ­lia
     spawnFamilyMembers(family, tileMap);
     
-    System.out.println("🏕️ " + familyName + " estabeleceu território em (" + hutPos.x + ", " + hutPos.y + ")");
+    System.out.println("ðŸ•ï¸ " + familyName + " estabeleceu territÃ³rio em (" + hutPos.x + ", " + hutPos.y + ")");
     System.out.println("==========================================\n");
     
-    // Pequena chance de começar em guerra com família existente (20%)
+    // Pequena chance de comeÃ§ar em guerra com famÃ­lia existente (20%)
     if (!goblinFamilies.isEmpty() && random.nextDouble() < 0.2) {
       GoblinFamily enemy = goblinFamilies.get(random.nextInt(goblinFamilies.size()));
       if (enemy != family) {
         family.declareWarAgainst(enemy);
-        System.out.println("⚔️ " + familyName + " já chegou em conflito com " + enemy.getFamilyName() + "!");
+        System.out.println("âš”ï¸ " + familyName + " jÃ¡ chegou em conflito com " + enemy.getFamilyName() + "!");
       }
     }
   }
   
   /**
-   * Gera nome para família de forma aleatória sem repetição
+   * Gera nome para famÃ­lia de forma aleatÃ³ria sem repetiÃ§Ã£o
    */
   private String getFamilyName(int index) {
     String[] allNames = {
-      "Clã Pedra Negra",
+      "ClÃ£ Pedra Negra",
       "Tribo Dente Afiado", 
-      "Família Garra Suja",
+      "FamÃ­lia Garra Suja",
       "Bando Olho Vermelho",
-      "Clã Sombra Verde",
+      "ClÃ£ Sombra Verde",
       "Horda Osso Quebrado",
       "Tribo Sangue Podre",
-      "Clã Veneno Noturno",
+      "ClÃ£ Veneno Noturno",
       "Bando Fogo Negro",
-      "Família Lâmina Enferrujada",
-      "Tribo Cranêo Rachado",
-      "Clã Língua Venenosa",
+      "FamÃ­lia LÃ¢mina Enferrujada",
+      "Tribo CranÃªo Rachado",
+      "ClÃ£ LÃ­ngua Venenosa",
       "Horda Grito Selvagem",
       "Bando Lua Sangrenta",
-      "Família Espinho Negro",
-      "Tribo Pântano Escuro",
-      "Clã Chifre Retorcido",
+      "FamÃ­lia Espinho Negro",
+      "Tribo PÃ¢ntano Escuro",
+      "ClÃ£ Chifre Retorcido",
       "Horda Presa Afiada",
       "Bando Cinza Sombria",
-      "Família Caverna Profunda"
+      "FamÃ­lia Caverna Profunda"
     };
     
-    // Tentar encontrar um nome não usado
+    // Tentar encontrar um nome nÃ£o usado
     java.util.List<String> availableNames = new java.util.ArrayList<>();
     for (String name : allNames) {
       if (!usedFamilyNames.contains(name)) {
@@ -659,7 +659,7 @@ public class EnemyManager {
       }
     }
     
-    // Escolher nome aleatório da lista disponível
+    // Escolher nome aleatÃ³rio da lista disponÃ­vel
     String chosenName = availableNames.get(random.nextInt(availableNames.size()));
     usedFamilyNames.add(chosenName);
     return chosenName;
@@ -675,14 +675,14 @@ public class EnemyManager {
   }
   
   /**
-   * Retorna famílias de goblins
+   * Retorna famÃ­lias de goblins
    */
   public ArrayList<GoblinFamily> getGoblinFamilies() {
     return new ArrayList<>(goblinFamilies);
   }
   
   /**
-   * Retorna estruturas para verificação de ataques
+   * Retorna estruturas para verificaÃ§Ã£o de ataques
    */
   public ArrayList<Structure> getStructures() {
     return new ArrayList<>(structures);
@@ -696,18 +696,18 @@ public class EnemyManager {
   }
   
   /**
-   * Callback quando uma estrutura é destruída pelo player
+   * Callback quando uma estrutura Ã© destruÃ­da pelo player
    */
   public void onStructureDestroyed(Structure structure) {
     Point structurePos = new Point((int)structure.getX(), (int)structure.getY());
     
-    // Procurar qual família tinha cabana nesta posição
+    // Procurar qual famÃ­lia tinha cabana nesta posiÃ§Ã£o
     for (GoblinFamily family : new java.util.ArrayList<>(goblinFamilies)) {
       Point hutPos = family.getHutPosition();
       if (hutPos.x == structurePos.x && hutPos.y == structurePos.y) {
-        System.out.println("🏚️ Cabana de " + family.getFamilyName() + " foi destruída pelo jogador!");
+        System.out.println("ðŸšï¸ Cabana de " + family.getFamilyName() + " foi destruÃ­da pelo jogador!");
         
-        // Matar todos os goblins da família
+        // Matar todos os goblins da famÃ­lia
         java.util.List<com.rpggame.entities.Goblin> familyMembers = new java.util.ArrayList<>();
         for (Enemy enemy : enemies) {
           if (enemy instanceof com.rpggame.entities.Goblin) {
@@ -718,7 +718,7 @@ public class EnemyManager {
           }
         }
         
-        // Remover goblins da família
+        // Remover goblins da famÃ­lia
         for (com.rpggame.entities.Goblin goblin : familyMembers) {
           goblin.takeDamage(9999); // Matar instantaneamente
         }
@@ -731,29 +731,29 @@ public class EnemyManager {
   }
   
   /**
-   * Lida com família derrotada - torna a cabana vulnerável
+   * Lida com famÃ­lia derrotada - torna a cabana vulnerÃ¡vel
    */
   private void handleFamilyDefeated(GoblinFamily family) {
-    System.out.println("🏴 " + family.getFamilyName() + " foi completamente derrotada!");
+    System.out.println("ðŸ´ " + family.getFamilyName() + " foi completamente derrotada!");
     
     // Notificar o conselho goblin
     goblinCouncil.registerFamilyDestroyed();
     
-    // Remover família da lista
+    // Remover famÃ­lia da lista
     goblinFamilies.remove(family);
     
-    // Iniciar timer de respawn de nova família (3 minutos)
+    // Iniciar timer de respawn de nova famÃ­lia (3 minutos)
     if (goblinFamilies.size() < MAX_FAMILIES) {
       familyRespawnTimer = FAMILY_RESPAWN_DELAY;
-      System.out.println("⏳ Nova família goblin aparecerá em 3 minutos...");
+      System.out.println("â³ Nova famÃ­lia goblin aparecerÃ¡ em 3 minutos...");
     }
     
-    // Encontrar a cabana desta família e torná-la vulnerável (se ainda não foi destruída)
+    // Encontrar a cabana desta famÃ­lia e tornÃ¡-la vulnerÃ¡vel (se ainda nÃ£o foi destruÃ­da)
     Point hutPos = family.getHutPosition();
     for (Structure structure : structures) {
       if (structure.getX() == hutPos.x && structure.getY() == hutPos.y && !structure.isDestroyed()) {
         structure.makeVulnerable();
-        System.out.println("🏚️ A cabana de " + family.getFamilyName() + " agora está vulnerável!");
+        System.out.println("ðŸšï¸ A cabana de " + family.getFamilyName() + " agora estÃ¡ vulnerÃ¡vel!");
         break;
       }
     }
@@ -780,7 +780,7 @@ public class EnemyManager {
   }
   
   /**
-   * Verifica se há linha de visão entre dois pontos (sem paredes no caminho)
+   * Verifica se hÃ¡ linha de visÃ£o entre dois pontos (sem paredes no caminho)
    */
   private boolean hasLineOfSight(double x1, double y1, double x2, double y2) {
     int tileX1 = (int)(x1 / GamePanel.TILE_SIZE);
@@ -788,7 +788,7 @@ public class EnemyManager {
     int tileX2 = (int)(x2 / GamePanel.TILE_SIZE);
     int tileY2 = (int)(y2 / GamePanel.TILE_SIZE);
     
-    // Algoritmo de Bresenham para traçar linha entre os pontos
+    // Algoritmo de Bresenham para traÃ§ar linha entre os pontos
     int dx = Math.abs(tileX2 - tileX1);
     int dy = Math.abs(tileY2 - tileY1);
     int sx = tileX1 < tileX2 ? 1 : -1;
@@ -798,10 +798,10 @@ public class EnemyManager {
     int y = tileY1;
     
     while (true) {
-      // Verificar se o tile atual é uma parede (exceto origem e destino)
+      // Verificar se o tile atual Ã© uma parede (exceto origem e destino)
       if ((x != tileX1 || y != tileY1) && (x != tileX2 || y != tileY2)) {
         if (!tileMap.isWalkable(x, y)) {
-          return false; // Há uma parede no caminho
+          return false; // HÃ¡ uma parede no caminho
         }
       }
       
@@ -820,6 +820,16 @@ public class EnemyManager {
       }
     }
     
-    return true; // Linha de visão clara
+    return true; // Linha de visÃ£o clara
+  }
+  
+  /**
+   * Limpa todos os inimigos para troca de mapa
+   */
+  public void clearAllEnemies() {
+    enemies.clear();
+    goblinFamilies.clear();
+    familiesInitialized = false;
+    System.out.println("Todos os inimigos foram removidos");
   }
 }
