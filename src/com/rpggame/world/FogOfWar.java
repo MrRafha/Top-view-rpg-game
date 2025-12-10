@@ -182,4 +182,16 @@ public class FogOfWar {
       }
     }
   }
+  
+  /**
+   * Reseta a fog of war (para trocar de mapa)
+   */
+  public void resetFog() {
+    for (int y = 0; y < mapHeight; y++) {
+      for (int x = 0; x < mapWidth; x++) {
+        explored[y][x] = false;
+        visible[y][x] = false;
+      }
+    }
+  }
 }

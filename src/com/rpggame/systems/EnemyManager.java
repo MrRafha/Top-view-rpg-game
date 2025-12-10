@@ -19,6 +19,7 @@ public class EnemyManager {
   private TileMap tileMap;
   private Random random;
   private GoblinCouncil goblinCouncil;
+  private String currentMapId;
 
   // Controle de população
   private static final int MIN_ENEMIES = 1;
@@ -47,6 +48,13 @@ public class EnemyManager {
     this.random = new Random();
     this.goblinCouncil = new GoblinCouncil();
     this.usedFamilyNames = new java.util.HashSet<>();
+  }
+
+  /**
+   * Define o ID do mapa atual
+   */
+  public void setCurrentMapId(String mapId) {
+    this.currentMapId = mapId;
   }
 
   /**
@@ -372,6 +380,13 @@ public class EnemyManager {
    */
   public void initializeGoblinFamilies(TileMap tileMap) {
     if (familiesInitialized) return;
+    
+    // Não spawnar goblins em mapas de vila ou outros mapas seguros
+    if ("village".equals(currentMapId) || "cave".equals(currentMapId)) {
+      familiesInitialized = true;
+      System.out.println("🏞️ Mapa seguro (" + currentMapId + ") - sem goblins");
+      return;
+    }
     
     System.out.println("Inicializando famílias de goblins...");
     
@@ -822,4 +837,16 @@ public class EnemyManager {
     
     return true; // Linha de visão clara
   }
+  
+  /**
+   * Limpa todos os inimigos para troca de mapa
+   */
+  public void clearAllEnemies() {
+    enemies.clear();
+    goblinFamilies.clear();
+    structures.clear();
+    familiesInitialized = false;
+    System.out.println("Todos os inimigos foram removidos");
+  }
+  
 }

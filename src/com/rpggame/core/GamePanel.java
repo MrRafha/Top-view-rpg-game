@@ -8,9 +8,15 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseEvent;
 
 import com.rpggame.entities.Player;
+import com.rpggame.npcs.NPC;
+import com.rpggame.npcs.MerchantNPC;
+import com.rpggame.npcs.GuardNPC;
+import com.rpggame.npcs.VillagerNPC;
+import com.rpggame.npcs.WiseManNPC;
 import com.rpggame.world.*;
 import com.rpggame.systems.*;
 import com.rpggame.ui.CharacterScreen;
+import com.rpggame.ui.DialogBox;
 
 /**
  * Painel principal onde o jogo é renderizado
@@ -31,6 +37,16 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   // Telas do jogo
   private CharacterScreen characterScreen;
   private boolean showingCharacterScreen = false;
+  
+  // Sistema de NPCs e diálogos
+  private java.util.ArrayList<NPC> npcs;
+  private DialogBox dialogBox;
+  private NPC currentTalkingNPC = null;
+  private boolean showingDialog = false;
+  
+  // Sistema de mapas e transições
+  private MapManager mapManager;
+  private MapTransition mapTransition;
 
   // Debug - Visualização de campo de visão
   private boolean showVisionCones = false;
@@ -62,6 +78,17 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Criar a câmera
     camera = new Camera(0, 0);
+    
+    // Inicializar sistema de diálogos
+    dialogBox = new DialogBox();
+    npcs = new java.util.ArrayList<>();
+    
+    // Inicializar sistema de mapas e transições
+    mapManager = new MapManager();
+    mapTransition = new MapTransition();
+    
+    // Criar NPCs de exemplo
+    createExampleNPCs();
 
     // Não criar player aqui - será criado quando setPlayerClass for chamado
     // Isso evita conflitos quando o jogo é iniciado através da tela de criação de
@@ -86,6 +113,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       // Reinicializar o gerenciador de inimigos com o novo player
       enemyManager = new EnemyManager(player, tileMap);
       player.setEnemyManager(enemyManager); // Conectar player ao enemy manager
+      enemyManager.setCurrentMapId(mapManager.getCurrentMapId());
       enemyManager.initializeGoblinFamilies(tileMap);
     } else {
       // Fallback para posição central se tileMap ainda não foi inicializado
@@ -106,6 +134,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       // Criar o gerenciador de inimigos com o novo player
       enemyManager = new EnemyManager(player, tileMap);
       player.setEnemyManager(enemyManager); // Conectar player ao enemy manager
+      enemyManager.setCurrentMapId(mapManager.getCurrentMapId());
       enemyManager.initializeGoblinFamilies(tileMap);
 
       // Iniciar o loop do jogo se ainda não estiver rodando
@@ -161,7 +190,25 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (player == null || showingCharacterScreen)
       return;
 
+    // Atualizar transição de mapa
+    if (mapTransition.isTransitioning()) {
+      boolean shouldChangeMap = mapTransition.update();
+      
+      if (shouldChangeMap) {
+        // Momento de trocar o mapa (tela totalmente preta)
+        changeMap(mapTransition.getTargetMapPath(), 
+                  mapTransition.getPlayerSpawnX(), 
+                  mapTransition.getPlayerSpawnY());
+      }
+      
+      // Não atualizar gameplay durante transição
+      return;
+    }
+
     player.update();
+
+    // Atualizar NPCs
+    updateNPCs();
 
     // Atualizar inimigos
     if (enemyManager != null) {
@@ -174,6 +221,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Atualizar câmera para seguir o jogador
     camera.centerOnPlayer(player);
+    
+    // Verificar se player está sobre um portal
+    checkPortalCollision();
   }
 
   @Override
@@ -222,11 +272,24 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       enemyManager.renderAttackEffects(g2d, camera);
     }
 
+    // Renderizar NPCs
+    renderNPCs(g2d);
+
     // Renderizar o jogador
     player.render(g2d, camera);
 
     // Renderizar UI
     renderUI(g2d);
+    
+    // Renderizar DialogBox se estiver mostrando
+    if (showingDialog && dialogBox != null && currentTalkingNPC != null) {
+      dialogBox.render(g2d, currentTalkingNPC.getName(), getWidth(), getHeight());
+    }
+    
+    // Renderizar transição de mapa (sempre por último, em cima de tudo)
+    if (mapTransition != null && mapTransition.isTransitioning()) {
+      mapTransition.render(g2d, getWidth(), getHeight());
+    }
   }
 
   private void renderUI(Graphics2D g) {
@@ -373,6 +436,12 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       return;
     }
 
+    // Tecla E para interagir com NPCs
+    if (e.getKeyCode() == KeyEvent.VK_E) {
+      interactWithNearbyNPC();
+      return;
+    }
+
     // Tecla C para abrir tela de características
     if (e.getKeyCode() == KeyEvent.VK_C) {
       openCharacterScreen();
@@ -485,4 +554,186 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       System.out.println("Tela de características fechada - foco restaurado");
     }
   }
+  
+  /**
+   * Cria NPCs de acordo com o mapa atual
+   */
+  private void createExampleNPCs() {
+    String currentMapId = mapManager.getCurrentMapId();
+    
+    if ("village".equals(currentMapId)) {
+      // Vila: Mercador, Aldeão, Sábio
+      npcs.add(new MerchantNPC(500, 400));
+      npcs.add(new VillagerNPC(300, 300));
+      npcs.add(new WiseManNPC(900, 500));
+      System.out.println("🏘️ NPCs da vila criados: " + npcs.size());
+    } else if ("goblin_territories".equals(currentMapId)) {
+      // Territórios Goblin: Guards protegendo a entrada da vila (ao redor do spawn tile 12,3)
+      npcs.add(new GuardNPC(480, 144)); // Esquerda do spawn (tile 10, 3)
+      npcs.add(new GuardNPC(672, 144)); // Direita do spawn (tile 14, 3)
+      System.out.println("⚔️ Guards dos territórios criados: " + npcs.size());
+    }
+    // Outros mapas podem não ter NPCs
+  }
+  
+  /* 
+    Atualiza NPCs
+   */
+  private void updateNPCs() {
+    for (NPC npc : npcs) {
+      npc.update(player);
+    }
+    
+    if (showingDialog && dialogBox != null) {
+      dialogBox.update();
+    }
+  }
+  
+  /**
+   * Renderiza NPCs
+   */
+  private void renderNPCs(Graphics2D g) {
+    for (NPC npc : npcs) {
+      npc.render(g, camera);
+    }
+  }
+  
+  /**
+   * Tenta interagir com NPCs pr�ximos
+   */
+  private void interactWithNearbyNPC() {
+    if (showingDialog) {
+      if (dialogBox.isTextComplete()) {
+        boolean hasMore = currentTalkingNPC.nextDialog();
+        if (hasMore) {
+          dialogBox.setText(currentTalkingNPC.getCurrentDialog());
+        } else {
+          endDialog();
+        }
+      } else {
+        dialogBox.skipAnimation();
+      }
+    } else {
+      for (NPC npc : npcs) {
+        if (npc.canInteract()) {
+          startDialog(npc);
+          break;
+        }
+      }
+    }
+  }
+  
+  /**
+   * Inicia di�logo com NPC
+   */
+  private void startDialog(NPC npc) {
+    currentTalkingNPC = npc;
+    showingDialog = true;
+    npc.resetDialog();
+    dialogBox.setText(npc.getCurrentDialog());
+    System.out.println("?? Iniciando conversa com: " + npc.getName());
+  }
+  
+  /**
+   * Encerra di�logo
+   */
+  private void endDialog() {
+    showingDialog = false;
+    currentTalkingNPC = null;
+    dialogBox.reset();
+    System.out.println("💬 Conversa encerrada");
+  }
+  
+  /**
+   * Verifica se o jogador está sobre um portal
+   */
+  private void checkPortalCollision() {
+    if (player == null || tileMap == null || mapTransition.isTransitioning()) {
+      return;
+    }
+    
+    // Calcular posição do jogador em tiles
+    int playerTileX = (int)(player.getX() / TILE_SIZE);
+    int playerTileY = (int)(player.getY() / TILE_SIZE);
+    
+    // Verificar se há portal nesta posição
+    Portal portal = tileMap.getPortalAt(playerTileX, playerTileY);
+    
+    if (portal != null) {
+      System.out.println("🚪 Player entrou no portal: " + portal.getName());
+      triggerPortalTransition(portal);
+    }
+  }
+  
+  /**
+   * Inicia transição para outro mapa via portal
+   */
+  private void triggerPortalTransition(Portal portal) {
+    // Verificar se o mapa de destino existe
+    if (!mapManager.hasMap(portal.getTargetMapId())) {
+      System.err.println("❌ Mapa de destino não encontrado: " + portal.getTargetMapId());
+      return;
+    }
+    
+    // Obter dados do mapa de destino
+    MapManager.MapData targetMap = mapManager.getMap(portal.getTargetMapId());
+    
+    // Usar spawn point do mapa de destino
+    int spawnX = targetMap.getDefaultSpawnX();
+    int spawnY = targetMap.getDefaultSpawnY();
+    
+    // Iniciar transição
+    mapTransition.startTransition(
+      targetMap.getFilePath(),
+      spawnX,
+      spawnY
+    );
+  }
+  
+  /**
+   * Troca efetivamente o mapa (chamado no meio da transição)
+   */
+  private void changeMap(String mapPath, int playerX, int playerY) {
+    System.out.println("🔄 Trocando mapa...");
+    
+    // Determinar ID do mapa baseado no caminho
+    String mapId;
+    if (mapPath.contains("village")) {
+      mapId = "village";
+    } else if (mapPath.contains("goblin_territories")) {
+      mapId = "goblin_territories";
+    } else if (mapPath.contains("cave") || mapPath.contains("new_map")) {
+      mapId = "cave";
+    } else {
+      mapId = "goblin_territories"; // Padrão
+    }
+    
+    // Recarregar mapa com ID
+    tileMap.reloadMap(mapPath, mapId);
+    
+    // Reposicionar player
+    if (player != null) {
+      player.setPosition(playerX, playerY);
+    }
+    
+    // Reinicializar fog of war
+    tileMap.getFogOfWar().resetFog();
+    
+    // Atualizar mapa atual no MapManager
+    mapManager.setCurrentMap(mapId);
+    
+    // Reinicializar inimigos
+    if (enemyManager != null) {
+      enemyManager.clearAllEnemies();
+      enemyManager.setCurrentMapId(mapManager.getCurrentMapId());
+      enemyManager.initializeGoblinFamilies(tileMap);
+    }
+    
+    // Limpar NPCs antigos e criar novos
+    npcs.clear();
+    createExampleNPCs();
+    
+    System.out.println("✅ Mapa trocado com sucesso!");
+  }
+
 }
