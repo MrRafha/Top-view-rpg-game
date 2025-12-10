@@ -113,6 +113,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       // Reinicializar o gerenciador de inimigos com o novo player
       enemyManager = new EnemyManager(player, tileMap);
       player.setEnemyManager(enemyManager); // Conectar player ao enemy manager
+      enemyManager.setCurrentMapId(mapManager.getCurrentMapId());
       enemyManager.initializeGoblinFamilies(tileMap);
     } else {
       // Fallback para posição central se tileMap ainda não foi inicializado
@@ -133,6 +134,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       // Criar o gerenciador de inimigos com o novo player
       enemyManager = new EnemyManager(player, tileMap);
       player.setEnemyManager(enemyManager); // Conectar player ao enemy manager
+      enemyManager.setCurrentMapId(mapManager.getCurrentMapId());
       enemyManager.initializeGoblinFamilies(tileMap);
 
       // Iniciar o loop do jogo se ainda não estiver rodando
@@ -554,16 +556,24 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   }
   
   /**
-   * Cria NPCs de exemplo
+   * Cria NPCs de acordo com o mapa atual
    */
   private void createExampleNPCs() {
-    // Criar NPCs usando as novas subclasses - simples e fácil!
-    npcs.add(new MerchantNPC(500, 400));
-    npcs.add(new GuardNPC(700, 600));
-    npcs.add(new VillagerNPC(300, 300));
-    npcs.add(new WiseManNPC(900, 500));
+    String currentMapId = mapManager.getCurrentMapId();
     
-    System.out.println("✅ NPCs criados: " + npcs.size());
+    if ("village".equals(currentMapId)) {
+      // Vila: Mercador, Aldeão, Sábio
+      npcs.add(new MerchantNPC(500, 400));
+      npcs.add(new VillagerNPC(300, 300));
+      npcs.add(new WiseManNPC(900, 500));
+      System.out.println("🏘️ NPCs da vila criados: " + npcs.size());
+    } else if ("goblin_territories".equals(currentMapId)) {
+      // Territórios Goblin: Guards
+      npcs.add(new GuardNPC(700, 600));
+      npcs.add(new GuardNPC(400, 800));
+      System.out.println("⚔️ Guards dos territórios criados: " + npcs.size());
+    }
+    // Outros mapas podem não ter NPCs
   }
   
   /**
@@ -668,11 +678,15 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Obter dados do mapa de destino
     MapManager.MapData targetMap = mapManager.getMap(portal.getTargetMapId());
     
+    // Usar spawn point do mapa de destino
+    int spawnX = targetMap.getDefaultSpawnX();
+    int spawnY = targetMap.getDefaultSpawnY();
+    
     // Iniciar transição
     mapTransition.startTransition(
       targetMap.getFilePath(),
-      portal.getTargetX(),
-      portal.getTargetY()
+      spawnX,
+      spawnY
     );
   }
   
@@ -693,9 +707,19 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Reinicializar fog of war
     tileMap.getFogOfWar().resetFog();
     
+    // Atualizar mapa atual no MapManager
+    if (mapPath.contains("village")) {
+      mapManager.setCurrentMap("village");
+    } else if (mapPath.contains("goblin_territories")) {
+      mapManager.setCurrentMap("goblin_territories");
+    } else if (mapPath.contains("cave") || mapPath.contains("new_map")) {
+      mapManager.setCurrentMap("cave");
+    }
+    
     // Reinicializar inimigos
     if (enemyManager != null) {
       enemyManager.clearAllEnemies();
+      enemyManager.setCurrentMapId(mapManager.getCurrentMapId());
       enemyManager.initializeGoblinFamilies(tileMap);
     }
     

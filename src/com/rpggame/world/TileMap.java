@@ -317,11 +317,44 @@ public class TileMap {
     for (int y = 0; y < MAP_HEIGHT; y++) {
       for (int x = 0; x < MAP_WIDTH; x++) {
         if (map[y][x] == TileType.PORTAL) {
-          portals.add(new Portal(x, y, "village", 400, 400, "Portal da Vila"));
-          System.out.println("🌀 Portal encontrado em (" + x + ", " + y + ")");
+          // Detectar se é mapa village (tem areia)
+          boolean isVillageMap = hasSignificantSand();
+          
+          if (isVillageMap) {
+            // Village -> Goblin Territories (spawn proporcional invertido)
+            int targetX = x * GamePanel.TILE_SIZE;
+            int targetY = (MAP_HEIGHT - 1 - y) * GamePanel.TILE_SIZE;
+            portals.add(new Portal(x, y, "goblin_territories", targetX, targetY, "Portal dos Territórios"));
+            System.out.println("🌀 Portal Village encontrado em (" + x + ", " + y + ") -> Goblin Territories (" + targetX + ", " + targetY + ")");
+          } else {
+            // Goblin Territories -> Village (spawn proporcional invertido)
+            int targetX = x * GamePanel.TILE_SIZE;
+            int targetY = (MAP_HEIGHT - 1 - y) * GamePanel.TILE_SIZE;
+            portals.add(new Portal(x, y, "village", targetX, targetY, "Portal da Vila"));
+            System.out.println("🌀 Portal Goblin encontrado em (" + x + ", " + y + ") -> Village (" + targetX + ", " + targetY + ")");
+          }
         }
       }
     }
+  }
+  
+  /**
+   * Verifica se o mapa tem areia significativa (indica vila)
+   */
+  private boolean hasSignificantSand() {
+    int sandCount = 0;
+    int totalTiles = 0;
+    
+    for (int y = 0; y < MAP_HEIGHT; y++) {
+      for (int x = 0; x < MAP_WIDTH; x++) {
+        totalTiles++;
+        if (map[y][x] == TileType.SAND) {
+          sandCount++;
+        }
+      }
+    }
+    
+    return sandCount > (totalTiles * 0.05); // Mais de 5% é areia
   }
   
   /**

@@ -23,21 +23,21 @@ public class MapManager {
     maps.put("goblin_territories", new MapData(
       "maps/goblin_territories_25x25.txt",
       "Territórios Goblin",
-      600, 600 // Spawn padrão
+      12, 12 // Spawn em tile (12, 12) - centro do mapa
     ));
     
-    // Exemplo de novo mapa (vila)
+    // Vila com praia à esquerda
     maps.put("village", new MapData(
-      "maps/example.txt", // Usar mapa de exemplo por enquanto
-      "Vila",
-      400, 400
+      "maps/village.txt",
+      "Vila da Praia",
+      12, 22 // Spawn em tile (12, 22) - logo acima dos portais
     ));
     
     // Exemplo de mapa menor
     maps.put("cave", new MapData(
       "maps/new_map_15x15.txt",
       "Caverna",
-      200, 200
+      7, 7 // Centro do mapa 15x15
     ));
     
     currentMapId = "goblin_territories";
@@ -87,14 +87,14 @@ public class MapManager {
   public static class MapData {
     private String filePath;
     private String name;
-    private int defaultSpawnX;
-    private int defaultSpawnY;
+    private int spawnTileX;
+    private int spawnTileY;
     
-    public MapData(String filePath, String name, int spawnX, int spawnY) {
+    public MapData(String filePath, String name, int spawnTileX, int spawnTileY) {
       this.filePath = filePath;
       this.name = name;
-      this.defaultSpawnX = spawnX;
-      this.defaultSpawnY = spawnY;
+      this.spawnTileX = spawnTileX;
+      this.spawnTileY = spawnTileY;
     }
     
     public String getFilePath() {
@@ -105,12 +105,21 @@ public class MapManager {
       return name;
     }
     
+    public int getSpawnTileX() {
+      return spawnTileX;
+    }
+    
+    public int getSpawnTileY() {
+      return spawnTileY;
+    }
+    
+    // Para compatibilidade, retorna pixels
     public int getDefaultSpawnX() {
-      return defaultSpawnX;
+      return spawnTileX * 48; // TILE_SIZE = 48
     }
     
     public int getDefaultSpawnY() {
-      return defaultSpawnY;
+      return spawnTileY * 48;
     }
   }
 }
