@@ -70,6 +70,7 @@
 - 🔧 Removidas chamadas para métodos inexistentes (`applyKnockback`)
 - 🔧 Otimização do sistema de renderização
 - 🔧 **Correção do círculo de progresso** - Agora completa corretamente a volta durante o cooldown
+- 🔧 **HOTFIX: Carregamento de mapas no JAR** - Mapas agora carregam corretamente quando executado via JAR
 
 ---
 
