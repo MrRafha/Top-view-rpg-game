@@ -13,14 +13,15 @@ Um RPG 2D em Java com sistema completo de habilidades, classes únicas e combate
 
 **Baixe e jogue em segundos:**
 
-1. **Baixe** o arquivo `RPG-2D-Game-v1.1-FIXED.zip`
-2. **Extraia** o conteúdo em qualquer pasta
-3. **Execute**:
-   - **Windows**: Duplo-clique em `RPG-Game.exe.bat`
-   - **Linux/Mac**: `chmod +x RPG-Game.sh && ./RPG-Game.sh`
-   - **Manual**: `java -cp "lib:resources" com.rpggame.core.Game`
+1. **Baixe** o arquivo `RPG-Game-v2.0.jar` na pasta [releases](https://github.com/MrRafha/Top-view-rpg-game/releases)
+2. **Execute** o JAR:
+   ```bash
+   java -jar RPG-Game-v2.0.jar
+   ```
 
-**✅ Requisito único**: Java 8 ou superior instalado
+**✅ Requisitos**: 
+- Java 11 ou superior instalado
+- Resolução mínima: 1024x800
 
 ### 🛠️ Desenvolvimento (Código Fonte)
 
@@ -31,13 +32,13 @@ Para desenvolvedores que querem modificar o código:
 git clone https://github.com/MrRafha/Top-view-rpg-game.git
 cd Top-view-rpg-game
 
-# Compile
-javac -encoding UTF-8 -d build -cp . src/com/rpggame/**/*.java
+# Compile (Windows PowerShell)
+cd src
+javac -d ..\bin -encoding UTF-8 com\rpggame\core\Game.java
 
 # Execute  
-java -cp build com.rpggame.core.Game
-```
-
+cd ..
+java -cp bin com.rpggame.core.Game
 ## 🎮 Controles
 
 | Tecla | Ação |
@@ -47,6 +48,8 @@ java -cp build com.rpggame.core.Game
 | **1, 2, 3, 4** | **NOVO v2.0!** Usar habilidades especiais |
 | **E** | Interagir com NPCs |
 | **C** | Abrir tela de características |
+| **V** | Toggle campo de visão (modo debug) |
+| **ESC** | Sair do jogo |racterísticas |
 | **V** | Modo debug (informações do jogo) |
 | **ESC** | Sair do jogo |
 
@@ -69,11 +72,13 @@ java -cp build com.rpggame.core.Game
 
 ### 📚 Como Usar Habilidades
 
-1. **Converse com o NPC Sábio** na vila para aprender sua primeira habilidade
-2. **Pressione teclas 1-4** para ativar habilidades aprendidas
-3. **Gerencie cooldowns** estrategicamente durante o combate
-4. **Dano escalado** com os atributos principais de cada classe
-5. **Acompanhe visualmente** o progresso dos cooldowns nos slots
+1. **Chegue na vila** através dos portais no mapa inicial
+2. **Converse com o NPC Sábio** (Wise Man) usando tecla **E**
+3. **Aprenda sua primeira habilidade** através do diálogo
+4. **Pressione teclas 1-4** para ativar habilidades aprendidas
+5. **Gerencie cooldowns** estrategicamente durante o combate
+6. **Dano escalado** com os atributos principais de cada classe
+7. **Acompanhe visualmente** o progresso dos cooldowns nos slots UI
 
 ## ⚔️ Características do Jogo
 
@@ -94,8 +99,7 @@ java -cp build com.rpggame.core.Game
 | **Inteligência** | INT | 🧠 Aumenta dano mágico e mana máxima |
 | **Sabedoria** | WIS | 👁️ Aumenta experiência ganha e visão |
 | **Carisma** | CHA | 💬 Afeta interações sociais |
-| **Constituição** | CON | ❤️ Aumenta vida máxima |
-
+| **Constituição** | CON | Aumenta a vida e a resistencia |
 ### 👹 Sistema de Inimigos Inteligente
 
 **🧌 Goblins com IA Avançada:**
@@ -105,55 +109,93 @@ java -cp build com.rpggame.core.Game
 - **Tímido**: Mais rápido mas foge quando ferido
 - **Líder**: Comanda outros goblins em grupo
 
+**🏛️ Sistema de Famílias Goblin:**
+- **Clãs organizados**: 20 nomes únicos de famílias
+- **Territórios definidos**: Cada família defende sua área
+- **Conselho Goblin**: Sistema de decisões estratégicas
+- **Respawn automático**: Famílias reaparecem após eliminação
+- **Estruturas**: Cabanas e acampamentos goblinss ataques
+- **Tímido**: Mais rápido mas foge quando ferido
+- **Líder**: Comanda outros goblins em grupo
+
 ### ✨ Efeitos Visuais de Combate
 
 - **⚠️ Preparação de Ataque**: Aviso visual 0.75s antes do ataque
 - **💥 Efeito de Slash**: Animação visual durante ataques
 - **📡 Sistema de Telegraphing**: Permite reação aos ataques inimigos
-- **🎯 Feedback Visual**: Textos flutuantes para dano e ações
-
 ## 🗺️ Sistema de Mundo
 
-### 🌫️ Fog of War
-- **Visibilidade realista** baseada em linha de visão
-- **Exploração dinâmica** do mapa
-- **Alcance determinado** pelo atributo Sabedoria
-
-### 🗃️ Mapas Customizáveis
-- **Formato simples**: Arquivos `.txt` editáveis
-- **Tiles variados**: 6 tipos diferentes de terreno
-- **Colisão inteligente**: Sistema robusto de física
-- **Mapas inclusos**: Vários mapas pré-criados
-
+### 🌍 Múltiplos Mapas
+- **Territórios Goblin**: Mapa inicial 25x25 com goblins e estruturas
+- **Vila**: Mapa 25x25 com praia, NPCs e área segura
+- **Portais**: Sistema de teleporte bidirecionais entre mapas
 ## 🏗️ Estrutura do Projeto
 
 ```
 📁 Top-view-rpg-game/
-├── 📦 dist/                    # Versão executável
-│   ├── 📚 lib/                # Classes compiladas (.class)
-│   ├── 🎨 resources/          # Assets (sprites, mapas)
-│   ├── 🖥️ RPG-Game.exe.bat   # Executável Windows
-│   └── 🐧 RPG-Game.sh         # Executável Linux/Mac
+├── 📦 release/                # Builds executáveis
+│   └── 🎮 RPG-Game-v2.0.jar  # Versão atual
 │
 ├── 💻 src/com/rpggame/        # Código fonte Java
-│   ├── 🎯 core/              # Engine principal
-│   ├── 👤 entities/          # Jogador, inimigos, objetos
-│   ├── ⚙️ systems/           # Sistemas (XP, stats, combate)
+│   ├── 🎯 core/              # Engine principal (Game, GamePanel)
+│   ├── 👤 entities/          # Jogador, NPCs, inimigos, estruturas
+│   ├── 👥 npcs/              # NPCs específicos (Guard, Merchant, Sábio)
+│   ├── ⚙️ systems/           # Sistemas de jogo
+│   │   ├── 💪 CharacterStats, EnemyManager, ExperienceSystem
+│   │   ├── 🎯 Skill, SkillManager
+│   │   └── 🔥 skills/        # Habilidades específicas por classe
 │   ├── 🖼️ ui/                # Interface do usuário
-│   └── 🗺️ world/             # Mundo (tiles, câmera, mapas)
+│   │   ├── 📊 CharacterScreen, DialogBox
+│   │   └── 🎮 SkillSlotUI    # Interface de habilidades
+│   └── 🗺️ world/             # Mundo do jogo
+│       ├── 🗺️ TileMap, MapManager, MapLoader
+│       ├── 🌀 MapTransition, Portal
+│       └── 🌫️ FogOfWar, Camera
 │
-├── 🎨 sprites/               # Imagens e sprites
-├── 🗺️ maps/                 # Mapas personalizados
-└── 📦 RPG-2D-Game-v1.1-FIXED.zip  # Pacote de distribuição
-```
-
+├── 🎨 sprites/               # Sprites de personagens e NPCs
 ## 🛠️ Requisitos Técnicos
 
 ### Mínimos
-- **Java**: 8 ou superior
+- **Java**: JDK 11 ou superior
 - **SO**: Windows 7+, macOS 10.12+, Linux (qualquer distro)
-- **RAM**: 256MB livres
-- **Espaço**: 50MB
+- **RAM**: 512MB livres
+- **Resolução**: 1024x800 ou superior
+- **Espaço**: 100MB
+
+### Recomendados  
+- **Java**: JDK 17 ou superior
+- **RAM**: 1GB livres
+- **Resolução**: 1920x1080
+## 📈 Changelog
+
+### v2.0 - "Skills & Magic Update" (Atual - 11/12/2025)
+- 🔥 **Sistema de Habilidades**: 3 habilidades únicas por classe
+- 🎮 **Interface de Slots Visual**: 4 slots com indicadores de cooldown
+- 👥 **NPCs com sprites customizados**: Guard, Sábio, Aldeão, Mercador
+- 📚 **Sistema de aprendizado**: Aprenda habilidades através de NPCs
+- 🎨 **Efeitos visuais**: Animações para cada habilidade
+- ⚖️ **Balanceamento**: Dano baseado em atributos principais de cada classe
+- 🎯 **Controles intuitivos**: Teclas 1-4 para habilidades
+
+### v1.2.2 - Sistema de Portais (10/12/2025)
+- 🌀 **Portais bidirecionais**: Teleporte entre mapas
+- 🏖️ **Novo mapa: Vila**: 25x25 com praia e NPCs
+- 🎬 **Transição animada**: Efeito circular de fade
+- 🗺️ **MapManager**: Sistema escalável de gerenciamento de mapas
+- 🛡️ **Guards estratégicos**: NPCs posicionados como sentinelas
+- 📍 **Sistema de spawn**: Pontos consistentes por mapa
+
+### v1.2.1 - Conselho Goblin (Anterior)
+- 🏛️ Sistema de Conselho Goblin com decisões estratégicas
+- 👑 Hierarquia de clãs com líderes
+- 🔄 Respawn automático de famílias
+- 20 nomes únicos de clãs
+
+### v1.1 - Recursos e IA
+- ✅ Sistema ResourceResolver para carregamento de recursos
+- ✅ IA avançada: 4 personalidades de goblins
+- ✅ Sistema de territórios e famílias
+- ✅ Efeitos visuais de combate
 
 ### Recomendados  
 - **Java**: 11 ou superior
