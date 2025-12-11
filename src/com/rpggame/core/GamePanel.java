@@ -6,6 +6,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 
 import com.rpggame.entities.Player;
 import com.rpggame.npcs.NPC;
@@ -37,13 +38,13 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   // Telas do jogo
   private CharacterScreen characterScreen;
   private boolean showingCharacterScreen = false;
-  
+
   // Sistema de NPCs e diálogos
   private java.util.ArrayList<NPC> npcs;
   private DialogBox dialogBox;
   private NPC currentTalkingNPC = null;
   private boolean showingDialog = false;
-  
+
   // Sistema de mapas e transições
   private MapManager mapManager;
   private MapTransition mapTransition;
@@ -78,15 +79,15 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Criar a câmera
     camera = new Camera(0, 0);
-    
+
     // Inicializar sistema de diálogos
     dialogBox = new DialogBox();
     npcs = new java.util.ArrayList<>();
-    
+
     // Inicializar sistema de mapas e transições
     mapManager = new MapManager();
     mapTransition = new MapTransition();
-    
+
     // Criar NPCs de exemplo
     createExampleNPCs();
 
@@ -193,14 +194,14 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Atualizar transição de mapa
     if (mapTransition.isTransitioning()) {
       boolean shouldChangeMap = mapTransition.update();
-      
+
       if (shouldChangeMap) {
         // Momento de trocar o mapa (tela totalmente preta)
-        changeMap(mapTransition.getTargetMapPath(), 
-                  mapTransition.getPlayerSpawnX(), 
-                  mapTransition.getPlayerSpawnY());
+        changeMap(mapTransition.getTargetMapPath(),
+            mapTransition.getPlayerSpawnX(),
+            mapTransition.getPlayerSpawnY());
       }
-      
+
       // Não atualizar gameplay durante transição
       return;
     }
@@ -221,7 +222,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Atualizar câmera para seguir o jogador
     camera.centerOnPlayer(player);
-    
+
     // Verificar se player está sobre um portal
     checkPortalCollision();
   }
@@ -266,7 +267,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (showVisionCones && enemyManager != null) {
       enemyManager.renderVisionCones(g2d, camera);
     }
-    
+
     // Renderizar efeitos visuais de ataque dos goblins
     if (enemyManager != null) {
       enemyManager.renderAttackEffects(g2d, camera);
@@ -280,12 +281,12 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Renderizar UI
     renderUI(g2d);
-    
+
     // Renderizar DialogBox se estiver mostrando
     if (showingDialog && dialogBox != null && currentTalkingNPC != null) {
       dialogBox.render(g2d, currentTalkingNPC.getName(), getWidth(), getHeight());
     }
-    
+
     // Renderizar transição de mapa (sempre por último, em cima de tudo)
     if (mapTransition != null && mapTransition.isTransitioning()) {
       mapTransition.render(g2d, getWidth(), getHeight());
@@ -332,18 +333,24 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     g.drawString("Classe: " + player.getPlayerClass() + " | Nível: " + expSys.getCurrentLevel(),
         barX, barY + (barSpacing * 3) + 5);
 
-    // Informação de inimigos (debug)
-    if (enemyManager != null) {
+    // Informações de debug (só aparece quando modo debug está ativo - tecla V)
+    if (enemyManager != null && showVisionCones) {
       g.setFont(new Font("Arial", Font.PLAIN, 10));
       g.setColor(Color.LIGHT_GRAY);
-      g.drawString("Inimigos: " + enemyManager.getAliveCount() + "/4",
+
+      // Quantidade de inimigos
+      g.drawString("Inimigos: " + enemyManager.getAliveCount(),
           barX, barY + (barSpacing * 3) + 25);
-      
+
+      // Posição do player (X, Y)
+      g.drawString("Player X: " + (int) player.getX() + " Y: " + (int) player.getY(),
+          barX, barY + (barSpacing * 3) + 40);
+
       // Mostrar decisão do conselho goblin se houver
       com.rpggame.systems.GoblinCouncil council = enemyManager.getGoblinCouncil();
       if (council != null) {
-        int yOffset = barY + (barSpacing * 3) + 45;
-        
+        int yOffset = barY + (barSpacing * 3) + (showVisionCones ? 60 : 25);
+
         if (council.isAllianceAgainstPlayerActive()) {
           g.setFont(new Font("Arial", Font.BOLD, 12));
           g.setColor(new Color(255, 100, 100));
@@ -448,10 +455,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       return;
     }
 
-    // Tecla V para ativar/desativar visualização de campo de visão (debug)
+    // Tecla V para ativar/desativar modo debug
     if (e.getKeyCode() == KeyEvent.VK_V) {
       showVisionCones = !showVisionCones;
-      System.out.println("👁 Visualização de campo de visão: " + (showVisionCones ? "ATIVADA" : "DESATIVADA"));
+      System.out.println("� Modo Debug: " + (showVisionCones ? "ATIVADO" : "DESATIVADO") +
+          " (Campo de visão, contadores de inimigos, posição do player)");
       return;
     }
 
@@ -554,13 +562,13 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       System.out.println("Tela de características fechada - foco restaurado");
     }
   }
-  
+
   /**
    * Cria NPCs de acordo com o mapa atual
    */
   private void createExampleNPCs() {
     String currentMapId = mapManager.getCurrentMapId();
-    
+
     if ("village".equals(currentMapId)) {
       // Vila: Mercador, Aldeão, Sábio
       npcs.add(new MerchantNPC(500, 400));
@@ -568,27 +576,33 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       npcs.add(new WiseManNPC(900, 500));
       System.out.println("🏘️ NPCs da vila criados: " + npcs.size());
     } else if ("goblin_territories".equals(currentMapId)) {
-      // Territórios Goblin: Guards protegendo a entrada da vila (ao redor do spawn tile 12,3)
+      // Territórios Goblin: Guards protegendo a entrada da vila (ao redor do spawn
+      // tile 12,3)
       npcs.add(new GuardNPC(480, 144)); // Esquerda do spawn (tile 10, 3)
       npcs.add(new GuardNPC(672, 144)); // Direita do spawn (tile 14, 3)
       System.out.println("⚔️ Guards dos territórios criados: " + npcs.size());
     }
     // Outros mapas podem não ter NPCs
   }
-  
-  /* 
-    Atualiza NPCs
+
+  /*
+   * Atualiza NPCs
    */
   private void updateNPCs() {
     for (NPC npc : npcs) {
       npc.update(player);
+
+      // Se for um guarda, atualizar comportamento de combate
+      if (npc instanceof GuardNPC && enemyManager != null) {
+        ((GuardNPC) npc).updateGuardBehavior(enemyManager.getAllGoblins());
+      }
     }
-    
+
     if (showingDialog && dialogBox != null) {
       dialogBox.update();
     }
   }
-  
+
   /**
    * Renderiza NPCs
    */
@@ -597,7 +611,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       npc.render(g, camera);
     }
   }
-  
+
   /**
    * Tenta interagir com NPCs pr�ximos
    */
@@ -622,28 +636,40 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       }
     }
   }
-  
+
   /**
-   * Inicia di�logo com NPC
+   * Inicia diálogo com NPC
    */
   private void startDialog(NPC npc) {
     currentTalkingNPC = npc;
     showingDialog = true;
     npc.resetDialog();
     dialogBox.setText(npc.getCurrentDialog());
-    System.out.println("?? Iniciando conversa com: " + npc.getName());
+
+    // Informar ao jogador que está em diálogo (bloquear movimento)
+    if (player != null) {
+      player.setInDialog(true);
+    }
+
+    System.out.println("💬 Iniciando conversa com: " + npc.getName());
   }
-  
+
   /**
-   * Encerra di�logo
+   * Encerra diálogo
    */
   private void endDialog() {
     showingDialog = false;
     currentTalkingNPC = null;
     dialogBox.reset();
+
+    // Informar ao jogador que não está mais em diálogo (liberar movimento)
+    if (player != null) {
+      player.setInDialog(false);
+    }
+
     System.out.println("💬 Conversa encerrada");
   }
-  
+
   /**
    * Verifica se o jogador está sobre um portal
    */
@@ -651,20 +677,20 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (player == null || tileMap == null || mapTransition.isTransitioning()) {
       return;
     }
-    
+
     // Calcular posição do jogador em tiles
-    int playerTileX = (int)(player.getX() / TILE_SIZE);
-    int playerTileY = (int)(player.getY() / TILE_SIZE);
-    
+    int playerTileX = (int) (player.getX() / TILE_SIZE);
+    int playerTileY = (int) (player.getY() / TILE_SIZE);
+
     // Verificar se há portal nesta posição
     Portal portal = tileMap.getPortalAt(playerTileX, playerTileY);
-    
+
     if (portal != null) {
       System.out.println("🚪 Player entrou no portal: " + portal.getName());
       triggerPortalTransition(portal);
     }
   }
-  
+
   /**
    * Inicia transição para outro mapa via portal
    */
@@ -674,28 +700,27 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       System.err.println("❌ Mapa de destino não encontrado: " + portal.getTargetMapId());
       return;
     }
-    
+
     // Obter dados do mapa de destino
     MapManager.MapData targetMap = mapManager.getMap(portal.getTargetMapId());
-    
+
     // Usar spawn point do mapa de destino
     int spawnX = targetMap.getDefaultSpawnX();
     int spawnY = targetMap.getDefaultSpawnY();
-    
+
     // Iniciar transição
     mapTransition.startTransition(
-      targetMap.getFilePath(),
-      spawnX,
-      spawnY
-    );
+        targetMap.getFilePath(),
+        spawnX,
+        spawnY);
   }
-  
+
   /**
    * Troca efetivamente o mapa (chamado no meio da transição)
    */
   private void changeMap(String mapPath, int playerX, int playerY) {
     System.out.println("🔄 Trocando mapa...");
-    
+
     // Determinar ID do mapa baseado no caminho
     String mapId;
     if (mapPath.contains("village")) {
@@ -707,32 +732,32 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     } else {
       mapId = "goblin_territories"; // Padrão
     }
-    
+
     // Recarregar mapa com ID
     tileMap.reloadMap(mapPath, mapId);
-    
+
     // Reposicionar player
     if (player != null) {
       player.setPosition(playerX, playerY);
     }
-    
+
     // Reinicializar fog of war
     tileMap.getFogOfWar().resetFog();
-    
+
     // Atualizar mapa atual no MapManager
     mapManager.setCurrentMap(mapId);
-    
+
     // Reinicializar inimigos
     if (enemyManager != null) {
       enemyManager.clearAllEnemies();
       enemyManager.setCurrentMapId(mapManager.getCurrentMapId());
       enemyManager.initializeGoblinFamilies(tileMap);
     }
-    
+
     // Limpar NPCs antigos e criar novos
     npcs.clear();
     createExampleNPCs();
-    
+
     System.out.println("✅ Mapa trocado com sucesso!");
   }
 

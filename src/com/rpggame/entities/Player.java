@@ -70,9 +70,12 @@ public class Player {
 
   // Referência para o mapa (para verificação de colisão)
   private TileMap tileMap;
-  
+
   // Referência para o gerenciador de inimigos (para atacar estruturas)
   private EnemyManager enemyManager;
+
+  // Controle de movimento durante diálogos
+  private boolean inDialog = false;
 
   public Player(double x, double y, String spritePath) {
     this.x = x;
@@ -160,18 +163,21 @@ public class Player {
     dx = 0;
     dy = 0;
 
-    // Calcular movimento baseado nas teclas pressionadas
-    if (up)
-      dy = -speed;
-    if (down)
-      dy = speed;
-    if (left) {
-      dx = -speed;
-      facingLeft = true; // Virado para a esquerda
-    }
-    if (right) {
-      dx = speed;
-      facingLeft = false; // Virado para a direita
+    // Só permite movimento se não estiver em diálogo
+    if (!inDialog) {
+      // Calcular movimento baseado nas teclas pressionadas
+      if (up)
+        dy = -speed;
+      if (down)
+        dy = speed;
+      if (left) {
+        dx = -speed;
+        facingLeft = true; // Virado para a esquerda
+      }
+      if (right) {
+        dx = speed;
+        facingLeft = false; // Virado para a direita
+      }
     }
 
     // Movimento diagonal (normalizar velocidade)
@@ -212,8 +218,8 @@ public class Player {
       }
     }
 
-    // Processar ataque
-    if (spacePressed && canAttack) {
+    // Processar ataque (só se não estiver em diálogo)
+    if (spacePressed && canAttack && !inDialog) {
       attack();
     }
 
@@ -238,11 +244,11 @@ public class Player {
         floatingTexts.remove(i);
       }
     }
-    
+
     // Verificar level up e restaurar vida
     checkLevelUpAndRestoreHealth();
   }
-  
+
   /**
    * Verifica se houve level up e restaura a vida ao máximo
    */
@@ -250,14 +256,14 @@ public class Player {
     if (experienceSystem.shouldRestoreHealth(lastLevelCheck)) {
       currentHealth = maxHealth; // Restaurar vida ao máximo
       lastLevelCheck = experienceSystem.getCurrentLevel();
-      
+
       // Mostrar texto de level up
-      FloatingText levelUpText = new FloatingText(x + WIDTH / 2, y - 20, 
+      FloatingText levelUpText = new FloatingText(x + WIDTH / 2, y - 20,
           "LEVEL UP!", Color.YELLOW);
       floatingTexts.add(levelUpText);
-      
+
       // Mostrar texto de vida restaurada
-      FloatingText healText = new FloatingText(x + WIDTH / 2, y - 35, 
+      FloatingText healText = new FloatingText(x + WIDTH / 2, y - 35,
           "VIDA RESTAURADA!", Color.GREEN);
       floatingTexts.add(healText);
     }
@@ -294,26 +300,26 @@ public class Player {
   }
 
   // TODO: Implementar renderização de barra de vida
-  /* 
-  private void renderHealthBar(Graphics2D g, int screenX, int screenY) {
-    int barWidth = WIDTH;
-    int barHeight = 4;
-    int barY = screenY - 8;
-
-    // Fundo da barra (vermelho)
-    g.setColor(Color.RED);
-    g.fillRect(screenX, barY, barWidth, barHeight);
-
-    // Vida atual (verde)
-    g.setColor(Color.GREEN);
-    int healthWidth = (int) ((double) currentHealth / maxHealth * barWidth);
-    g.fillRect(screenX, barY, healthWidth, barHeight);
-
-    // Borda da barra
-    g.setColor(Color.WHITE);
-    g.drawRect(screenX, barY, barWidth, barHeight);
-  }
-  */
+  /*
+   * private void renderHealthBar(Graphics2D g, int screenX, int screenY) {
+   * int barWidth = WIDTH;
+   * int barHeight = 4;
+   * int barY = screenY - 8;
+   * 
+   * // Fundo da barra (vermelho)
+   * g.setColor(Color.RED);
+   * g.fillRect(screenX, barY, barWidth, barHeight);
+   * 
+   * // Vida atual (verde)
+   * g.setColor(Color.GREEN);
+   * int healthWidth = (int) ((double) currentHealth / maxHealth * barWidth);
+   * g.fillRect(screenX, barY, healthWidth, barHeight);
+   * 
+   * // Borda da barra
+   * g.setColor(Color.WHITE);
+   * g.drawRect(screenX, barY, barWidth, barHeight);
+   * }
+   */
 
   private void attack() {
     if (!canAttack)
@@ -351,58 +357,59 @@ public class Player {
     if (projectile != null) {
       projectiles.add(projectile);
     }
-    
+
     // Verificar se há estruturas vulneráveis próximas para atacar diretamente
     checkAndAttackNearbyStructures(totalDamage);
   }
-  
+
   /**
    * Verifica e ataca estruturas vulneráveis próximas
    */
   private void checkAndAttackNearbyStructures(int damage) {
-    if (enemyManager == null) return;
-    
+    if (enemyManager == null)
+      return;
+
     // Alcance de ataque corpo a corpo para estruturas
     double structureAttackRange = 80.0;
-    
+
     // Verificar estruturas próximas
     for (Structure structure : enemyManager.getStructures()) {
       if (structure.isVulnerable() && !structure.isDestroyed()) {
-        double distance = structure.distanceTo(x + WIDTH/2, y + HEIGHT/2);
-        
+        double distance = structure.distanceTo(x + WIDTH / 2, y + HEIGHT / 2);
+
         if (distance <= structureAttackRange) {
           // Atacar a estrutura
           boolean destroyed = structure.takeDamage(damage);
-          
+
           // Criar texto de dano
           FloatingText damageText = new FloatingText(
-            structure.getX() + structure.getWidth()/2, 
-            structure.getY() + structure.getHeight()/2, 
-            "-" + damage, Color.ORANGE);
+              structure.getX() + structure.getWidth() / 2,
+              structure.getY() + structure.getHeight() / 2,
+              "-" + damage, Color.ORANGE);
           floatingTexts.add(damageText);
-          
+
           if (destroyed) {
             // Dar XP por destruir a cabana
             int xpReward = 100; // XP por destruir cabana
             boolean leveledUp = experienceSystem.addExperience(xpReward);
-            
+
             // Mostrar XP ganho
             FloatingText xpText = new FloatingText(
-              structure.getX() + structure.getWidth()/2,
-              structure.getY() + structure.getHeight()/2 - 20,
-              "+" + xpReward + " XP", Color.CYAN);
+                structure.getX() + structure.getWidth() / 2,
+                structure.getY() + structure.getHeight() / 2 - 20,
+                "+" + xpReward + " XP", Color.CYAN);
             floatingTexts.add(xpText);
-            
+
             System.out.println("Cabana destruída! +" + xpReward + " XP");
-            
+
             // Notificar EnemyManager que a cabana foi destruída
             enemyManager.onStructureDestroyed(structure);
-            
+
             if (leveledUp) {
               System.out.println("Level up ao destruir cabana!");
             }
           }
-          
+
           break; // Atacar apenas uma estrutura por vez
         }
       }
@@ -469,7 +476,7 @@ public class Player {
   public double getY() {
     return y;
   }
-  
+
   public void setPosition(double x, double y) {
     this.x = x;
     this.y = y;
@@ -571,7 +578,7 @@ public class Player {
   public void setTileMap(TileMap tileMap) {
     this.tileMap = tileMap;
   }
-  
+
   public void setEnemyManager(EnemyManager enemyManager) {
     this.enemyManager = enemyManager;
   }
@@ -668,5 +675,19 @@ public class Player {
 
     System.out.println("Stats atualizados - Vida: " + currentHealth + "/" + maxHealth +
         " | Mana: " + currentMana + "/" + maxMana);
+  }
+
+  /**
+   * Define se o jogador está em diálogo (não pode se mover)
+   */
+  public void setInDialog(boolean inDialog) {
+    this.inDialog = inDialog;
+  }
+
+  /**
+   * Retorna se o jogador está em diálogo
+   */
+  public boolean isInDialog() {
+    return inDialog;
   }
 }

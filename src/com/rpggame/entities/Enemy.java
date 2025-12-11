@@ -64,7 +64,7 @@ public abstract class Enemy {
    */
   private void loadSprite() {
     System.out.println("Tentando carregar sprite: " + spritePath);
-    
+
     boolean loaded = false;
 
     try {
@@ -239,6 +239,27 @@ public abstract class Enemy {
   }
 
   /**
+   * Recebe dano de NPCs (guardas) sem dar XP ao player
+   */
+  public void takeDamageFromNPC(int damage) {
+    currentHealth -= damage;
+    if (currentHealth <= 0) {
+      dieWithoutXP();
+    }
+
+    // Ficar agressivo quando receber dano
+    aggressive = true;
+  }
+
+  /**
+   * Morre sem conceder experiência (morto por NPC)
+   */
+  protected void dieWithoutXP() {
+    alive = false;
+    System.out.println("Inimigo foi derrotado por um NPC!");
+  }
+
+  /**
    * Morre e concede experiência
    */
   protected void die() {
@@ -339,7 +360,7 @@ public abstract class Enemy {
       Goblin goblin = (Goblin) this;
       skipCollision = goblin.isInSpawnSafety();
     }
-    
+
     if (tileMap == null || skipCollision) {
       // Se não há mapa ou está em spawn safety, mover sem restrições
       x += dx;
