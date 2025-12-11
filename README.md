@@ -1,8 +1,9 @@
 # Top-view RPG Game 🎮
 
-Um RPG 2D em Java com sistema de combate, exploração e progressão de personagem.
+Um RPG 2D em Java com sistema completo de habilidades, classes únicas e combate estratégico.
 
-![Java](https://img.shields.io/badge/Java-8+-orange)
+![Java](https://img.shields.io/badge/Java-11+-orange)
+![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen)
 ![Status](https://img.shields.io/badge/Status-Complete-green)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
@@ -43,8 +44,28 @@ java -cp build com.rpggame.core.Game
 |-------|------|
 | **WASD** | Movimentação do personagem |
 | **Espaço** | Atacar inimigos |
+| **1, 2, 3, 4** | **NOVO!** Usar habilidades especiais |
+| **E** | Interagir com NPCs |
 | **C** | Abrir tela de características |
+| **V** | Modo debug (informações do jogo) |
 | **ESC** | Sair do jogo |
+
+## ✨ **NOVIDADE v2.0:** Sistema de Habilidades
+
+### 🔥 Habilidades Especiais por Classe
+
+| Classe | Habilidade | Efeito | Cooldown |
+|--------|-----------|--------|----------|
+| **🗡️ Guerreiro** | Golpe Horizontal | Ataque semicircular que atinge múltiplos inimigos | 15s |
+| **🧙 Mago** | Bola de Fogo | Projétil explosivo com dano em área | 30s |
+| **🏹 Arqueiro/Hunter** | Flecha Perfurante | Projétil que atravessa todos os inimigos em linha | 20s |
+
+### 📚 Como Usar Habilidades
+
+1. **Converse com o NPC Sábio** na vila para aprender sua primeira habilidade
+2. **Pressione teclas 1-4** para ativar habilidades aprendidas
+3. **Gerencie cooldowns** estrategicamente durante o combate
+4. **Dano escalado** com os atributos principais de cada classe
 
 ## ⚔️ Características do Jogo
 

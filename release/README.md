@@ -1,23 +1,32 @@
-# RPG 2D Game - v1.2 Release
+# RPG 2D Game - v2.0 "Skills & Magic Update"
 
-## Executável
-- `RPG-Game-v1.2.jar` - Executável cross-platform
+## 🎮 Novo Sistema de Habilidades!
 
-## Como Executar
+Esta versão introduz um sistema completo de habilidades especiais para cada classe, com efeitos visuais impressionantes e gameplay estratégico.
 
-### Windows
-```
-java -jar RPG-Game-v1.2.jar
-```
+## 📦 Executável
+- `RPG-Game-v2.0.jar` - Executável cross-platform (Em breve)
 
-### Linux/macOS
+## 🚀 Como Executar
+
+### Opção 1: Executável JAR (Recomendado)
 ```bash
-java -jar RPG-Game-v1.2.jar
+java -jar RPG-Game-v2.0.jar
 ```
 
-## Requisitos
-- Java 11 ou superior
-- 512MB RAM mínimo
+### Opção 2: Código Fonte
+```bash
+# Compile
+javac -cp "src" -d "bin" src/com/rpggame/core/*.java src/com/rpggame/**/*.java
+
+# Execute
+java -cp "bin" com.rpggame.core.Game
+```
+
+## 📋 Requisitos
+- **Java:** JDK 11 ou superior
+- **RAM:** 512MB mínimo
+- **Resolução:** 1024x768 ou superior
 - Resolução mínima: 1024x800
 
 ## Novidades da v1.2

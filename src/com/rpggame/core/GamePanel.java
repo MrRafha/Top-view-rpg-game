@@ -279,6 +279,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Renderizar o jogador
     player.render(g2d, camera);
 
+    // Renderizar habilidades do jogador (efeitos visuais)
+    if (player.getSkillManager() != null) {
+      player.getSkillManager().render(g2d, camera);
+    }
+
     // Renderizar UI
     renderUI(g2d);
 

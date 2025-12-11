@@ -77,6 +77,9 @@ public class Player {
   // Controle de movimento durante diálogos
   private boolean inDialog = false;
 
+  // Gerenciador de habilidades
+  private SkillManager skillManager;
+
   public Player(double x, double y, String spritePath) {
     this.x = x;
     this.y = y;
@@ -91,6 +94,7 @@ public class Player {
     this.lastLevelCheck = 1; // Começar no nível 1
     this.projectiles = new ArrayList<>();
     this.floatingTexts = new ArrayList<>();
+    this.skillManager = new SkillManager(this);
     loadSprite(spritePath);
   }
 
@@ -107,6 +111,7 @@ public class Player {
     this.speed = 3.0; // Velocidade base fixa
     this.projectiles = new ArrayList<>();
     this.floatingTexts = new ArrayList<>();
+    this.skillManager = new SkillManager(this);
     loadSprite(spritePath);
   }
 
@@ -243,6 +248,11 @@ public class Player {
       if (!ft.isActive()) {
         floatingTexts.remove(i);
       }
+    }
+
+    // Atualizar habilidades
+    if (skillManager != null) {
+      skillManager.update();
     }
 
     // Verificar level up e restaurar vida
@@ -439,6 +449,26 @@ public class Player {
       case KeyEvent.VK_SPACE:
         spacePressed = true;
         break;
+      case KeyEvent.VK_1:
+        if (skillManager != null) {
+          skillManager.useSkill(1);
+        }
+        break;
+      case KeyEvent.VK_2:
+        if (skillManager != null) {
+          skillManager.useSkill(2);
+        }
+        break;
+      case KeyEvent.VK_3:
+        if (skillManager != null) {
+          skillManager.useSkill(3);
+        }
+        break;
+      case KeyEvent.VK_4:
+        if (skillManager != null) {
+          skillManager.useSkill(4);
+        }
+        break;
     }
   }
 
@@ -581,6 +611,21 @@ public class Player {
 
   public void setEnemyManager(EnemyManager enemyManager) {
     this.enemyManager = enemyManager;
+  }
+
+  public EnemyManager getEnemyManager() {
+    return enemyManager;
+  }
+
+  public SkillManager getSkillManager() {
+    return skillManager;
+  }
+
+  /**
+   * Obtém a direção que o jogador está olhando
+   */
+  public double getFacingDirection() {
+    return facing;
   }
 
   private void updatePositionWithCollision(double dx, double dy) {
