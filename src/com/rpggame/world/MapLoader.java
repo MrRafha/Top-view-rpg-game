@@ -18,11 +18,24 @@ public class MapLoader {
     try {
       List<String> lines = new ArrayList<>();
 
-      // Tentar carregar arquivo
-      try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-        String line;
-        while ((line = reader.readLine()) != null) {
-          lines.add(line);
+      // Tentar carregar como recurso primeiro (funciona dentro do JAR)
+      InputStream resourceStream = MapLoader.class.getClassLoader().getResourceAsStream(filePath);
+      if (resourceStream != null) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(resourceStream))) {
+          String line;
+          while ((line = reader.readLine()) != null) {
+            lines.add(line);
+          }
+          System.out.println("Mapa carregado como recurso: " + filePath);
+        }
+      } else {
+        // Fallback: tentar carregar como arquivo do sistema (desenvolvimento)
+        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+          String line;
+          while ((line = reader.readLine()) != null) {
+            lines.add(line);
+          }
+          System.out.println("Mapa carregado como arquivo: " + filePath);
         }
       }
       if (lines.isEmpty()) {
