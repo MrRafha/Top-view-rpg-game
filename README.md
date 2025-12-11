@@ -39,6 +39,8 @@ javac -d ..\bin -encoding UTF-8 com\rpggame\core\Game.java
 # Execute  
 cd ..
 java -cp bin com.rpggame.core.Game
+```
+
 ## 🎮 Controles
 
 | Tecla | Ação |
@@ -49,9 +51,6 @@ java -cp bin com.rpggame.core.Game
 | **E** | Interagir com NPCs |
 | **C** | Abrir tela de características |
 | **V** | Toggle campo de visão (modo debug) |
-| **ESC** | Sair do jogo |racterísticas |
-| **V** | Modo debug (informações do jogo) |
-| **ESC** | Sair do jogo |
 
 ## ✨ **NOVIDADE v2.0:** Sistema de Habilidades
 
@@ -99,7 +98,8 @@ java -cp bin com.rpggame.core.Game
 | **Inteligência** | INT | 🧠 Aumenta dano mágico e mana máxima |
 | **Sabedoria** | WIS | 👁️ Aumenta experiência ganha e visão |
 | **Carisma** | CHA | 💬 Afeta interações sociais |
-| **Constituição** | CON | Aumenta a vida e a resistencia |
+| **Constituição** | CON | ❤️ Aumenta a vida e a resistência |
+
 ### 👹 Sistema de Inimigos Inteligente
 
 **🧌 Goblins com IA Avançada:**
@@ -114,21 +114,21 @@ java -cp bin com.rpggame.core.Game
 - **Territórios definidos**: Cada família defende sua área
 - **Conselho Goblin**: Sistema de decisões estratégicas
 - **Respawn automático**: Famílias reaparecem após eliminação
-- **Estruturas**: Cabanas e acampamentos goblinss ataques
-- **Tímido**: Mais rápido mas foge quando ferido
-- **Líder**: Comanda outros goblins em grupo
+- **Estruturas**: Cabanas e acampamentos goblins
 
 ### ✨ Efeitos Visuais de Combate
 
 - **⚠️ Preparação de Ataque**: Aviso visual 0.75s antes do ataque
 - **💥 Efeito de Slash**: Animação visual durante ataques
 - **📡 Sistema de Telegraphing**: Permite reação aos ataques inimigos
+
 ## 🗺️ Sistema de Mundo
 
 ### 🌍 Múltiplos Mapas
 - **Territórios Goblin**: Mapa inicial 25x25 com goblins e estruturas
 - **Vila**: Mapa 25x25 com praia, NPCs e área segura
 - **Portais**: Sistema de teleporte bidirecionais entre mapas
+
 ## 🏗️ Estrutura do Projeto
 
 ```
@@ -153,6 +153,8 @@ java -cp bin com.rpggame.core.Game
 │       └── 🌫️ FogOfWar, Camera
 │
 ├── 🎨 sprites/               # Sprites de personagens e NPCs
+```
+
 ## 🛠️ Requisitos Técnicos
 
 ### Mínimos
@@ -166,6 +168,7 @@ java -cp bin com.rpggame.core.Game
 - **Java**: JDK 17 ou superior
 - **RAM**: 1GB livres
 - **Resolução**: 1920x1080
+
 ## 📈 Changelog
 
 ### v2.0 - "Skills & Magic Update" (Atual - 11/12/2025)
@@ -196,22 +199,6 @@ java -cp bin com.rpggame.core.Game
 - ✅ IA avançada: 4 personalidades de goblins
 - ✅ Sistema de territórios e famílias
 - ✅ Efeitos visuais de combate
-
-### Recomendados  
-- **Java**: 11 ou superior
-- **RAM**: 512MB livres
-- **CPU**: Dual-core 2GHz+
-
-## 📈 Changelog
-
-### v1.1 (Atual)
-- ✅ **Sistema ResourceResolver**: Carregamento inteligente de recursos
-- ✅ **Correção crítica**: Sprites e mapas funcionando no executável
-- ✅ **Efeitos visuais de combate**: Animações e telegraphing dos goblins
-- ✅ **IA avançada**: 4 personalidades de goblins únicas
-- ✅ **Sistema de territórios**: Famílias de goblins e guerras
-- ✅ **Estrutura organizada**: Pacotes Java modulares
-- ✅ **Executável corrigido**: Cross-platform totalmente funcional
 
 ### v1.0
 - ✅ Sistema de combate básico
