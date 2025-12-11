@@ -44,7 +44,7 @@ java -cp build com.rpggame.core.Game
 |-------|------|
 | **WASD** | Movimentação do personagem |
 | **Espaço** | Atacar inimigos |
-| **1, 2, 3, 4** | **NOVO!** Usar habilidades especiais |
+| **1, 2, 3, 4** | **NOVO v2.0!** Usar habilidades especiais |
 | **E** | Interagir com NPCs |
 | **C** | Abrir tela de características |
 | **V** | Modo debug (informações do jogo) |
@@ -60,12 +60,20 @@ java -cp build com.rpggame.core.Game
 | **🧙 Mago** | Bola de Fogo | Projétil explosivo com dano em área | 30s |
 | **🏹 Arqueiro/Hunter** | Flecha Perfurante | Projétil que atravessa todos os inimigos em linha | 20s |
 
+### 🎮 Interface de Habilidades
+
+- **4 Slots visuais** no canto direito da tela
+- **Indicadores de cooldown** com círculos de progresso
+- **Cores dinâmicas**: Verde (pronto), Cinza (cooldown), Vazio (não aprendido)
+- **Contadores em tempo real** mostrando segundos restantes
+
 ### 📚 Como Usar Habilidades
 
 1. **Converse com o NPC Sábio** na vila para aprender sua primeira habilidade
 2. **Pressione teclas 1-4** para ativar habilidades aprendidas
 3. **Gerencie cooldowns** estrategicamente durante o combate
 4. **Dano escalado** com os atributos principais de cada classe
+5. **Acompanhe visualmente** o progresso dos cooldowns nos slots
 
 ## ⚔️ Características do Jogo
 

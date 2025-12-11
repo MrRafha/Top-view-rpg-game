@@ -107,4 +107,11 @@ public abstract class Skill {
   public int getCooldownInSeconds() {
     return (currentCooldown / 60) + (currentCooldown % 60 > 0 ? 1 : 0);
   }
+
+  /**
+   * Obtém o tempo total de cooldown em frames.
+   */
+  public int getTotalCooldownTime() {
+    return cooldownTime;
+  }
 }

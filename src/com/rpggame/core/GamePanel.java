@@ -18,6 +18,7 @@ import com.rpggame.world.*;
 import com.rpggame.systems.*;
 import com.rpggame.ui.CharacterScreen;
 import com.rpggame.ui.DialogBox;
+import com.rpggame.ui.SkillSlotUI;
 
 /**
  * Painel principal onde o jogo é renderizado
@@ -44,6 +45,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private DialogBox dialogBox;
   private NPC currentTalkingNPC = null;
   private boolean showingDialog = false;
+
+  // Sistema de UI de habilidades
+  private SkillSlotUI skillSlotUI;
 
   // Sistema de mapas e transições
   private MapManager mapManager;
@@ -137,6 +141,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       player.setEnemyManager(enemyManager); // Conectar player ao enemy manager
       enemyManager.setCurrentMapId(mapManager.getCurrentMapId());
       enemyManager.initializeGoblinFamilies(tileMap);
+
+      // Inicializar UI de slots de habilidades
+      if (player.getSkillManager() != null) {
+        skillSlotUI = new SkillSlotUI(player.getSkillManager(), Game.SCREEN_WIDTH);
+      }
 
       // Iniciar o loop do jogo se ainda não estiver rodando
       if (gameThread == null || !gameThread.isAlive()) {
@@ -304,6 +313,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Barras de vida e mana (canto superior esquerdo)
     drawHealthAndManaBars(g, player);
+
+    // Slots de habilidades (canto superior direito)
+    if (skillSlotUI != null) {
+      skillSlotUI.render(g);
+    }
 
     // Instruções de controle removidas para interface mais limpa
   }

@@ -53,6 +53,13 @@ Game.main()
 3. Cálculo de dano com base nos atributos
 4. Sistema de evasão probabilístico
 
+#### Sistema de Habilidades (v2.0)
+1. **Arquitetura modular** com classe base `Skill`
+2. **SkillManager** gerencia slots e execução
+3. **Cooldowns visuais** com UI de slots
+4. **Aprendizado via NPCs** - sistema de progressão
+5. **Balanceamento por atributos** - cada classe tem fórmula específica
+
 #### Fog of War
 1. Algoritmo de Bresenham para line-of-sight
 2. Alcance baseado em Wisdom
@@ -89,6 +96,36 @@ ROGUE("Ladino", 1, 3, 1, 2, 1, 1)
 
 3. **CombinedCharacterScreen.java** - adicionar à interface
 
+### Nova Habilidade
+
+1. **Criar classe herdando de Skill**:
+```java
+public class NewSkill extends Skill {
+    public NewSkill() {
+        super("Nome", "Descrição", cooldownSeconds, "classe");
+    }
+    
+    @Override
+    protected void performSkill(Player player) {
+        // Implementar lógica da habilidade
+    }
+    
+    @Override
+    public void render(Graphics2D g, Camera camera) {
+        // Implementar efeitos visuais
+    }
+}
+```
+
+2. **Adicionar no SkillManager.initializeSkills()**:
+```java
+case "classe":
+    skills.put(2, new NewSkill()); // Slot 2
+    break;
+```
+
+3. **Atualizar WiseManNPC** para ensinar a nova habilidade
+
 ### Novo Sistema (ex: Inventário)
 
 1. Criar classe `Inventory.java`
@@ -102,6 +139,8 @@ ROGUE("Ladino", 1, 3, 1, 2, 1, 1)
 - Culling de tiles fora da tela
 - Fog of War calculado apenas quando necessário
 - Double buffering nativo do Swing
+- **UI de Habilidades** com renderização otimizada e antialiasing
+- **Círculos de progresso** para cooldowns em tempo real
 
 ### Memória
 - Reutilização de objetos Projectile
@@ -159,11 +198,14 @@ public static final boolean DEBUG_FOW = true;
 ### Estrutura de Arquivos
 ```
 src/
-├── core/           # Classes principais
-├── entities/       # Entidades do jogo
-├── systems/        # Sistemas específicos
-├── ui/            # Interface de usuário
-└── utils/         # Utilitários
+├── core/           # Classes principais (Game, GamePanel)
+├── entities/       # Entidades do jogo (Player, Enemy, etc.)
+├── systems/        # Sistemas específicos (SkillManager, ExperienceSystem)
+│   └── skills/     # Habilidades específicas (v2.0)
+├── ui/            # Interface de usuário (SkillSlotUI, CharacterScreen)
+├── world/         # Sistema de mundo (TileMap, Camera, etc.)
+├── npcs/          # NPCs (WiseManNPC, MerchantNPC, etc.)
+└── enemies/       # Inimigos (Goblins, etc.)
 ```
 
 ### Comentários

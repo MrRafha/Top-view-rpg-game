@@ -15,6 +15,7 @@
 - **Controles intuitivos** com teclas numéricas (1-4)
 - **Sistema de cooldown** balanceado para cada habilidade
 - **Aprendizado através de NPCs** - converse com o Sábio para desbloquear
+- **Interface de Slots Visual** - 4 slots no canto direito da tela com indicadores de cooldown
 
 ### ⚔️ **Habilidades por Classe**
 
@@ -55,6 +56,9 @@
 - ✅ Correções de estabilidade em diálogos
 
 ### **Interface e Controles**
+- ✅ **Slots de Habilidades Visuais** - 4 slots no canto direito da tela
+- ✅ **Indicadores de Cooldown** - Círculos de progresso e contadores em tempo real
+- ✅ **Cores Dinâmicas** - Verde para pronto, cinza para cooldown, vazio para não aprendido
 - ✅ Controles de habilidades (teclas 1-4)
 - ✅ Feedback visual para cooldowns
 - ✅ Mensagens de debug melhoradas
@@ -65,6 +69,7 @@
 - 🔧 Corrigidos erros de compilação
 - 🔧 Removidas chamadas para métodos inexistentes (`applyKnockback`)
 - 🔧 Otimização do sistema de renderização
+- 🔧 **Correção do círculo de progresso** - Agora completa corretamente a volta durante o cooldown
 
 ---
 
