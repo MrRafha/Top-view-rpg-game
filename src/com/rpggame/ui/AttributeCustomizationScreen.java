@@ -39,14 +39,15 @@ public class AttributeCustomizationScreen extends JPanel implements ActionListen
       "(Atributo principal do Guerreiro)",
       "(Atributo principal do Caçador)",
       "(Atributo principal do Mago)",
-      "(Campo de visão e XP +1% a cada 2 pts)",
+      "(Regeneração de Mana)",
       "(Interações com NPCs)",
       "(Vida do personagem +10HP por ponto)"
   };
 
   // Cores do tema
   private final Color BACKGROUND_COLOR = new Color(20, 30, 40);
-  // private final Color PANEL_COLOR = new Color(40, 50, 60); // TODO: Usar se necessário
+  // private final Color PANEL_COLOR = new Color(40, 50, 60); // TODO: Usar se
+  // necessário
   private final Color TEXT_COLOR = new Color(220, 220, 220);
   private final Color ACCENT_COLOR = new Color(100, 150, 200);
   private final Color PRIMARY_COLOR = new Color(255, 215, 0); // Dourado para atributo principal
@@ -363,7 +364,7 @@ public class AttributeCustomizationScreen extends JPanel implements ActionListen
     bonusLabels[1].setText("Dano: +" + Math.max(0, stats.getDexterity() - 5));
     bonusLabels[2].setText("Dano: +" + Math.max(0, stats.getIntelligence() - 5)
         + " | Mana: " + stats.getMaxMana());
-    bonusLabels[3].setText(String.format("Visão/XP: +%.0f%%", (stats.getWisdom() - 5) / 2.0f));
+    bonusLabels[3].setText(String.format("Regen Mana: +%.1f/s", stats.getManaRegen()));
     bonusLabels[4].setText("Interação com NPCs");
     bonusLabels[5].setText("Vida: " + stats.getMaxHealth() + " HP");
 

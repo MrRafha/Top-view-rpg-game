@@ -33,15 +33,27 @@ public class SkillManager {
     switch (playerClass.toLowerCase()) {
       case "warrior":
         skills.put(1, new HorizontalSlashSkill());
+        skills.put(2, new IntimidatingShoutSkill());
+        skills.put(3, new BullRushSkill());
+        skills.put(4, new BerserkFurySkill());
         break;
       case "mage":
         skills.put(1, new FireballSkill());
+        skills.put(2, new FreezingSkill());
+        skills.put(3, new EnchantmentSkill());
+        skills.put(4, new ArcaneMeteorSkill());
         break;
       case "archer":
         skills.put(1, new PiercingArrowSkill());
+        skills.put(2, new QuickDashSkill());
+        skills.put(3, new DeadlyTrapSkill());
+        skills.put(4, new ArrowRainSkill());
         break;
       case "hunter":
         skills.put(1, new PiercingArrowSkill());
+        skills.put(2, new QuickDashSkill());
+        skills.put(3, new DeadlyTrapSkill());
+        skills.put(4, new ArrowRainSkill());
         break;
     }
   }
@@ -145,5 +157,12 @@ public class SkillManager {
     String status = skill.isOnCooldown() ? " (Cooldown: " + skill.getCooldownInSeconds() + "s)" : " (Pronta)";
 
     return "Slot " + slot + ": " + skill.getName() + status;
+  }
+
+  /**
+   * Obtém uma habilidade por slot (alias para getSkill)
+   */
+  public Skill getSkillBySlot(int slot) {
+    return skills.get(slot);
   }
 }

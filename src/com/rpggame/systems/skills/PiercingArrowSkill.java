@@ -26,7 +26,8 @@ public class PiercingArrowSkill extends Skill {
     super("Flecha Perfurante",
         "Dispara uma flecha mágica que atravessa todos os inimigos em seu caminho",
         20, // 20 segundos de cooldown
-        "Archer");
+        "Archer",
+        20); // 20 de mana
 
     this.activeArrows = new ArrayList<>();
   }

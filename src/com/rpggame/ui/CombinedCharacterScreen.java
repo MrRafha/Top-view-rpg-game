@@ -73,7 +73,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
       "(Dano + Slots de inventário)",
       "(Dano + Chance de evasão)",
       "(Dano + Projéteis mágicos)",
-      "(XP +5% a cada 2 pontos)",
+      "(Regeneração de mana)",
       "(Sistema de intimidação futuro)",
       "(Vida +10HP e -1% dano recebido a cada 2 pts)"
   };
@@ -103,7 +103,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
       String warriorPath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/WarriorPlayer.png");
       String magePath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/MagePlayer.png");
       String hunterPath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/HunterPlayer.png");
-      
+
       warriorSprite = ImageIO.read(new File(warriorPath));
       mageSprite = ImageIO.read(new File(magePath));
       hunterSprite = ImageIO.read(new File(hunterPath));
@@ -284,30 +284,30 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     JPanel topPanel = new JPanel();
     topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
     topPanel.setBackground(backgroundColor);
-    
+
     // Título da seção
     JLabel attrTitle = new JLabel("DISTRIBUIÇÃO DE ATRIBUTOS", SwingConstants.CENTER);
     attrTitle.setFont(new Font("Arial", Font.BOLD, 18));
     attrTitle.setForeground(textColor);
     attrTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
     topPanel.add(attrTitle);
-    
+
     // Espaçamento
     topPanel.add(Box.createRigidArea(new Dimension(0, 5)));
-    
+
     // Painel de pontos (será usado o pointsLabel existente, mas reposicionado)
     pointsLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
     topPanel.add(pointsLabel);
-    
+
     // Aviso sobre pontos não utilizados
     JLabel warningLabel = new JLabel("⚠️ Pontos não utilizados serão perdidos!", SwingConstants.CENTER);
     warningLabel.setFont(new Font("Arial", Font.ITALIC, 12));
     warningLabel.setForeground(warningColor);
     warningLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
     topPanel.add(warningLabel);
-    
+
     topPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-    
+
     mainPanel.add(topPanel, BorderLayout.NORTH);
 
     // Painel dos atributos
@@ -610,7 +610,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
         + " | Evasão: " + String.format("%.0f%%", stats.getEvasionChance() * 100));
     bonusLabels[2].setText("Dano: +" + Math.max(0, stats.getIntelligence() - 5)
         + " | Mana: " + stats.getMaxMana());
-    bonusLabels[3].setText("XP: +" + String.format("%.0f%%", (stats.getXpMultiplier() - 1) * 100));
+    bonusLabels[3].setText("Regen Mana: +" + String.format("%.1f/s", stats.getManaRegen()));
     bonusLabels[4].setText("Intimidação (futuro)");
     bonusLabels[5].setText("Vida: " + stats.getMaxHealth() + "HP | Def: -"
         + String.format("%.0f%%", stats.getDamageReduction() * 100));

@@ -96,7 +96,7 @@ java -cp bin com.rpggame.core.Game
 | **Força** | STR | ⚔️ Aumenta dano corpo a corpo |
 | **Destreza** | DEX | 🏃 Aumenta dano à distância e velocidade |
 | **Inteligência** | INT | 🧠 Aumenta dano mágico e mana máxima |
-| **Sabedoria** | WIS | 👁️ Aumenta experiência ganha e visão |
+| **Sabedoria** | WIS | 👁️ Aumenta visão e regeneração de mana |
 | **Carisma** | CHA | 💬 Afeta interações sociais |
 | **Constituição** | CON | ❤️ Aumenta a vida e a resistência |
 

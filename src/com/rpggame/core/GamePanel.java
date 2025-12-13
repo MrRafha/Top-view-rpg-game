@@ -53,6 +53,12 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private MapManager mapManager;
   private MapTransition mapTransition;
 
+  // Sistema de morte
+  private boolean playerDead = false;
+  private boolean deathTransitionStarted = false;
+  private boolean showingDeathScreen = false;
+  private Rectangle newGameButton;
+
   // Debug - Visualização de campo de visão
   private boolean showVisionCones = false;
 
@@ -78,8 +84,18 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   }
 
   private void initializeGame() {
+    // Inicializar sistema de mapas primeiro
+    mapManager = new MapManager();
+
     // Criar o mapa de tiles
     tileMap = new TileMap();
+
+    // Carregar o mapa inicial correto baseado no MapManager
+    MapManager.MapData initialMap = mapManager.getCurrentMap();
+    if (initialMap != null) {
+      tileMap.reloadMap(initialMap.getFilePath(), mapManager.getCurrentMapId());
+      System.out.println("✅ Mapa inicial carregado: " + initialMap.getName());
+    }
 
     // Criar a câmera
     camera = new Camera(0, 0);
@@ -88,8 +104,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     dialogBox = new DialogBox();
     npcs = new java.util.ArrayList<>();
 
-    // Inicializar sistema de mapas e transições
-    mapManager = new MapManager();
+    // Inicializar sistema de transições
     mapTransition = new MapTransition();
 
     // Criar NPCs de exemplo
@@ -110,9 +125,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   public void setPlayerClass(String playerClass, String spritePath) {
     // Verificar se o tileMap já foi inicializado antes de criar o player
     if (tileMap != null) {
-      // Encontrar uma posição centrada de grama para spawn do jogador
-      Point spawnPosition = tileMap.getCenteredGrassPosition(33, 48); // Tamanho do player
-      player = new Player(spawnPosition.x, spawnPosition.y, spritePath);
+      // Posição inicial fixa no mapa village
+      player = new Player(638, 260, spritePath);
       player.setTileMap(tileMap);
 
       // Reinicializar o gerenciador de inimigos com o novo player
@@ -130,10 +144,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   public void setPlayerClass(String playerClass, String spritePath, CharacterStats stats) {
     // Conectar o mapa ao jogador para verificação de colisão
     if (tileMap != null) {
-      // Encontrar uma posição aleatória de grama para spawn do jogador (centralizada
-      // no tile)
-      Point spawnPosition = tileMap.getCenteredGrassPosition(33, 48); // Player dimensions
-      player = new Player(spawnPosition.x, spawnPosition.y, spritePath, playerClass, stats);
+      // Posição inicial fixa no mapa village (x:638, y:260)
+      player = new Player(638, 260, spritePath, playerClass, stats);
       player.setTileMap(tileMap);
 
       // Criar o gerenciador de inimigos com o novo player
@@ -155,7 +167,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       System.out.println("=== PERSONAGEM CRIADO ===");
       System.out.println("Classe: " + playerClass);
       System.out.println("Stats: " + stats.toString());
-      System.out.println("Posição: " + spawnPosition.x + ", " + spawnPosition.y);
+      System.out.println("Posição inicial: 638, 260 (Village)");
       System.out.println("Controles: WASD para mover, ESPAÇO para atacar, C para características");
       System.out.println("========================");
     } else {
@@ -200,22 +212,48 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (player == null || showingCharacterScreen)
       return;
 
-    // Atualizar transição de mapa
+    // Verificar se player morreu
+    if (!playerDead && player != null && !player.isAlive()) {
+      playerDead = true;
+      deathTransitionStarted = false;
+      System.out.println("💀 Player morreu!");
+    }
+
+    // Se player está morto, iniciar transição de morte
+    if (playerDead && !deathTransitionStarted) {
+      mapTransition.startTransition("", 0, 0); // Transição vazia, só para efeito visual
+      deathTransitionStarted = true;
+    }
+
+    // Atualizar transição de mapa ou morte
     if (mapTransition.isTransitioning()) {
       boolean shouldChangeMap = mapTransition.update();
 
-      if (shouldChangeMap) {
-        // Momento de trocar o mapa (tela totalmente preta)
+      if (shouldChangeMap && !playerDead) {
+        // Momento de trocar o mapa (tela totalmente preta) - apenas se não for morte
         changeMap(mapTransition.getTargetMapPath(),
             mapTransition.getPlayerSpawnX(),
             mapTransition.getPlayerSpawnY());
+      } else if (shouldChangeMap && playerDead) {
+        // Tela totalmente preta - mostrar tela de morte
+        showingDeathScreen = true;
       }
 
       // Não atualizar gameplay durante transição
       return;
     }
 
+    // Não atualizar se estiver na tela de morte
+    if (showingDeathScreen) {
+      return;
+    }
+
     player.update();
+
+    // Verificar desbloqueio de habilidade pendente
+    if (player.getPendingSkillUnlock() > 0 && !showingDialog) {
+      showSkillUnlockDialog(player.getPendingSkillUnlock());
+    }
 
     // Atualizar NPCs
     updateNPCs();
@@ -297,14 +335,74 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     renderUI(g2d);
 
     // Renderizar DialogBox se estiver mostrando
-    if (showingDialog && dialogBox != null && currentTalkingNPC != null) {
-      dialogBox.render(g2d, currentTalkingNPC.getName(), getWidth(), getHeight());
+    if (showingDialog && dialogBox != null) {
+      String npcName = currentTalkingNPC != null ? currentTalkingNPC.getName() : "Sistema";
+      dialogBox.render(g2d, npcName, getWidth(), getHeight());
     }
 
     // Renderizar transição de mapa (sempre por último, em cima de tudo)
     if (mapTransition != null && mapTransition.isTransitioning()) {
       mapTransition.render(g2d, getWidth(), getHeight());
     }
+
+    // Renderizar tela de morte (se ativa)
+    if (showingDeathScreen) {
+      renderDeathScreen(g2d);
+    }
+  }
+
+  /**
+   * Renderiza a tela de morte
+   */
+  private void renderDeathScreen(Graphics2D g) {
+    // Fundo preto
+    g.setColor(Color.BLACK);
+    g.fillRect(0, 0, getWidth(), getHeight());
+
+    // Antialiasing
+    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+    // Texto "Você morreu" em vermelho sangue
+    Color bloodRed = new Color(139, 0, 0); // Vermelho escuro/sangue
+    g.setColor(bloodRed);
+    g.setFont(new Font("Arial", Font.BOLD, 72));
+
+    String deathText = "Você morreu";
+    FontMetrics fm = g.getFontMetrics();
+    int textWidth = fm.stringWidth(deathText);
+    int textX = (getWidth() - textWidth) / 2;
+    int textY = getHeight() / 2 - 50;
+
+    g.drawString(deathText, textX, textY);
+
+    // Botão "Novo Jogo"
+    int buttonWidth = 200;
+    int buttonHeight = 50;
+    int buttonX = (getWidth() - buttonWidth) / 2;
+    int buttonY = textY + 80;
+
+    // Armazenar área do botão para detecção de clique
+    if (newGameButton == null) {
+      newGameButton = new Rectangle(buttonX, buttonY, buttonWidth, buttonHeight);
+    }
+
+    // Desenhar botão
+    g.setColor(new Color(60, 60, 60));
+    g.fillRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10, 10);
+
+    g.setColor(Color.WHITE);
+    g.setStroke(new BasicStroke(2));
+    g.drawRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10, 10);
+
+    // Texto do botão
+    g.setFont(new Font("Arial", Font.BOLD, 24));
+    String buttonText = "Novo Jogo";
+    fm = g.getFontMetrics();
+    textWidth = fm.stringWidth(buttonText);
+    int buttonTextX = buttonX + (buttonWidth - textWidth) / 2;
+    int buttonTextY = buttonY + ((buttonHeight - fm.getHeight()) / 2) + fm.getAscent();
+
+    g.drawString(buttonText, buttonTextX, buttonTextY);
   }
 
   private void renderUI(Graphics2D g) {
@@ -365,10 +463,16 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       g.drawString("Player X: " + (int) player.getX() + " Y: " + (int) player.getY(),
           barX, barY + (barSpacing * 3) + 40);
 
+      // Posição do tile do player
+      int tileX = (int) player.getX() / TILE_SIZE;
+      int tileY = (int) player.getY() / TILE_SIZE;
+      g.drawString("Tile: T " + tileX + " - L " + tileY,
+          barX, barY + (barSpacing * 3) + 55);
+
       // Mostrar decisão do conselho goblin se houver
       com.rpggame.systems.GoblinCouncil council = enemyManager.getGoblinCouncil();
       if (council != null) {
-        int yOffset = barY + (barSpacing * 3) + (showVisionCones ? 60 : 25);
+        int yOffset = barY + (barSpacing * 3) + (showVisionCones ? 75 : 40);
 
         if (council.isAllianceAgainstPlayerActive()) {
           g.setFont(new Font("Arial", Font.BOLD, 12));
@@ -501,6 +605,13 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   @Override
   public void mouseClicked(MouseEvent e) {
     requestFocusInWindow();
+
+    // Verificar clique no botão "Novo Jogo" na tela de morte
+    if (showingDeathScreen && newGameButton != null) {
+      if (newGameButton.contains(e.getPoint())) {
+        restartGame();
+      }
+    }
   }
 
   @Override
@@ -548,6 +659,37 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
       System.out.println("Tela de características aberta - jogo pausado");
     }
+  }
+
+  /**
+   * Reinicia o jogo voltando para a tela de criação de personagem
+   */
+  private void restartGame() {
+    System.out.println("🔄 Reiniciando jogo...");
+
+    // Parar o game loop
+    running = false;
+
+    // Resetar estados
+    playerDead = false;
+    deathTransitionStarted = false;
+    showingDeathScreen = false;
+    newGameButton = null;
+
+    // Limpar referências
+    player = null;
+    enemyManager = null;
+
+    // Fechar a janela atual e voltar para tela de criação
+    SwingUtilities.invokeLater(() -> {
+      JFrame topFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
+      if (topFrame != null) {
+        topFrame.dispose();
+      }
+
+      // Criar nova janela com tela de criação
+      Game.main(new String[] {});
+    });
   }
 
   /**
@@ -637,11 +779,23 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private void interactWithNearbyNPC() {
     if (showingDialog) {
       if (dialogBox.isTextComplete()) {
-        boolean hasMore = currentTalkingNPC.nextDialog();
-        if (hasMore) {
-          dialogBox.setText(currentTalkingNPC.getCurrentDialog());
-        } else {
-          endDialog();
+        // Se é um diálogo de desbloqueio de habilidade
+        if (skillUnlockDialogs != null) {
+          currentSkillUnlockIndex++;
+          if (currentSkillUnlockIndex < skillUnlockDialogs.length) {
+            dialogBox.setText(skillUnlockDialogs[currentSkillUnlockIndex]);
+          } else {
+            endDialog();
+          }
+        }
+        // Se é diálogo com NPC
+        else if (currentTalkingNPC != null) {
+          boolean hasMore = currentTalkingNPC.nextDialog();
+          if (hasMore) {
+            dialogBox.setText(currentTalkingNPC.getCurrentDialog());
+          } else {
+            endDialog();
+          }
         }
       } else {
         dialogBox.skipAnimation();
@@ -673,6 +827,35 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     System.out.println("💬 Iniciando conversa com: " + npc.getName());
   }
 
+  // Sistema de diálogo multi-etapas para desbloqueio de habilidades
+  private String[] skillUnlockDialogs;
+  private int currentSkillUnlockIndex = 0;
+
+  /**
+   * Mostra diálogo de desbloqueio de habilidade
+   */
+  private void showSkillUnlockDialog(int slot) {
+    showingDialog = true;
+    currentSkillUnlockIndex = 0;
+
+    // Criar diálogos multi-etapas
+    skillUnlockDialogs = new String[] {
+        "Você sente toda a experiência acumulada ressoando em você...",
+        "Seu corpo e mente se fortalecem com o conhecimento adquirido.",
+        "HABILIDADE DESBLOQUEADA!",
+        "Slot " + slot + " agora está disponível! Use a tecla " + slot + " para ativar."
+    };
+
+    dialogBox.setText(skillUnlockDialogs[0]);
+
+    // Bloquear movimento do player
+    if (player != null) {
+      player.setInDialog(true);
+    }
+
+    System.out.println(" Mostrando diálogo de desbloqueio de habilidade - Slot " + slot);
+  }
+
   /**
    * Encerra diálogo
    */
@@ -680,6 +863,13 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     showingDialog = false;
     currentTalkingNPC = null;
     dialogBox.reset();
+    skillUnlockDialogs = null;
+    currentSkillUnlockIndex = 0;
+
+    // Limpar desbloqueio pendente se houver
+    if (player != null && player.getPendingSkillUnlock() > 0) {
+      player.clearPendingSkillUnlock();
+    }
 
     // Informar ao jogador que não está mais em diálogo (liberar movimento)
     if (player != null) {

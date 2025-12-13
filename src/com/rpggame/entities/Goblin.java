@@ -272,6 +272,13 @@ public class Goblin extends Enemy {
    */
   @Override
   protected void updateAI() {
+    // IMPORTANTE: Se estiver encantado, usar IA da classe base para atacar aliados
+    if (charmed) {
+      System.out.println("💜 Goblin.updateAI() detectou charmed, chamando super.updateAI()");
+      super.updateAI();
+      return;
+    }
+
     // Atualizar direção de olhar baseado no movimento
     updateFacingDirection();
 

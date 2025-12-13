@@ -28,7 +28,8 @@ public class FireballSkill extends Skill {
     super("Bola de Fogo",
         "Dispara uma bola de fogo mágica que explode ao atingir inimigos, causando grande dano em área",
         30, // 30 segundos de cooldown
-        "Mage");
+        "Mage",
+        20); // 20 de mana
 
     this.activeFireballs = new ArrayList<>();
     this.activeExplosions = new ArrayList<>();

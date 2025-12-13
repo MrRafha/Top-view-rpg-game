@@ -56,8 +56,15 @@ public class Player {
   private int maxHealth;
   private int currentMana;
   private int maxMana;
+  private int manaRegenTimer = 0; // Timer para regeneração de mana (60 frames = 1 segundo)
   private ExperienceSystem experienceSystem;
   private int lastLevelCheck; // Para detectar level ups
+
+  // Controle de desbloqueio de habilidades
+  private boolean skill2Unlocked = false;
+  private boolean skill3Unlocked = false;
+  private boolean skill4Unlocked = false;
+  private int pendingSkillUnlock = 0; // 0 = nenhum, 2/3/4 = slot a desbloquear
 
   // Direção atual (para ataques direcionais)
   private double facing = 0; // 0 = direita, PI/2 = baixo, PI = esquerda, 3*PI/2 = cima
@@ -76,6 +83,9 @@ public class Player {
 
   // Controle de movimento durante diálogos
   private boolean inDialog = false;
+
+  // Estado de Fúria Berserk
+  private boolean berserkActive = false;
 
   // Gerenciador de habilidades
   private SkillManager skillManager;
@@ -168,19 +178,22 @@ public class Player {
     dx = 0;
     dy = 0;
 
+    // Calcular velocidade efetiva (dobra se estiver em fúria berserk)
+    double effectiveSpeed = berserkActive ? speed * 2.0 : speed;
+
     // Só permite movimento se não estiver em diálogo
     if (!inDialog) {
       // Calcular movimento baseado nas teclas pressionadas
       if (up)
-        dy = -speed;
+        dy = -effectiveSpeed;
       if (down)
-        dy = speed;
+        dy = effectiveSpeed;
       if (left) {
-        dx = -speed;
+        dx = -effectiveSpeed;
         facingLeft = true; // Virado para a esquerda
       }
       if (right) {
-        dx = speed;
+        dx = effectiveSpeed;
         facingLeft = false; // Virado para a direita
       }
     }
@@ -253,10 +266,24 @@ public class Player {
     // Atualizar habilidades
     if (skillManager != null) {
       skillManager.update();
+
+      // Verificar se está usando QuickDashSkill
+      try {
+        com.rpggame.systems.Skill dashSkill = getSkillInSlot(2);
+        if (dashSkill instanceof com.rpggame.systems.skills.QuickDashSkill) {
+          com.rpggame.systems.skills.QuickDashSkill quickDash = (com.rpggame.systems.skills.QuickDashSkill) dashSkill;
+          quickDash.applyDashMovement(this);
+        }
+      } catch (Exception e) {
+        // Ignorar se não houver habilidade no slot 2
+      }
     }
 
     // Verificar level up e restaurar vida
     checkLevelUpAndRestoreHealth();
+
+    // Regenerar mana baseado na sabedoria
+    regenerateMana();
   }
 
   /**
@@ -265,7 +292,8 @@ public class Player {
   private void checkLevelUpAndRestoreHealth() {
     if (experienceSystem.shouldRestoreHealth(lastLevelCheck)) {
       currentHealth = maxHealth; // Restaurar vida ao máximo
-      lastLevelCheck = experienceSystem.getCurrentLevel();
+      int newLevel = experienceSystem.getCurrentLevel();
+      lastLevelCheck = newLevel;
 
       // Mostrar texto de level up
       FloatingText levelUpText = new FloatingText(x + WIDTH / 2, y - 20,
@@ -276,6 +304,40 @@ public class Player {
       FloatingText healText = new FloatingText(x + WIDTH / 2, y - 35,
           "VIDA RESTAURADA!", Color.GREEN);
       floatingTexts.add(healText);
+
+      // Verificar desbloqueio de habilidades
+      checkSkillUnlock(newLevel);
+    }
+  }
+
+  /**
+   * Verifica se o nível atual desbloqueia uma nova habilidade
+   */
+  private void checkSkillUnlock(int level) {
+    if (level == 5 && !skill2Unlocked) {
+      skill2Unlocked = true;
+      pendingSkillUnlock = 2;
+      // Aprender a habilidade do slot 2
+      if (skillManager != null) {
+        skillManager.learnSkill(2);
+      }
+      System.out.println("✨ Level 5 alcançado! Slot 2 desbloqueado!");
+    } else if (level == 7 && !skill3Unlocked) {
+      skill3Unlocked = true;
+      pendingSkillUnlock = 3;
+      // Aprender a habilidade do slot 3
+      if (skillManager != null) {
+        skillManager.learnSkill(3);
+      }
+      System.out.println("✨ Level 7 alcançado! Slot 3 desbloqueado!");
+    } else if (level == 10 && !skill4Unlocked) {
+      skill4Unlocked = true;
+      pendingSkillUnlock = 4;
+      // Aprender a habilidade do slot 4
+      if (skillManager != null) {
+        skillManager.learnSkill(4);
+      }
+      System.out.println("✨ Level 10 alcançado! Slot 4 desbloqueado!");
     }
   }
 
@@ -589,16 +651,91 @@ public class Player {
 
     // Aplicar redução de dano baseada na constituição
     float reduction = stats.getDamageReduction();
+
+    // Se estiver em Fúria Berserk, reduz 50% adicional do dano
+    if (berserkActive) {
+      reduction += 0.5f;
+      reduction = Math.min(0.95f, reduction); // Máximo de 95% de redução total
+    }
+
     int reducedDamage = (int) (damage * (1.0f - reduction));
     currentHealth = Math.max(0, currentHealth - reducedDamage);
 
-    // Mostrar texto de dano
-    FloatingText damageText = new FloatingText(x + WIDTH / 2, y, "-" + reducedDamage, Color.RED);
+    // Mostrar texto de dano (com cor diferente se em berserk)
+    Color damageColor = berserkActive ? new Color(255, 100, 0) : Color.RED;
+    FloatingText damageText = new FloatingText(x + WIDTH / 2, y, "-" + reducedDamage, damageColor);
     floatingTexts.add(damageText);
   }
 
   public void heal(int amount) {
     currentHealth = Math.min(maxHealth, currentHealth + amount);
+  }
+
+  /**
+   * Tenta aplicar atordoamento no player
+   * Retorna true se foi atordoado, false se for imune (berserk)
+   */
+  public boolean applyStun(int duration) {
+    if (berserkActive) {
+      FloatingText immuneText = new FloatingText(x + WIDTH / 2, y - 10, "IMUNE!", new Color(255, 200, 0));
+      floatingTexts.add(immuneText);
+      System.out.println("⚔️ Fúria Berserk: IMUNE a atordoamento!");
+      return false;
+    }
+    // Player não tem sistema de stun implementado ainda, mas retorna true para
+    // indicar que seria atordoado
+    return true;
+  }
+
+  /**
+   * Tenta aplicar medo no player
+   * Retorna true se foi amedrontado, false se for imune (berserk)
+   */
+  public boolean applyFear(int duration) {
+    if (berserkActive) {
+      FloatingText immuneText = new FloatingText(x + WIDTH / 2, y - 10, "IMUNE!", new Color(255, 200, 0));
+      floatingTexts.add(immuneText);
+      System.out.println("⚔️ Fúria Berserk: IMUNE a medo!");
+      return false;
+    }
+    // Player não tem sistema de fear implementado ainda, mas retorna true para
+    // indicar que seria amedrontado
+    return true;
+  }
+
+  /**
+   * Consome mana do jogador
+   */
+  public void consumeMana(int amount) {
+    currentMana = Math.max(0, currentMana - amount);
+
+    // Mostrar texto de mana consumida
+    FloatingText manaText = new FloatingText(x + WIDTH / 2, y - 5,
+        "-" + amount + " MP", new Color(100, 150, 255));
+    floatingTexts.add(manaText);
+  }
+
+  /**
+   * Regenera mana baseado na sabedoria do jogador
+   */
+  private void regenerateMana() {
+    if (currentMana >= maxMana) {
+      manaRegenTimer = 0;
+      return;
+    }
+
+    manaRegenTimer++;
+
+    // Regenerar a cada 1 segundo (60 frames)
+    if (manaRegenTimer >= 60) {
+      manaRegenTimer = 0;
+
+      // Quantidade de mana regenerada baseada na sabedoria
+      float manaRegen = stats.getManaRegen();
+      int manaToRegen = (int) Math.ceil(manaRegen);
+
+      currentMana = Math.min(maxMana, currentMana + manaToRegen);
+    }
   }
 
   public boolean isAlive() {
@@ -619,6 +756,20 @@ public class Player {
 
   public SkillManager getSkillManager() {
     return skillManager;
+  }
+
+  public TileMap getTileMap() {
+    return tileMap;
+  }
+
+  /**
+   * Obtém uma habilidade do slot especificado
+   */
+  public com.rpggame.systems.Skill getSkillInSlot(int slot) {
+    if (skillManager != null) {
+      return skillManager.getSkill(slot);
+    }
+    return null;
   }
 
   /**
@@ -688,11 +839,34 @@ public class Player {
     int tileX4 = (int) ((hitboxX + HITBOX_WIDTH - 1) / tileSize);
     int tileY4 = (int) ((hitboxY + HITBOX_HEIGHT - 1) / tileSize);
 
-    // Verificar se todos os tiles são válidos e caminháveis
-    return isValidTile(tileX1, tileY1) && tileMap.isWalkable(tileX1, tileY1) &&
-        isValidTile(tileX2, tileY2) && tileMap.isWalkable(tileX2, tileY2) &&
-        isValidTile(tileX3, tileY3) && tileMap.isWalkable(tileX3, tileY3) &&
-        isValidTile(tileX4, tileY4) && tileMap.isWalkable(tileX4, tileY4);
+    // Verificar se todos os tiles são válidos e caminháveis (ou congelados)
+    return isValidTile(tileX1, tileY1) && isTileWalkableOrFrozen(tileX1, tileY1) &&
+        isValidTile(tileX2, tileY2) && isTileWalkableOrFrozen(tileX2, tileY2) &&
+        isValidTile(tileX3, tileY3) && isTileWalkableOrFrozen(tileX3, tileY3) &&
+        isValidTile(tileX4, tileY4) && isTileWalkableOrFrozen(tileX4, tileY4);
+  }
+
+  /**
+   * Verifica se um tile é caminhável ou está congelado (gelo sobre água/lava)
+   */
+  private boolean isTileWalkableOrFrozen(int tileX, int tileY) {
+    // Se o tile é naturalmente caminhável, retorna true
+    if (tileMap.isWalkable(tileX, tileY)) {
+      return true;
+    }
+
+    // Se não é caminhável, verificar se está congelado (apenas para Mage)
+    if (skillManager != null) {
+      com.rpggame.systems.Skill skill = skillManager.getSkillBySlot(2);
+      if (skill instanceof com.rpggame.systems.skills.FreezingSkill) {
+        com.rpggame.systems.skills.FreezingSkill freezingSkill = (com.rpggame.systems.skills.FreezingSkill) skill;
+        if (freezingSkill.isTileFrozen(tileX, tileY)) {
+          return true; // Tile congelado permite passagem
+        }
+      }
+    }
+
+    return false;
   }
 
   private boolean isValidTile(int tileX, int tileY) {
@@ -734,5 +908,33 @@ public class Player {
    */
   public boolean isInDialog() {
     return inDialog;
+  }
+
+  /**
+   * Define o estado de Fúria Berserk
+   */
+  public void setBerserkActive(boolean active) {
+    this.berserkActive = active;
+  }
+
+  /**
+   * Retorna se está em Fúria Berserk
+   */
+  public boolean isBerserkActive() {
+    return berserkActive;
+  }
+
+  /**
+   * Retorna qual slot de habilidade está pendente para desbloqueio (0 = nenhum)
+   */
+  public int getPendingSkillUnlock() {
+    return pendingSkillUnlock;
+  }
+
+  /**
+   * Limpa o desbloqueio pendente de habilidade
+   */
+  public void clearPendingSkillUnlock() {
+    pendingSkillUnlock = 0;
   }
 }

@@ -54,7 +54,7 @@ public class CharacterScreen extends JPanel implements ActionListener, KeyListen
       "Aumenta dano corpo a corpo e slots de inventário",
       "Aumenta chance de evasão e precisão",
       "Aumenta dano mágico e mana máxima",
-      "Aumenta XP ganho e campo de visão",
+      "Aumenta regeneração de mana",
       "Melhora interações com NPCs",
       "Aumenta vida máxima e resistência"
   };

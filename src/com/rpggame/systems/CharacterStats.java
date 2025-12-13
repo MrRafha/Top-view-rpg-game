@@ -28,7 +28,7 @@ public class CharacterStats {
   private int strength; // Força - atributo principal do Guerreiro
   private int dexterity; // Destreza - atributo principal do Caçador
   private int intelligence; // Inteligência - atributo principal do Mago
-  private int wisdom; // Sabedoria - aumenta campo de visão e XP
+  private int wisdom; // Sabedoria - aumenta campo de visão e regeneração de mana
   private int charisma; // Carisma - para interações com NPCs
   private int constitution; // Constituição - aumenta vida do personagem
 
@@ -199,33 +199,25 @@ public class CharacterStats {
 
   // Calcular mana baseada na inteligência
   public int getMaxMana() {
-    int baseMana;
+    // Mana base: 40 (com 5 de inteligência)
+    int baseMana = 40;
 
-    // Mana base por classe
-    switch (playerClass.toLowerCase()) {
-      case "mage":
-        baseMana = 30;
-        break;
-      case "hunter":
-        baseMana = 15;
-        break;
-      case "warrior":
-        baseMana = 10;
-        break;
-      default:
-        baseMana = 15; // valor padrão
-        break;
-    }
+    // Bônus de inteligência: +5 de mana por cada ponto acima de 5
+    int intelligenceBonus = Math.max(0, intelligence - BASE_ATTRIBUTE) * 5;
 
-    // Bônus de inteligência
-    int intelligenceBonus = (intelligence - BASE_ATTRIBUTE) * 5; // 5 pontos por nível
     return baseMana + intelligenceBonus;
   }
 
-  // Calcular bônus de XP baseado na sabedoria
+  // Calcular bônus de XP baseado na sabedoria (DEPRECATED - usar getManaRegen)
   public float getXpMultiplier() {
     int wisdomBonus = wisdom - BASE_ATTRIBUTE;
     return 1.0f + (wisdomBonus / 2.0f * 0.05f); // 5% por cada 2 pontos
+  }
+
+  // Calcular regeneração de mana baseado na sabedoria
+  public float getManaRegen() {
+    int wisdomBonus = wisdom - BASE_ATTRIBUTE;
+    return 0.5f + (wisdomBonus * 0.1f); // 0.5 base + 0.1 por ponto de sabedoria
   }
 
   // Calcular chance de evasão baseada na destreza

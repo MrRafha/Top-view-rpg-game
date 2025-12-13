@@ -10,7 +10,8 @@ public enum TileType {
   WATER(3, "Water", false),
   DIRT(4, "Terra", true),
   SAND(5, "Areia", true),
-  PORTAL(6, "Portal", true); // Tile de transição entre mapas
+  PORTAL(6, "Portal", true), // Tile de transição entre mapas
+  WALKABLE_WATER(7, "WalkableWater", true); // Vitória-régia sobre água
 
   private final int id;
   private final String name;
@@ -67,6 +68,9 @@ public enum TileType {
       case 'P':
       case 'p':
         return PORTAL;
+      case 'w':
+      case 'V': // V de vitória-régia ou W minúsculo
+        return WALKABLE_WATER;
       default:
         return GRASS;
     }
@@ -89,6 +93,8 @@ public enum TileType {
         return 's';
       case PORTAL:
         return 'P';
+      case WALKABLE_WATER:
+        return 'w';
       default:
         return '.';
     }

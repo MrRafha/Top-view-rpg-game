@@ -85,19 +85,25 @@ public class FogOfWar {
     int y = y0;
 
     while (true) {
-      // Se chegou ao destino, verificar se o tile de destino é uma parede
+      // Se chegou ao destino, verificar se o tile de destino bloqueia visão
       if (x == x1 && y == y1) {
-        // Não pode ver através de paredes, mesmo que seja o tile de destino
+        // Apenas paredes e pedras bloqueiam visão (água não bloqueia)
         if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
-          return map[y][x].isWalkable();
+          TileType tileType = map[y][x];
+          return tileType != TileType.WALL && tileType != TileType.STONE;
         }
         return true;
       }
-      
-      // Se encontrou uma parede (exceto na posição inicial), bloqueia a visão
+
+      // Se encontrou uma parede ou pedra (exceto na posição inicial), bloqueia a
+      // visão
+      // Água NÃO bloqueia a visão
       if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
-        if (!map[y][x].isWalkable() && !(x == x0 && y == y0)) {
-          return false;
+        if (!(x == x0 && y == y0)) {
+          TileType tileType = map[y][x];
+          if (tileType == TileType.WALL || tileType == TileType.STONE) {
+            return false;
+          }
         }
       }
 
@@ -182,7 +188,7 @@ public class FogOfWar {
       }
     }
   }
-  
+
   /**
    * Reseta a fog of war (para trocar de mapa)
    */

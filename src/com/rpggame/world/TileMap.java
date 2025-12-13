@@ -25,10 +25,10 @@ public class TileMap {
 
   // Sistema de fog of war
   private FogOfWar fogOfWar;
-  
+
   // Cache de sprites dos tiles
   private Map<TileType, BufferedImage> tileSprites;
-  
+
   // Lista de portais no mapa
   private java.util.List<Portal> portals;
 
@@ -48,25 +48,23 @@ public class TileMap {
 
     // Criar mapa de exemplo se não existir
     MapLoader.createExampleMap();
-    
+
     // Configurar portais do mapa
     setupPortals();
   }
-
-
 
   /**
    * Carrega os sprites dos tiles da pasta sprites
    */
   private void loadTileSprites() {
-    String[] spriteFiles = {"GRASS.png", "STONE.png", "BORDER.png", "WATER.png"};
-    TileType[] tileTypes = {TileType.GRASS, TileType.STONE, TileType.WALL, TileType.WATER};
-    
+    String[] spriteFiles = { "GRASS.png", "STONE.png", "BORDER.png", "Wather.png", "WalknableWather.png" };
+    TileType[] tileTypes = { TileType.GRASS, TileType.STONE, TileType.WALL, TileType.WATER, TileType.WALKABLE_WATER };
+
     for (int i = 0; i < spriteFiles.length; i++) {
       try {
         String spritePath = ResourceResolver.getResourcePath("sprites/" + spriteFiles[i]);
         File spriteFile = new File(spritePath);
-        
+
         if (spriteFile.exists()) {
           BufferedImage sprite = ImageIO.read(spriteFile);
           // Redimensionar para o tamanho do tile
@@ -75,7 +73,7 @@ public class TileMap {
           g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
           g2d.drawImage(sprite, 0, 0, TILE_SIZE, TILE_SIZE, null);
           g2d.dispose();
-          
+
           tileSprites.put(tileTypes[i], scaledSprite);
           System.out.println("Sprite carregado: " + spriteFiles[i] + " para " + tileTypes[i]);
         } else {
@@ -85,7 +83,7 @@ public class TileMap {
         System.err.println("Erro ao carregar sprite " + spriteFiles[i] + ": " + e.getMessage());
       }
     }
-    
+
     // PORTAL usa o mesmo sprite da GRASS
     if (tileSprites.containsKey(TileType.GRASS)) {
       tileSprites.put(TileType.PORTAL, tileSprites.get(TileType.GRASS));
@@ -96,12 +94,12 @@ public class TileMap {
   private void loadMap() {
     // Lista de mapas para tentar carregar em ordem de preferência
     String[] mapFiles = {
-      "maps/goblin_territories_25x25.txt",
-      "maps/enhanced_map_15x15.txt", 
-      "maps/new_map_15x15.txt",
-      "maps/example.txt"
+        "maps/goblin_territories_25x25.txt",
+        "maps/enhanced_map_15x15.txt",
+        "maps/new_map_15x15.txt",
+        "maps/example.txt"
     };
-    
+
     // Tentar carregar cada mapa usando o sistema de resolução de caminho
     for (String mapFile : mapFiles) {
       String resolvedPath = ResourceResolver.getResourcePath(mapFile);
@@ -146,7 +144,7 @@ public class TileMap {
 
         // Verificar se existe sprite para este tipo de tile
         BufferedImage tileSprite = tileSprites.get(tileType);
-        
+
         if (tileSprite != null) {
           // Usar sprite se disponível
           g.drawImage(tileSprite, screenX, screenY, null);
@@ -285,18 +283,18 @@ public class TileMap {
 
     return new Point(centerX, centerY);
   }
-  
+
   /**
    * Getters para dimensões do mapa
    */
   public int getWidth() {
     return MAP_WIDTH;
   }
-  
+
   public int getHeight() {
     return MAP_HEIGHT;
   }
-  
+
   /**
    * Retorna o tipo de tile em uma coordenada específica
    */
@@ -306,7 +304,7 @@ public class TileMap {
     }
     return TileType.WALL; // Retorna parede se fora dos limites
   }
-  
+
   /**
    * Configura os portais do mapa atual
    */
@@ -315,14 +313,14 @@ public class TileMap {
    */
   public void setupPortals(String currentMapId) {
     portals.clear();
-    
+
     // Procurar tiles PORTAL no mapa e criar portais automaticamente
     for (int y = 0; y < MAP_HEIGHT; y++) {
       for (int x = 0; x < MAP_WIDTH; x++) {
         if (map[y][x] == TileType.PORTAL) {
           // Verificar qual é o mapa atual para definir destino
           boolean isVillageMap = "village".equals(currentMapId);
-          
+
           if (isVillageMap) {
             // Village -> Goblin Territories
             portals.add(new Portal(x, y, "goblin_territories", 0, 0, "Portal dos Territórios"));
@@ -336,21 +334,22 @@ public class TileMap {
       }
     }
   }
-  
+
   /**
-   * Versão antiga do setupPortals (sem parâmetro) - chama a nova versão com ID padrão
+   * Versão antiga do setupPortals (sem parâmetro) - chama a nova versão com ID
+   * padrão
    */
   private void setupPortals() {
     setupPortals("goblin_territories"); // Mapa inicial padrão
   }
-  
+
   /**
    * Verifica se o mapa tem areia significativa (indica vila)
    */
   private boolean hasSignificantSand() {
     int sandCount = 0;
     int totalTiles = 0;
-    
+
     for (int y = 0; y < MAP_HEIGHT; y++) {
       for (int x = 0; x < MAP_WIDTH; x++) {
         totalTiles++;
@@ -359,10 +358,10 @@ public class TileMap {
         }
       }
     }
-    
+
     return sandCount > (totalTiles * 0.05); // Mais de 5% é areia
   }
-  
+
   /**
    * Verifica se o jogador esta sobre um portal
    */
@@ -374,7 +373,7 @@ public class TileMap {
     }
     return null;
   }
-  
+
   /**
    * Adiciona um portal manualmente
    */
@@ -382,7 +381,7 @@ public class TileMap {
     portals.add(portal);
     System.out.println("➕ " + portal);
   }
-  
+
   /**
    * Recarrega o mapa com novo arquivo e ID do mapa
    */

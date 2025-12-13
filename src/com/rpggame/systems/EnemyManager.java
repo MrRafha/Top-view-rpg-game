@@ -62,6 +62,7 @@ public class EnemyManager {
    */
   public void addEnemy(Enemy enemy) {
     enemy.setTileMap(tileMap);
+    enemy.setEnemyManager(this); // Configurar referência ao EnemyManager
     enemies.add(enemy);
   }
 
@@ -114,7 +115,18 @@ public class EnemyManager {
 
     // Verificar se é hora de convocar reunião
     if (goblinCouncil.shouldConveneCouncil(goblinFamilies)) {
-      goblinCouncil.conveneCouncil(goblinFamilies);
+      GoblinCouncil.CouncilDecision decision = goblinCouncil.conveneCouncil(goblinFamilies);
+
+      // Se formou império, remover todas as outras famílias e adicionar novos membros
+      if (decision == GoblinCouncil.CouncilDecision.GOBLIN_EMPIRE) {
+        // Adicionar os novos goblins do império à lista de inimigos
+        for (com.rpggame.entities.Goblin goblin : goblinCouncil.getAndClearNewEmpireGoblins()) {
+          addEnemy(goblin);
+        }
+
+        // Remover as outras famílias
+        removeNonEmpireFamilies();
+      }
     }
 
     // Atualizar timer de respawn de famílias
@@ -129,8 +141,14 @@ public class EnemyManager {
       }
 
       if (familyRespawnTimer == 0 && goblinFamilies.size() < MAX_FAMILIES) {
-        System.out.println("🎯 Timer zerou! Chamando spawnNewFamily()...");
-        spawnNewFamily();
+        // Não spawnar novas famílias se o império estiver ativo
+        if (!goblinCouncil.isGoblinEmpireActive()) {
+          System.out.println("🎯 Timer zerou! Chamando spawnNewFamily()...");
+          spawnNewFamily();
+        } else {
+          System.out.println("👑 Império Goblin está ativo - novas famílias não podem surgir!");
+          familyRespawnTimer = FAMILY_RESPAWN_DELAY; // Resetar timer para tentar depois
+        }
       }
     }
 
@@ -761,16 +779,29 @@ public class EnemyManager {
   private void handleFamilyDefeated(GoblinFamily family) {
     System.out.println("🏴 " + family.getFamilyName() + " foi completamente derrotada!");
 
-    // Notificar o conselho goblin
-    goblinCouncil.registerFamilyDestroyed();
+    // Verificar se é o Império Goblin
+    boolean isEmpire = family.getFamilyName().equals("IMPÉRIO GOBLIN");
+
+    if (isEmpire) {
+      // Desfazer o império
+      goblinCouncil.dissolveEmpire();
+    } else {
+      // Notificar o conselho goblin (apenas para famílias normais)
+      goblinCouncil.registerFamilyDestroyed();
+    }
 
     // Remover família da lista
     goblinFamilies.remove(family);
 
     // Iniciar timer de respawn de nova família (3 minutos)
-    if (goblinFamilies.size() < MAX_FAMILIES) {
+    // Mas NÃO respawnar se o império foi derrotado
+    if (!isEmpire && goblinFamilies.size() < MAX_FAMILIES) {
       familyRespawnTimer = FAMILY_RESPAWN_DELAY;
       System.out.println("⏳ Nova família goblin aparecerá em 3 minutos...");
+    } else if (isEmpire) {
+      // Após império ser derrotado, permitir respawn de novas famílias normais
+      familyRespawnTimer = FAMILY_RESPAWN_DELAY;
+      System.out.println("⏳ Novas famílias goblin surgirão em 3 minutos...");
     }
 
     // Encontrar a cabana desta família e torná-la vulnerável (se ainda não foi
@@ -783,6 +814,60 @@ public class EnemyManager {
         break;
       }
     }
+  }
+
+  /**
+   * Remove todas as famílias exceto o Império Goblin
+   */
+  private void removeNonEmpireFamilies() {
+    // Encontrar a família do império
+    GoblinFamily empire = null;
+    for (GoblinFamily family : goblinFamilies) {
+      if (family.getFamilyName().equals("IMPÉRIO GOBLIN")) {
+        empire = family;
+        break;
+      }
+    }
+
+    if (empire == null) {
+      System.out.println("⚠️ Erro: Império não encontrado!");
+      return;
+    }
+
+    // Criar lista temporária das famílias a serem removidas
+    java.util.List<GoblinFamily> toRemove = new java.util.ArrayList<>();
+    for (GoblinFamily family : goblinFamilies) {
+      if (!family.getFamilyName().equals("IMPÉRIO GOBLIN")) {
+        toRemove.add(family);
+      }
+    }
+
+    // Eliminar todos os goblins das outras famílias
+    for (GoblinFamily family : toRemove) {
+      System.out.println("💀 Eliminando família: " + family.getFamilyName());
+
+      // Destruir todos os membros
+      for (com.rpggame.entities.Goblin goblin : family.getMembers()) {
+        goblin.takeDamage(99999);
+      }
+
+      // Remover família
+      goblinFamilies.remove(family);
+
+      // Destruir a cabana desta família
+      Point hutPos = family.getHutPosition();
+      for (Structure structure : structures) {
+        if (structure.getX() == hutPos.x && structure.getY() == hutPos.y && !structure.isDestroyed()) {
+          structure.makeVulnerable();
+          structure.takeDamage(99999); // Destruir imediatamente
+          System.out.println("🏚️ Cabana de " + family.getFamilyName() + " destruída!");
+          break;
+        }
+      }
+    }
+
+    System.out.println("✅ Apenas o " + empire.getFamilyName() + " permanece!");
+    System.out.println("   Total de goblins no império: " + empire.getMembers().size());
   }
 
   /**

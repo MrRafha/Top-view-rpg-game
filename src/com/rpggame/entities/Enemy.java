@@ -5,9 +5,11 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import com.rpggame.core.GamePanel;
 import com.rpggame.world.Camera;
 import com.rpggame.world.TileMap;
+import com.rpggame.systems.EnemyManager;
 
 /**
  * Classe base para todos os inimigos do jogo
@@ -34,6 +36,24 @@ public abstract class Enemy {
   protected double detectionRange;
   protected double attackRange;
 
+  // Estado de congelamento
+  protected boolean frozen;
+  protected int freezeTimer;
+
+  // Estado de medo (fear)
+  protected boolean feared;
+  protected int fearTimer;
+  protected double fearDirectionX;
+  protected double fearDirectionY;
+
+  // Estado de encantamento (charm)
+  protected boolean charmed;
+  protected int charmTimer;
+
+  // Estado de atordoamento (stun)
+  protected boolean stunned;
+  protected int stunTimer;
+
   // Timer para ataques
   protected int attackCooldown;
   protected final int ATTACK_COOLDOWN_TIME = 60; // frames
@@ -43,6 +63,12 @@ public abstract class Enemy {
 
   // Referência para o mapa (para verificação de colisão)
   protected TileMap tileMap;
+
+  // Referência para o EnemyManager (para atacar aliados quando encantado)
+  protected EnemyManager enemyManager;
+
+  // Alvo encantado (outro inimigo para atacar)
+  protected Enemy charmedTarget;
 
   /**
    * Construtor da classe Enemy
@@ -54,6 +80,16 @@ public abstract class Enemy {
     this.alive = true;
     this.aggressive = false;
     this.attackCooldown = 0;
+    this.frozen = false;
+    this.freezeTimer = 0;
+    this.feared = false;
+    this.fearTimer = 0;
+    this.fearDirectionX = 0;
+    this.fearDirectionY = 0;
+    this.charmed = false;
+    this.charmTimer = 0;
+    this.stunned = false;
+    this.stunTimer = 0;
 
     loadSprite();
     initializeStats();
@@ -139,13 +175,72 @@ public abstract class Enemy {
 
     this.target = player;
 
+    // Atualizar estado de congelamento
+    if (frozen) {
+      freezeTimer--;
+      if (freezeTimer <= 0) {
+        frozen = false;
+        System.out.println("❄️ Inimigo descongelado!");
+      }
+      return; // Não fazer nada enquanto congelado
+    }
+
+    // Atualizar estado de encantamento (charm)
+    if (charmed) {
+      charmTimer--;
+      if (charmTimer <= 0) {
+        charmed = false;
+        charmedTarget = null;
+        System.out.println("💜 Encantamento dissipado!");
+      } else {
+        // Debug: mostrar que está encantado
+        if (charmTimer % 60 == 0) { // A cada segundo
+          System.out.println("💜 Inimigo está encantado! Tempo restante: " + (charmTimer / 60.0) + "s");
+        }
+      }
+    }
+
+    // Atualizar estado de atordoamento (stun)
+    if (stunned) {
+      stunTimer--;
+      if (stunTimer <= 0) {
+        stunned = false;
+        System.out.println("💥 Inimigo recuperou do atordoamento!");
+      }
+      return; // Não fazer nada enquanto atordoado
+    }
+
+    // Atualizar estado de medo (fear)
+    if (feared) {
+      fearTimer--;
+      if (fearTimer <= 0) {
+        feared = false;
+        dx = 0;
+        dy = 0;
+        System.out.println("💢 Inimigo recuperou coragem!");
+      } else {
+        // Continuar fugindo na direção definida
+        dx = fearDirectionX;
+        dy = fearDirectionY;
+      }
+    }
+
     // Atualizar cooldown de ataque
     if (attackCooldown > 0) {
       attackCooldown--;
     }
 
-    // IA básica
-    updateAI();
+    // IA básica (sempre executar se encantado, ou se não estiver com medo)
+    if (charmed || !feared) {
+      if (charmed && charmTimer % 60 == 0) {
+        System.out.println("💜 Chamando updateAI() para inimigo encantado...");
+      }
+      updateAI();
+    } else {
+      if (charmTimer % 60 == 0 && charmed) {
+        System.out.println("⚠️ Inimigo encantado mas com medo! IA não executada.");
+      }
+    }
 
     // Atualizar posição com verificação de colisão
     updatePosition();
@@ -155,6 +250,19 @@ public abstract class Enemy {
    * IA básica do inimigo
    */
   protected void updateAI() {
+    // Debug geral
+    if (charmed && charmTimer % 60 == 0) {
+      System.out.println("💜 updateAI() chamado! charmed=" + charmed + ", feared=" + feared);
+    }
+
+    // Se estiver encantado, atacar outros inimigos (VERIFICAR ANTES DO TARGET!)
+    if (charmed) {
+      System.out.println("💜 updateAI() detectou charmed=true, chamando updateCharmedAI()");
+      updateCharmedAI();
+      return;
+    }
+
+    // Apenas verificar target se NÃO estiver encantado
     if (target == null)
       return;
 
@@ -174,6 +282,78 @@ public abstract class Enemy {
         attemptAttack();
       }
     }
+  }
+
+  /**
+   * IA quando encantado - atacar outros inimigos
+   */
+  protected void updateCharmedAI() {
+    if (enemyManager == null) {
+      System.out.println("⚠️ EnemyManager é null! Não pode procurar alvos.");
+      return;
+    }
+
+    // Procurar inimigo mais próximo para atacar
+    Enemy nearestEnemy = null;
+    double nearestDistance = Double.MAX_VALUE;
+
+    ArrayList<Enemy> enemies = enemyManager.getEnemies();
+    System.out.println("💜 Procurando alvos... Total de inimigos: " + enemies.size());
+
+    for (Enemy enemy : enemies) {
+      if (enemy == this || !enemy.isAlive())
+        continue;
+
+      double dx = enemy.getX() - this.x;
+      double dy = enemy.getY() - this.y;
+      double distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestEnemy = enemy;
+      }
+    }
+
+    if (nearestEnemy != null) {
+      charmedTarget = nearestEnemy;
+      System.out.println("💜 Alvo encontrado! Distância: " + nearestDistance);
+
+      // Mover em direção ao inimigo
+      if (nearestDistance > attackRange) {
+        double deltaX = nearestEnemy.getX() - x;
+        double deltaY = nearestEnemy.getY() - y;
+        double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+        if (distance > 0) {
+          this.dx = (deltaX / distance) * speed;
+          this.dy = (deltaY / distance) * speed;
+          System.out.println("💜 Movendo em direção ao alvo... dx=" + this.dx + ", dy=" + this.dy);
+        }
+      } else {
+        // Atacar o inimigo
+        System.out.println("💜 Alcance de ataque! Atacando...");
+        attackCharmedTarget();
+      }
+    } else {
+      System.out.println("⚠️ Nenhum alvo encontrado!");
+    }
+  }
+
+  /**
+   * Ataca outro inimigo quando encantado
+   */
+  protected void attackCharmedTarget() {
+    if (charmedTarget == null || !charmedTarget.isAlive())
+      return;
+
+    if (attackCooldown <= 0) {
+      charmedTarget.takeDamageFromCharm(damage);
+      attackCooldown = ATTACK_COOLDOWN_TIME;
+      System.out.println("💜 Inimigo encantado atacou aliado causando " + damage + " de dano!");
+    }
+
+    dx = 0;
+    dy = 0;
   }
 
   /**
@@ -229,6 +409,12 @@ public abstract class Enemy {
    * Recebe dano
    */
   public void takeDamage(int damage) {
+    // Não recebe dano enquanto congelado
+    if (frozen) {
+      System.out.println("❄️ Inimigo congelado não recebe dano!");
+      return;
+    }
+
     currentHealth -= damage;
     if (currentHealth <= 0) {
       die();
@@ -242,6 +428,12 @@ public abstract class Enemy {
    * Recebe dano de NPCs (guardas) sem dar XP ao player
    */
   public void takeDamageFromNPC(int damage) {
+    // Não recebe dano enquanto congelado
+    if (frozen) {
+      System.out.println("❄️ Inimigo congelado não recebe dano!");
+      return;
+    }
+
     currentHealth -= damage;
     if (currentHealth <= 0) {
       dieWithoutXP();
@@ -249,6 +441,16 @@ public abstract class Enemy {
 
     // Ficar agressivo quando receber dano
     aggressive = true;
+  }
+
+  /**
+   * Recebe dano de outro inimigo encantado (não dá XP)
+   */
+  public void takeDamageFromCharm(int damage) {
+    currentHealth -= damage;
+    if (currentHealth <= 0) {
+      dieWithoutXP();
+    }
   }
 
   /**
@@ -286,6 +488,83 @@ public abstract class Enemy {
     // Desenhar sprite
     if (sprite != null) {
       g.drawImage(sprite, screenX, screenY, null);
+
+      // Se congelado, adicionar overlay azul
+      if (frozen) {
+        Composite oldComposite = g.getComposite();
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
+        g.setColor(new Color(150, 220, 255));
+        g.fillRect(screenX, screenY, width, height);
+
+        // Desenhar cristais de gelo
+        g.setColor(new Color(200, 240, 255));
+        g.setStroke(new BasicStroke(2));
+        g.drawLine(screenX + width / 2, screenY, screenX + width / 2, screenY + height);
+        g.drawLine(screenX, screenY + height / 2, screenX + width, screenY + height / 2);
+        g.drawLine(screenX + width / 4, screenY + height / 4, screenX + 3 * width / 4, screenY + 3 * height / 4);
+        g.drawLine(screenX + 3 * width / 4, screenY + height / 4, screenX + width / 4, screenY + 3 * height / 4);
+
+        g.setComposite(oldComposite);
+        g.setStroke(new BasicStroke(1));
+      }
+
+      // Se com medo, adicionar overlay amarelo pulsante
+      if (feared) {
+        Composite oldComposite = g.getComposite();
+        float pulse = 0.3f + 0.2f * (float) Math.sin(fearTimer * 0.2);
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, pulse));
+        g.setColor(new Color(255, 255, 100));
+        g.fillRect(screenX, screenY, width, height);
+
+        // Desenhar símbolo de exclamação
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.8f));
+        g.setColor(new Color(255, 200, 0));
+        g.setFont(new Font("Arial", Font.BOLD, 20));
+        g.drawString("!", screenX + width / 2 - 4, screenY - 5);
+
+        g.setComposite(oldComposite);
+      }
+
+      // Se encantado, adicionar overlay roxo brilhante
+      if (charmed) {
+        Composite oldComposite = g.getComposite();
+        float pulse = 0.4f + 0.3f * (float) Math.sin(charmTimer * 0.15);
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, pulse));
+        g.setColor(new Color(200, 100, 255));
+        g.fillRect(screenX, screenY, width, height);
+
+        // Desenhar símbolo de coração
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.9f));
+        g.setColor(new Color(220, 150, 255));
+        g.setFont(new Font("Arial", Font.BOLD, 18));
+        g.drawString("♥", screenX + width / 2 - 5, screenY - 5);
+
+        g.setComposite(oldComposite);
+      }
+
+      // Se atordoado, adicionar overlay amarelo escuro com estrelas
+      if (stunned) {
+        Composite oldComposite = g.getComposite();
+        float pulse = 0.3f + 0.2f * (float) Math.sin(stunTimer * 0.3);
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, pulse));
+        g.setColor(new Color(255, 200, 0));
+        g.fillRect(screenX, screenY, width, height);
+
+        // Desenhar estrelas girando
+        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.9f));
+        g.setColor(new Color(255, 255, 100));
+        g.setFont(new Font("Arial", Font.BOLD, 16));
+
+        // Três estrelas girando ao redor da cabeça
+        for (int i = 0; i < 3; i++) {
+          double angle = (System.currentTimeMillis() * 0.003 + i * Math.PI * 2 / 3);
+          int starX = screenX + width / 2 + (int) (Math.cos(angle) * 20) - 4;
+          int starY = screenY - 10 + (int) (Math.sin(angle) * 15);
+          g.drawString("★", starX, starY);
+        }
+
+        g.setComposite(oldComposite);
+      }
     }
 
     // Desenhar barra de vida
@@ -348,6 +627,56 @@ public abstract class Enemy {
    */
   public void setTileMap(TileMap tileMap) {
     this.tileMap = tileMap;
+  }
+
+  /**
+   * Define o EnemyManager (para atacar aliados quando encantado)
+   */
+  public void setEnemyManager(EnemyManager manager) {
+    this.enemyManager = manager;
+  }
+
+  /**
+   * Aplica estado de medo (fear) ao inimigo
+   */
+  public void applyFear(double directionX, double directionY, int duration, double fleeSpeed) {
+    this.feared = true;
+    this.fearTimer = duration;
+    this.fearDirectionX = directionX * fleeSpeed;
+    this.fearDirectionY = directionY * fleeSpeed;
+    System.out.println("💢 Inimigo com medo! Fugindo por " + (duration / 60.0) + " segundos");
+  }
+
+  /**
+   * Aplica estado de encantamento (charm) ao inimigo
+   */
+  public void applyCharm(int duration) {
+    this.charmed = true;
+    this.charmTimer = duration;
+    System.out.println("💜 Inimigo encantado! Atacará seus aliados por " + (duration / 60.0) + " segundos");
+  }
+
+  /**
+   * Verifica se o inimigo está encantado
+   */
+  public boolean isCharmed() {
+    return charmed;
+  }
+
+  /**
+   * Aplica estado de atordoamento (stun) ao inimigo
+   */
+  public void applyStun(int duration) {
+    this.stunned = true;
+    this.stunTimer = duration;
+    System.out.println("💥 Inimigo atordoado por " + (duration / 60.0) + " segundos!");
+  }
+
+  /**
+   * Verifica se o inimigo está atordoado
+   */
+  public boolean isStunned() {
+    return stunned;
   }
 
   /**

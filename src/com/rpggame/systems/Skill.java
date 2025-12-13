@@ -14,18 +14,24 @@ public abstract class Skill {
   protected int currentCooldown;
   protected boolean isLearned;
   protected String requiredClass;
+  protected int manaCost; // Custo de mana da habilidade
 
   public Skill(String name, String description, int cooldownSeconds, String requiredClass) {
+    this(name, description, cooldownSeconds, requiredClass, 0);
+  }
+
+  public Skill(String name, String description, int cooldownSeconds, String requiredClass, int manaCost) {
     this.name = name;
     this.description = description;
     this.cooldownTime = cooldownSeconds * 60; // Converter para frames
     this.currentCooldown = 0;
     this.isLearned = false;
     this.requiredClass = requiredClass;
+    this.manaCost = manaCost;
   }
 
   /**
-   * Executa a habilidade se estiver fora de cooldown
+   * Executa a habilidade se estiver fora de cooldown e tiver mana suficiente
    */
   public boolean execute(Player player) {
     if (!isLearned) {
@@ -37,6 +43,17 @@ public abstract class Skill {
       int secondsLeft = (currentCooldown / 60) + 1;
       System.out.println("⏱️ " + name + " em cooldown! " + secondsLeft + "s restantes");
       return false;
+    }
+
+    // Verificar mana
+    if (manaCost > 0 && player.getCurrentMana() < manaCost) {
+      System.out.println("❌ Mana insuficiente! Necessário: " + manaCost + ", Atual: " + player.getCurrentMana());
+      return false;
+    }
+
+    // Consumir mana
+    if (manaCost > 0) {
+      player.consumeMana(manaCost);
     }
 
     System.out.println("🔥 " + player.getPlayerClass() + " usou: " + name + "!");
@@ -113,5 +130,12 @@ public abstract class Skill {
    */
   public int getTotalCooldownTime() {
     return cooldownTime;
+  }
+
+  /**
+   * Obtém o custo de mana da habilidade
+   */
+  public int getManaCost() {
+    return manaCost;
   }
 }
