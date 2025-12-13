@@ -30,7 +30,6 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **SkillManager.java** com slot 4 para todas as classes
 
 ### 🐛 Corrigido
-- FreezingSkill agora é linear de 2 tiles (não circular)
 - Sistema de charm funcionando corretamente
 - Goblin.updateAI verifica charm antes de executar
 - Paths do MapManager corrigidos
