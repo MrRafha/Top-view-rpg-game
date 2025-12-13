@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import javax.imageio.ImageIO;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,11 +63,26 @@ public class TileMap {
 
     for (int i = 0; i < spriteFiles.length; i++) {
       try {
-        String spritePath = ResourceResolver.getResourcePath("sprites/" + spriteFiles[i]);
-        File spriteFile = new File(spritePath);
+        BufferedImage sprite = null;
+        String resourcePath = "sprites/" + spriteFiles[i];
 
-        if (spriteFile.exists()) {
-          BufferedImage sprite = ImageIO.read(spriteFile);
+        // Tentar carregar como recurso do classpath (funciona no JAR)
+        InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath);
+        if (is != null) {
+          sprite = ImageIO.read(is);
+          is.close();
+          System.out.println("✅ Sprite carregado do JAR: " + spriteFiles[i]);
+        } else {
+          // Fallback: tentar carregar como arquivo externo (desenvolvimento)
+          String spritePath = ResourceResolver.getResourcePath(resourcePath);
+          File spriteFile = new File(spritePath);
+          if (spriteFile.exists()) {
+            sprite = ImageIO.read(spriteFile);
+            System.out.println("✅ Sprite carregado do arquivo: " + spriteFiles[i]);
+          }
+        }
+
+        if (sprite != null) {
           // Redimensionar para o tamanho do tile
           BufferedImage scaledSprite = new BufferedImage(TILE_SIZE, TILE_SIZE, BufferedImage.TYPE_INT_ARGB);
           Graphics2D g2d = scaledSprite.createGraphics();
@@ -75,12 +91,11 @@ public class TileMap {
           g2d.dispose();
 
           tileSprites.put(tileTypes[i], scaledSprite);
-          System.out.println("Sprite carregado: " + spriteFiles[i] + " para " + tileTypes[i]);
         } else {
-          System.out.println("Sprite não encontrado: " + spritePath + " - usando cor padrão");
+          System.out.println("⚠️ Sprite não encontrado: " + resourcePath + " - usando cor padrão");
         }
       } catch (IOException e) {
-        System.err.println("Erro ao carregar sprite " + spriteFiles[i] + ": " + e.getMessage());
+        System.err.println("❌ Erro ao carregar sprite " + spriteFiles[i] + ": " + e.getMessage());
       }
     }
 

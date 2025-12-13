@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import com.rpggame.core.GamePanel;
 import com.rpggame.world.Camera;
 
@@ -50,17 +51,28 @@ public class NPC {
    */
   private void loadSprite() {
     try {
-      String resolvedPath = com.rpggame.world.ResourceResolver.getResourcePath(spritePath);
-      File spriteFile = new File(resolvedPath);
-
-      if (spriteFile.exists()) {
-        sprite = ImageIO.read(spriteFile);
+      // Tentar carregar como recurso do classpath (funciona no JAR)
+      InputStream is = getClass().getClassLoader().getResourceAsStream(spritePath);
+      if (is != null) {
+        sprite = ImageIO.read(is);
+        is.close();
         width = sprite.getWidth();
         height = sprite.getHeight();
-        System.out.println("Sprite do NPC carregado: " + name);
+        System.out.println("✅ Sprite do NPC carregado do JAR: " + name);
       } else {
-        System.err.println("Sprite do NPC não encontrado: " + resolvedPath);
-        createDefaultSprite();
+        // Fallback: tentar carregar como arquivo externo (desenvolvimento)
+        String resolvedPath = com.rpggame.world.ResourceResolver.getResourcePath(spritePath);
+        File spriteFile = new File(resolvedPath);
+
+        if (spriteFile.exists()) {
+          sprite = ImageIO.read(spriteFile);
+          width = sprite.getWidth();
+          height = sprite.getHeight();
+          System.out.println("✅ Sprite do NPC carregado do arquivo: " + name);
+        } else {
+          System.err.println("Sprite do NPC não encontrado: " + resolvedPath);
+          createDefaultSprite();
+        }
       }
     } catch (IOException e) {
       System.err.println("Erro ao carregar sprite do NPC: " + e.getMessage());

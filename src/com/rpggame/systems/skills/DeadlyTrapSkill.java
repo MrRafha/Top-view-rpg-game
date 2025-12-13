@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import javax.imageio.ImageIO;
 import java.io.File;
+import java.io.InputStream;
 import com.rpggame.entities.Player;
 import com.rpggame.entities.Enemy;
 import com.rpggame.world.Camera;
@@ -43,14 +44,23 @@ public class DeadlyTrapSkill extends Skill {
 
     private void loadSprite() {
       try {
-        String path = com.rpggame.world.ResourceResolver.getResourcePath("sprites/HunterTrap.png");
-        File spriteFile = new File(path);
-        if (spriteFile.exists()) {
-          sprite = ImageIO.read(spriteFile);
-          System.out.println("🪤 Sprite da armadilha carregado com sucesso!");
+        // Tentar carregar como recurso do classpath (funciona no JAR)
+        InputStream is = getClass().getClassLoader().getResourceAsStream("sprites/HunterTrap.png");
+        if (is != null) {
+          sprite = ImageIO.read(is);
+          is.close();
+          System.out.println("✅ Sprite da armadilha carregado do JAR!");
         } else {
-          System.err.println("⚠️ Sprite HunterTrap.png não encontrado em: " + path);
-          createDefaultSprite();
+          // Fallback: tentar carregar como arquivo externo (desenvolvimento)
+          String path = com.rpggame.world.ResourceResolver.getResourcePath("sprites/HunterTrap.png");
+          File spriteFile = new File(path);
+          if (spriteFile.exists()) {
+            sprite = ImageIO.read(spriteFile);
+            System.out.println("✅ Sprite da armadilha carregado do arquivo!");
+          } else {
+            System.err.println("⚠️ Sprite HunterTrap.png não encontrado");
+            createDefaultSprite();
+          }
         }
       } catch (Exception e) {
         System.err.println("❌ Erro ao carregar sprite da armadilha: " + e.getMessage());

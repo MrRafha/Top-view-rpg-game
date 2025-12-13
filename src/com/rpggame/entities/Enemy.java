@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import com.rpggame.core.GamePanel;
 import com.rpggame.world.Camera;
@@ -104,22 +105,34 @@ public abstract class Enemy {
     boolean loaded = false;
 
     try {
-      // Usar o sistema de resolução de caminho
-      String resolvedPath = com.rpggame.world.ResourceResolver.getResourcePath(spritePath);
-      File spriteFile = new File(resolvedPath);
-      System.out.println("Tentando caminho resolvido: " + spriteFile.getAbsolutePath());
-
-      if (spriteFile.exists()) {
-        sprite = ImageIO.read(spriteFile);
+      // Tentar carregar como recurso do classpath (funciona no JAR)
+      InputStream is = getClass().getClassLoader().getResourceAsStream(spritePath);
+      if (is != null) {
+        sprite = ImageIO.read(is);
+        is.close();
         if (sprite != null) {
           width = sprite.getWidth();
           height = sprite.getHeight();
           loaded = true;
-          System.out.println("Sprite carregado com sucesso: " + resolvedPath);
+          System.out.println("✅ Sprite carregado do JAR: " + spritePath);
+        }
+      } else {
+        // Fallback: tentar carregar como arquivo externo (desenvolvimento)
+        String resolvedPath = com.rpggame.world.ResourceResolver.getResourcePath(spritePath);
+        File spriteFile = new File(resolvedPath);
+
+        if (spriteFile.exists()) {
+          sprite = ImageIO.read(spriteFile);
+          if (sprite != null) {
+            width = sprite.getWidth();
+            height = sprite.getHeight();
+            loaded = true;
+            System.out.println("✅ Sprite carregado do arquivo: " + resolvedPath);
+          }
         }
       }
     } catch (IOException e) {
-      System.out.println("Falha ao carregar sprite: " + e.getMessage());
+      System.out.println("❌ Falha ao carregar sprite: " + e.getMessage());
     }
 
     if (!loaded) {

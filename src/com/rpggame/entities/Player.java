@@ -5,6 +5,7 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.File;
+import java.io.InputStream;
 import java.util.ArrayList;
 
 import com.rpggame.world.*;
@@ -142,7 +143,12 @@ public class Player {
       e.printStackTrace();
       // Tentar carregar sprite original como fallback
       try {
-        currentSprite = ImageIO.read(new File(path));
+        BufferedImage fallbackSprite = loadSpriteFromPath(path);
+        if (fallbackSprite != null) {
+          currentSprite = fallbackSprite;
+        } else {
+          throw new IOException("Não foi possível carregar: " + path);
+        }
         // Usar o mesmo sprite para todas as direções como fallback
         spriteRight1 = spriteRight2 = spriteLeft1 = spriteLeft2 = currentSprite;
       } catch (IOException e2) {
@@ -158,17 +164,41 @@ public class Player {
     }
   }
 
+  private BufferedImage loadSpriteFromPath(String path) throws IOException {
+    // Tentar carregar como recurso do classpath (funciona no JAR)
+    InputStream is = getClass().getClassLoader().getResourceAsStream(path);
+    if (is != null) {
+      BufferedImage img = ImageIO.read(is);
+      is.close();
+      System.out.println("✅ Sprite carregado do JAR: " + path);
+      return img;
+    }
+
+    // Fallback: tentar carregar como arquivo externo (desenvolvimento)
+    File file = new File(path);
+    if (file.exists()) {
+      System.out.println("✅ Sprite carregado do arquivo: " + path);
+      return ImageIO.read(file);
+    }
+
+    return null;
+  }
+
   private void loadAnimationSprites(String basePath, String className) throws IOException {
     // Nomes dos arquivos baseados na classe
     String classCapitalized = className.substring(0, 1).toUpperCase() + className.substring(1);
 
     // Sprites para direita
-    spriteRight1 = ImageIO.read(new File(basePath + classCapitalized + "Player.png"));
-    spriteRight2 = ImageIO.read(new File(basePath + classCapitalized + "Player2.png"));
+    spriteRight1 = loadSpriteFromPath(basePath + classCapitalized + "Player.png");
+    spriteRight2 = loadSpriteFromPath(basePath + classCapitalized + "Player2.png");
 
     // Sprites para esquerda
-    spriteLeft1 = ImageIO.read(new File(basePath + classCapitalized + "PlayerLeft.png"));
-    spriteLeft2 = ImageIO.read(new File(basePath + classCapitalized + "PlayerLeft2.png"));
+    spriteLeft1 = loadSpriteFromPath(basePath + classCapitalized + "PlayerLeft.png");
+    spriteLeft2 = loadSpriteFromPath(basePath + classCapitalized + "PlayerLeft2.png");
+
+    if (spriteRight1 == null || spriteRight2 == null || spriteLeft1 == null || spriteLeft2 == null) {
+      throw new IOException("Falha ao carregar um ou mais sprites de " + className);
+    }
 
     System.out.println("Sprites de animação carregados para " + className);
   }

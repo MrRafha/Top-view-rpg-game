@@ -15,6 +15,7 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -100,17 +101,34 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
 
   private void loadSprites() {
     try {
-      String warriorPath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/WarriorPlayer.png");
-      String magePath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/MagePlayer.png");
-      String hunterPath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/HunterPlayer.png");
-
-      warriorSprite = ImageIO.read(new File(warriorPath));
-      mageSprite = ImageIO.read(new File(magePath));
-      hunterSprite = ImageIO.read(new File(hunterPath));
+      warriorSprite = loadSpriteFromResource("sprites/WarriorPlayer.png");
+      mageSprite = loadSpriteFromResource("sprites/MagePlayer.png");
+      hunterSprite = loadSpriteFromResource("sprites/HunterPlayer.png");
     } catch (IOException e) {
       System.err.println("Erro ao carregar sprites das classes");
       e.printStackTrace();
     }
+  }
+
+  private BufferedImage loadSpriteFromResource(String resourcePath) throws IOException {
+    // Tentar carregar como recurso do classpath (funciona no JAR)
+    InputStream is = getClass().getClassLoader().getResourceAsStream(resourcePath);
+    if (is != null) {
+      BufferedImage img = ImageIO.read(is);
+      is.close();
+      System.out.println("✅ Sprite carregado do JAR: " + resourcePath);
+      return img;
+    }
+
+    // Fallback: tentar carregar como arquivo externo (desenvolvimento)
+    String filePath = com.rpggame.world.ResourceResolver.getResourcePath(resourcePath);
+    File file = new File(filePath);
+    if (file.exists()) {
+      System.out.println("✅ Sprite carregado do arquivo: " + resourcePath);
+      return ImageIO.read(file);
+    }
+
+    throw new IOException("Sprite não encontrado: " + resourcePath);
   }
 
   private void initializeUi() {
