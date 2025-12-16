@@ -36,7 +36,7 @@ public class CharacterStats {
   public static final int BASE_ATTRIBUTE = 5;
   public static final int EXTRA_POINTS = 5;
   public static final int MIN_ATTRIBUTE = 1;
-  public static final int MAX_ATTRIBUTE = 10;
+  public static final int MAX_ATTRIBUTE = 15;
 
   // Classe do personagem
   private String playerClass;
@@ -200,7 +200,7 @@ public class CharacterStats {
   // Calcular mana baseada na inteligência
   public int getMaxMana() {
     // Mana base: 40 (com 5 de inteligência)
-    int baseMana = 40;
+    int baseMana = 70;
 
     // Bônus de inteligência: +5 de mana por cada ponto acima de 5
     int intelligenceBonus = Math.max(0, intelligence - BASE_ATTRIBUTE) * 5;

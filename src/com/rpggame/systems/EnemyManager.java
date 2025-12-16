@@ -403,6 +403,10 @@ public class EnemyManager {
 
     // Não spawnar goblins em mapas de vila ou outros mapas seguros
     if ("village".equals(currentMapId) || "cave".equals(currentMapId)) {
+      // Adicionar estruturas decorativas no vilarejo
+      if ("village".equals(currentMapId)) {
+        initializeVillageStructures();
+      }
       familiesInitialized = true;
       System.out.println("🏞️ Mapa seguro (" + currentMapId + ") - sem goblins");
       return;
@@ -441,6 +445,36 @@ public class EnemyManager {
 
     familiesInitialized = true;
     System.out.println("Sistema de famílias de goblins inicializado!");
+  }
+
+  /**
+   * Inicializa estruturas decorativas do mapa village
+   */
+  public void initializeVillageStructures() {
+    if (!"village".equals(currentMapId)) {
+      return;
+    }
+
+    System.out.println("Inicializando estruturas do vilarejo...");
+
+    // Tenda de mercador - 144x144 pixels (3x3 tiles) - T10 L7
+    structures.add(new Structure(420, 300, "MarketTent", "sprites/MarketTend.png", 144, 144, false));
+
+    // Casas - 120x120 pixels (2.5x2.5 tiles)
+    structures.add(new Structure(318, 185, "House", "sprites/House1.png", 120, 120, false)); // Casa1: +30px direita
+    structures.add(new Structure(624, 474, "House", "sprites/House2.png", 120, 120, false)); // Casa2: -40px no y
+    structures.add(new Structure(936, 474, "House", "sprites/House1.png", 120, 120, false)); // Casa3: -40px no y
+
+    // Lâmpadas - 72x72 pixels (1.5x1.5 tiles) - maior e mais visíveis
+    structures.add(new Structure(612, 612, "Lamp", "sprites/Lamp.png", 72, 72, false));
+    structures.add(new Structure(480, 756, "Lamp", "sprites/Lamp.png", 72, 72, false));
+    structures.add(new Structure(612, 936, "Lamp", "sprites/Lamp.png", 72, 72, false));
+    structures.add(new Structure(612, 264, "Lamp", "sprites/Lamp.png", 72, 72, false));
+
+    // Igreja - 192x192 pixels (4x4 tiles) - T11 L1
+    structures.add(new Structure(466, 00, "Church", "sprites/curch.png", 192, 192, false));
+
+    System.out.println("✅ " + structures.size() + " estruturas decorativas adicionadas ao vilarejo");
   }
 
   /**

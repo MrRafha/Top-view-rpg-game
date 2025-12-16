@@ -24,7 +24,7 @@ public class Structure {
     private boolean isDestroyed;
 
     /**
-     * Construtor para estrutura
+     * Construtor para estrutura (cabanas de goblins)
      */
     public Structure(double x, double y, String structureType, String spritePath) {
         this.x = x;
@@ -38,6 +38,27 @@ public class Structure {
         this.maxHealth = 100;
         this.currentHealth = maxHealth;
         this.isVulnerable = false;
+        this.isDestroyed = false;
+
+        loadSprite(spritePath);
+    }
+
+    /**
+     * Construtor customizado para estruturas decorativas (casas, tendas, etc)
+     */
+    public Structure(double x, double y, String structureType, String spritePath, int width, int height,
+            boolean isVulnerable) {
+        this.x = x;
+        this.y = y;
+        this.structureType = structureType;
+        this.width = width;
+        this.height = height;
+        this.isOccupied = false;
+
+        // Estruturas decorativas geralmente não são vulneráveis
+        this.maxHealth = 100;
+        this.currentHealth = maxHealth;
+        this.isVulnerable = isVulnerable;
         this.isDestroyed = false;
 
         loadSprite(spritePath);

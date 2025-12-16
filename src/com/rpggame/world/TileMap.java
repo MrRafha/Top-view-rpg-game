@@ -58,8 +58,10 @@ public class TileMap {
    * Carrega os sprites dos tiles da pasta sprites
    */
   private void loadTileSprites() {
-    String[] spriteFiles = { "GRASS.png", "STONE.png", "BORDER.png", "Wather.png", "WalknableWather.png" };
-    TileType[] tileTypes = { TileType.GRASS, TileType.STONE, TileType.WALL, TileType.WATER, TileType.WALKABLE_WATER };
+    String[] spriteFiles = { "GRASS.png", "STONE.png", "BORDER.png", "Wather.png", "WalknableWather.png",
+        "CaminhoGrama.png" };
+    TileType[] tileTypes = { TileType.GRASS, TileType.STONE, TileType.WALL, TileType.WATER, TileType.WALKABLE_WATER,
+        TileType.GRASS_PATH };
 
     for (int i = 0; i < spriteFiles.length; i++) {
       try {
