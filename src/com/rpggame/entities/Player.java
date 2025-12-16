@@ -12,6 +12,9 @@ import com.rpggame.world.*;
 import com.rpggame.systems.*;
 import com.rpggame.core.GamePanel;
 import com.rpggame.core.Game;
+import com.rpggame.items.Inventory;
+import com.rpggame.items.consumables.HealthPotion;
+import com.rpggame.items.consumables.ManaPotion;
 import java.io.IOException;
 
 /**
@@ -91,6 +94,12 @@ public class Player {
   // Gerenciador de habilidades
   private SkillManager skillManager;
 
+  // Inventário do jogador
+  private Inventory inventory;
+
+  // Noclip mode (para debug/cheat)
+  private boolean noclipEnabled = false;
+
   public Player(double x, double y, String spritePath) {
     this.x = x;
     this.y = y;
@@ -106,7 +115,9 @@ public class Player {
     this.projectiles = new ArrayList<>();
     this.floatingTexts = new ArrayList<>();
     this.skillManager = new SkillManager(this);
+    this.inventory = new Inventory(); // Inicializa inventário com 20 slots
     loadSprite(spritePath);
+    initializeStartingItems(); // Adiciona itens iniciais
   }
 
   public Player(double x, double y, String spritePath, String playerClass, CharacterStats stats) {
@@ -123,7 +134,9 @@ public class Player {
     this.projectiles = new ArrayList<>();
     this.floatingTexts = new ArrayList<>();
     this.skillManager = new SkillManager(this);
+    this.inventory = new Inventory(); // Inicializa inventário com 20 slots
     loadSprite(spritePath);
+    initializeStartingItems(); // Adiciona itens iniciais
   }
 
   private void loadSprite(String path) {
@@ -702,6 +715,13 @@ public class Player {
   }
 
   /**
+   * Restaura mana do jogador.
+   */
+  public void restoreMana(int amount) {
+    currentMana = Math.min(maxMana, currentMana + amount);
+  }
+
+  /**
    * Tenta aplicar atordoamento no player
    * Retorna true se foi atordoado, false se for imune (berserk)
    */
@@ -839,6 +859,11 @@ public class Player {
   }
 
   private boolean canMoveToPosition(double newX, double newY) {
+    // Noclip bypass - permite atravessar qualquer coisa
+    if (noclipEnabled) {
+      return true;
+    }
+
     // Se o tileMap não estiver inicializado, permitir movimento (para
     // compatibilidade)
     if (tileMap == null) {
@@ -966,5 +991,63 @@ public class Player {
    */
   public void clearPendingSkillUnlock() {
     pendingSkillUnlock = 0;
+  }
+
+  /**
+   * Retorna o inventário do jogador
+   */
+  public Inventory getInventory() {
+    return inventory;
+  }
+
+  /**
+   * Inicializa itens iniciais no inventário.
+   */
+  private void initializeStartingItems() {
+    if (inventory != null) {
+      // Adiciona 3 poções de vida
+      inventory.addItem(new HealthPotion(this, 50), 3);
+
+      // Adiciona 3 poções de mana
+      inventory.addItem(new ManaPotion(this, 30), 3);
+
+      System.out.println("✅ Inventário iniciado com itens básicos");
+    }
+  }
+
+  /**
+   * Adiciona um texto flutuante na tela do jogador.
+   */
+  public void addFloatingText(String text, Color color) {
+    FloatingText ft = new FloatingText(x + WIDTH / 2, y - 20, text, color);
+    floatingTexts.add(ft);
+  }
+
+  /**
+   * Ativa/desativa modo noclip (atravessar paredes)
+   */
+  public void setNoclip(boolean enabled) {
+    this.noclipEnabled = enabled;
+  }
+
+  /**
+   * Retorna se noclip está ativo
+   */
+  public boolean isNoclipEnabled() {
+    return noclipEnabled;
+  }
+
+  /**
+   * Define velocidade do player
+   */
+  public void setSpeed(double newSpeed) {
+    this.speed = newSpeed;
+  }
+
+  /**
+   * Retorna velocidade atual do player
+   */
+  public double getSpeed() {
+    return speed;
   }
 }

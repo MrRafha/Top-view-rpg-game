@@ -11,7 +11,8 @@ public enum TileType {
   DIRT(4, "Terra", true),
   SAND(5, "Areia", true),
   PORTAL(6, "Portal", true), // Tile de transição entre mapas
-  WALKABLE_WATER(7, "WalkableWater", true); // Vitória-régia sobre água
+  WALKABLE_WATER(7, "WalkableWater", true), // Vitória-régia sobre água
+  GRASS_PATH(8, "GrassPath", true); // Caminho de pedras sobre grama (rua do vilarejo)
 
   private final int id;
   private final String name;
@@ -71,6 +72,9 @@ public enum TileType {
       case 'w':
       case 'V': // V de vitória-régia ou W minúsculo
         return WALKABLE_WATER;
+      case 'r':
+      case 'R': // R de road (rua/caminho)
+        return GRASS_PATH;
       default:
         return GRASS;
     }
@@ -95,6 +99,8 @@ public enum TileType {
         return 'P';
       case WALKABLE_WATER:
         return 'w';
+      case GRASS_PATH:
+        return 'r';
       default:
         return '.';
     }

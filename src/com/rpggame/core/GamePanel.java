@@ -19,6 +19,8 @@ import com.rpggame.systems.*;
 import com.rpggame.ui.CharacterScreen;
 import com.rpggame.ui.DialogBox;
 import com.rpggame.ui.SkillSlotUI;
+import com.rpggame.ui.InventoryScreen;
+import com.rpggame.ui.DeveloperConsole;
 
 /**
  * Painel principal onde o jogo é renderizado
@@ -39,6 +41,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   // Telas do jogo
   private CharacterScreen characterScreen;
   private boolean showingCharacterScreen = false;
+  private DeveloperConsole developerConsole;
+  private InventoryScreen inventoryScreen;
 
   // Sistema de NPCs e diálogos
   private java.util.ArrayList<NPC> npcs;
@@ -158,6 +162,13 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       if (player.getSkillManager() != null) {
         skillSlotUI = new SkillSlotUI(player.getSkillManager(), Game.SCREEN_WIDTH);
       }
+
+      // Inicializar tela de inventário
+      inventoryScreen = new InventoryScreen(player.getInventory());
+      inventoryScreen.updateLayout(Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT);
+
+      // Inicializar console de desenvolvedor
+      developerConsole = new DeveloperConsole(player);
 
       // Iniciar o loop do jogo se ainda não estiver rodando
       if (gameThread == null || !gameThread.isAlive()) {
@@ -340,6 +351,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       dialogBox.render(g2d, npcName, getWidth(), getHeight());
     }
 
+    // Renderizar inventário se estiver visível
+    if (inventoryScreen != null && inventoryScreen.isInventoryVisible()) {
+      inventoryScreen.render(g2d);
+    }
+
     // Renderizar transição de mapa (sempre por último, em cima de tudo)
     if (mapTransition != null && mapTransition.isTransitioning()) {
       mapTransition.render(g2d, getWidth(), getHeight());
@@ -490,6 +506,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
         }
       }
     }
+
+    // Console de desenvolvedor (renderizar antes da death screen)
+    if (developerConsole != null && developerConsole.isVisible()) {
+      developerConsole.render((Graphics2D) g, getWidth(), getHeight());
+    }
   }
 
   /**
@@ -561,8 +582,32 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       return;
     }
 
+    // Se inventário estiver aberto, passa eventos para ele
+    if (inventoryScreen != null && inventoryScreen.isInventoryVisible()) {
+      inventoryScreen.keyPressed(e);
+      return;
+    }
+
     // Se player ainda não foi criado, ignorar input
     if (player == null) {
+      return;
+    }
+
+    // Tecla ' (aspas) para abrir console de desenvolvedor
+    if (e.getKeyCode() == KeyEvent.VK_QUOTE) {
+      if (developerConsole != null) {
+        developerConsole.toggle();
+        repaint();
+      }
+      return;
+    }
+
+    // Se console está aberto, delegar input para ele
+    if (developerConsole != null && developerConsole.isVisible()) {
+      boolean needsRepaint = developerConsole.keyPressed(e);
+      if (needsRepaint) {
+        repaint();
+      }
       return;
     }
 
@@ -575,6 +620,15 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Tecla C para abrir tela de características
     if (e.getKeyCode() == KeyEvent.VK_C) {
       openCharacterScreen();
+      return;
+    }
+
+    // Tecla I para abrir inventário
+    if (e.getKeyCode() == KeyEvent.VK_I) {
+      if (inventoryScreen != null) {
+        inventoryScreen.toggleVisibility();
+        repaint();
+      }
       return;
     }
 
@@ -643,6 +697,13 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (player != null && !showingCharacterScreen) {
       // Criar e configurar a tela de características
       characterScreen = new CharacterScreen(this, player);
+
+      // Criar inventoryScreen se ainda não existe
+      if (inventoryScreen == null) {
+        inventoryScreen = new InventoryScreen(player.getInventory());
+        inventoryScreen.updateLayout(Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT);
+      }
+
       showingCharacterScreen = true;
 
       // Mostrar a tela (não pausar o thread do jogo)
