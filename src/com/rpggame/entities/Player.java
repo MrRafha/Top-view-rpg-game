@@ -895,10 +895,39 @@ public class Player {
     int tileY4 = (int) ((hitboxY + HITBOX_HEIGHT - 1) / tileSize);
 
     // Verificar se todos os tiles são válidos e caminháveis (ou congelados)
-    return isValidTile(tileX1, tileY1) && isTileWalkableOrFrozen(tileX1, tileY1) &&
+    boolean tilesWalkable = isValidTile(tileX1, tileY1) && isTileWalkableOrFrozen(tileX1, tileY1) &&
         isValidTile(tileX2, tileY2) && isTileWalkableOrFrozen(tileX2, tileY2) &&
         isValidTile(tileX3, tileY3) && isTileWalkableOrFrozen(tileX3, tileY3) &&
         isValidTile(tileX4, tileY4) && isTileWalkableOrFrozen(tileX4, tileY4);
+
+    if (!tilesWalkable) {
+      return false;
+    }
+
+    // Verificar colisão com estruturas (igreja, casas, tendas, lâmpadas, etc)
+    if (enemyManager != null) {
+      for (Structure structure : enemyManager.getStructures()) {
+        if (structure.isDestroyed()) {
+          continue; // Estruturas destruídas não bloqueiam
+        }
+
+        // Colisão AABB (Axis-Aligned Bounding Box) - retângulo vs retângulo
+        double structX = structure.getX();
+        double structY = structure.getY();
+        double structWidth = structure.getWidth();
+        double structHeight = structure.getHeight();
+
+        // Verificar se há sobreposição entre as hitboxes
+        if (hitboxX < structX + structWidth &&
+            hitboxX + HITBOX_WIDTH > structX &&
+            hitboxY < structY + structHeight &&
+            hitboxY + HITBOX_HEIGHT > structY) {
+          return false; // Colisão detectada
+        }
+      }
+    }
+
+    return true;
   }
 
   /**
