@@ -4,6 +4,19 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ---
 
+
+## [2.2.0] - 15.12.2025
+
+### ⚡ Adicionado
+- **Nova feature de inventário e poções.**
+  - **Poção de cura (cura 50 pv);**
+  - **Poção de mana (Restaura 50 MP).**
+- **Ambientação primaria no vilarejo (mapa inicial).**
+- **Console para melhorar os testes de gameplay (') com comandos funcionais:**
+  - **Comando maxlevel (força o aumento de level do player até o 10 liberando todas as skills com level);**
+  - **Comando Noclip (deixa o player sem colisão e aumenta a velocidade).**
+  
+
 ## [2.1.0] - 2025-12-12
 
 ### ⚡ Adicionado
