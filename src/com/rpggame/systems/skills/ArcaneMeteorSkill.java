@@ -159,20 +159,33 @@ public class ArcaneMeteorSkill extends Skill {
   }
 
   private void applyMeteorDamage() {
-    if (currentPlayer == null)
+    System.out.println("🔥 Aplicando dano do meteoro...");
+
+    if (currentPlayer == null) {
+      System.out.println("❌ currentPlayer é null!");
       return;
+    }
 
     EnemyManager enemyManager = currentPlayer.getEnemyManager();
-    if (enemyManager == null)
+    if (enemyManager == null) {
+      System.out.println("❌ enemyManager é null!");
       return;
+    }
 
     ArrayList<Enemy> enemies = enemyManager.getEnemies();
+    System.out.println("🎯 Inimigos disponíveis: " + enemies.size());
+
     int intelligence = currentPlayer.getStats().getIntelligence();
+    System.out.println("🧠 Inteligência do player: " + intelligence);
 
     // Calcular área de efeito
     double areaRadius = (AREA_SIZE * GamePanel.TILE_SIZE) / 2.0;
     double centerRadius = areaRadius * 0.5; // Centro = 50% do raio total
 
+    System.out.println("📍 Área de efeito - Raio: " + areaRadius + ", Centro: " + centerRadius);
+    System.out.println("📍 Alvo: (" + (int) targetX + ", " + (int) targetY + ")");
+
+    int enemiesHit = 0;
     for (Enemy enemy : enemies) {
       if (!enemy.isAlive())
         continue;
@@ -184,7 +197,10 @@ public class ArcaneMeteorSkill extends Skill {
       double dy = enemyY - targetY;
       double distance = Math.sqrt(dx * dx + dy * dy);
 
+      System.out.println("👹 Inimigo em (" + (int) enemyX + ", " + (int) enemyY + ") - Distância: " + (int) distance);
+
       if (distance <= areaRadius) {
+        enemiesHit++;
         int damage;
 
         if (distance <= centerRadius) {
@@ -201,6 +217,7 @@ public class ArcaneMeteorSkill extends Skill {
 
         // Aplicar queimadura
         burnEffects.add(new BurnEffect(enemy));
+        System.out.println("🔥 Queimadura aplicada!");
 
         // Aplicar knockback (empurrar inimigo para fora)
         if (distance > 0) {
@@ -226,6 +243,8 @@ public class ArcaneMeteorSkill extends Skill {
         }
       }
     }
+
+    System.out.println("✅ Total de inimigos atingidos: " + enemiesHit);
   }
 
   @Override

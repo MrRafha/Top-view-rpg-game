@@ -4,6 +4,63 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ---
 
+## [2.3.0] - 2025-12-26
+
+### ⚡ Adicionado
+- **Boss Golem - Guardião do Equilíbrio** 🗿
+  - 500 HP com 50% de resistência a dano
+  - Sistema de visão com ray casting
+  - Spawn inteligente fora da visão do jogador (até 50 tentativas)
+  - Pausa automática de goblins durante a batalha
+  - Modo Enrage aos 30% HP ou após 1 minuto
+  - 8 novos sprites (4 direcionais + 4 pedras animadas)
+  - Animação de balanço suave durante movimento
+  - Ataque de pedras com área 2x2 tiles
+  - Sistema de preparação visual (1.5s windup)
+  - Kiting inteligente mantendo distância ideal
+  - 500 XP de recompensa
+- **Sistema de Quests** 📋
+  - QuestManager completo
+  - Tipos: KILL, COLLECT, TALK
+  - Quest UI com progresso em tempo real
+  - Quest Choice Box para aceitar/recusar
+- **Sistema de Loja e Economia** 💰
+  - Shop UI funcional
+  - Gold UI mostrando recursos
+  - Merchant NPC interativo
+  - Sistema de compra/venda
+- **Itens Equipáveis** ⚔️
+  - Old Sword (corpo a corpo)
+  - Old Bow (alcance)
+  - Old Staff (mágico)
+  - Sistema EquippableItem para expansões
+- **Developer Console** 🛠️
+  - Comando `kill goblins all/N` (elimina e concede XP)
+  - Comando `spawngolem` (spawn forçado para testes)
+  - Comando `maxlevel` (força level 10, libera todas skills)
+  - Comando `noclip` (remove colisão e aumenta velocidade)
+  - Tecla V para debug de campo de visão
+
+### 🔧 Modificado
+- **Enemy.java** com método abstrato `initializeStats()`
+- **Sistema de carregamento de sprites** com dual-path (JAR + desenvolvimento)
+- **EnemyManager.java** com lógica de spawn do Golem
+- **Player.java** com suporte melhorado a floating texts
+- **Golem spawn** após todas famílias goblin derrotadas (50% chance)
+
+### 🐛 Corrigido
+- ConcurrentModificationException em múltiplos locais (update e render)
+- Sistema de carregamento de sprites com fallback para arquivos
+- Map ID check usando `startsWith()` ao invés de `equals()`
+- Problemas de compilação com métodos abstratos
+- Sprite loading do Golem e GolemStone
+
+### 📊 Estatísticas
+- 41 arquivos alterados
+- 3468 linhas adicionadas
+- 74 linhas removidas
+
+---
 
 ## [2.2.0] - 15.12.2025
 
@@ -15,7 +72,8 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Console para melhorar os testes de gameplay (') com comandos funcionais:**
   - **Comando maxlevel (força o aumento de level do player até o 10 liberando todas as skills com level);**
   - **Comando Noclip (deixa o player sem colisão e aumenta a velocidade).**
-  
+
+---
 
 ## [2.1.0] - 2025-12-12
 

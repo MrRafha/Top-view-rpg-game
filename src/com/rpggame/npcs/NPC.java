@@ -29,6 +29,10 @@ public abstract class NPC {
   protected boolean showInteractionPrompt = false;
   protected static final int INTERACTION_RANGE = 60;
 
+  // Sistema de quests
+  protected boolean hasQuestAvailable = false;
+  protected boolean hasQuestCompleted = false;
+
   /**
    * Construtor base do NPC
    */
@@ -126,8 +130,51 @@ public abstract class NPC {
       g.drawImage(sprite, screenX, screenY, scaledWidth, scaledHeight, null);
     }
 
+    // Desenhar indicador de quest
+    if (hasQuestAvailable || hasQuestCompleted) {
+      drawQuestIndicator(g, screenX, screenY);
+    }
+
     if (showInteractionPrompt) {
       drawInteractionPrompt(g, screenX, screenY);
+    }
+  }
+
+  /**
+   * Desenha o indicador de quest acima do NPC
+   */
+  private void drawQuestIndicator(Graphics2D g, int screenX, int screenY) {
+    // Posicionar à esquerda do NPC
+    int indicatorX = screenX - 25; // 25 pixels à esquerda
+    int indicatorY = screenY + (int) (height * 1.5) / 2; // Centralizado verticalmente
+    int indicatorSize = 20;
+
+    // Sombra do ícone
+    g.setColor(new Color(0, 0, 0, 100));
+    g.fillOval(indicatorX - indicatorSize / 2 + 2, indicatorY - indicatorSize / 2 + 2, indicatorSize, indicatorSize);
+
+    // Fundo do ícone
+    if (hasQuestCompleted) {
+      // Dourado para quest completa
+      g.setColor(new Color(255, 215, 0));
+    } else {
+      // Amarelo para quest disponível
+      g.setColor(new Color(255, 255, 0));
+    }
+    g.fillOval(indicatorX - indicatorSize / 2, indicatorY - indicatorSize / 2, indicatorSize, indicatorSize);
+
+    // Borda do ícone
+    g.setColor(new Color(150, 120, 0));
+    g.setStroke(new BasicStroke(2));
+    g.drawOval(indicatorX - indicatorSize / 2, indicatorY - indicatorSize / 2, indicatorSize, indicatorSize);
+
+    // Símbolo de exclamação ou interrogação
+    g.setColor(Color.BLACK);
+    g.setFont(new Font("Arial", Font.BOLD, 16));
+    if (hasQuestCompleted) {
+      g.drawString("?", indicatorX - 5, indicatorY + 6);
+    } else {
+      g.drawString("!", indicatorX - 4, indicatorY + 6);
     }
   }
 
@@ -194,5 +241,27 @@ public abstract class NPC {
 
   public Rectangle getBounds() {
     return new Rectangle((int) x, (int) y, (int) (width * 1.5), (int) (height * 1.5));
+  }
+
+  /**
+   * Método de interação - deve ser sobrescrito por NPCs específicos
+   */
+  public void interact(Player player) {
+    // NPCs específicos devem sobrescrever este método
+    currentDialogIndex = 0;
+  }
+
+  /**
+   * Define se o NPC tem uma quest disponível
+   */
+  public void setHasQuestAvailable(boolean hasQuest) {
+    this.hasQuestAvailable = hasQuest;
+  }
+
+  /**
+   * Define se o NPC tem uma quest completa
+   */
+  public void setHasQuestCompleted(boolean hasQuestCompleted) {
+    this.hasQuestCompleted = hasQuestCompleted;
   }
 }

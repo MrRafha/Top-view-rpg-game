@@ -59,16 +59,22 @@ public class ArrowRainSkill extends Skill {
     }
 
     private void hitEnemies() {
-      if (currentPlayer == null)
+      if (currentPlayer == null) {
+        System.out.println("❌ Arrow: currentPlayer é null!");
         return;
+      }
 
       EnemyManager enemyManager = currentPlayer.getEnemyManager();
-      if (enemyManager == null)
+      if (enemyManager == null) {
+        System.out.println("❌ Arrow: enemyManager é null!");
         return;
+      }
 
       ArrayList<Enemy> enemies = enemyManager.getEnemies();
       int dexterity = currentPlayer.getStats().getDexterity();
       int damage = 15 + (int) (dexterity * 1.5);
+
+      System.out.println("🎯 Flecha caiu em (" + (int) x + ", " + (int) y + ") - Dano: " + damage);
 
       for (Enemy enemy : enemies) {
         if (!enemy.isAlive())
@@ -83,6 +89,7 @@ public class ArrowRainSkill extends Skill {
 
         // Raio de hit da flecha
         if (distance < 25) {
+          System.out.println("✅ Flecha atingiu inimigo! Dano: " + damage);
           enemy.takeDamage(damage);
 
           // 30% de chance de sangramento

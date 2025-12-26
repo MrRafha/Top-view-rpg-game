@@ -97,8 +97,24 @@ public class Player {
   // Inventário do jogador
   private Inventory inventory;
 
+  // Sistema de equipamento
+  private com.rpggame.items.EquippableItem equippedWeapon;
+
+  // Sistema de moedas
+  private int gold = 0;
+  private boolean showGoldUI = false;
+  private int goldUITimer = 0;
+  private static final int GOLD_UI_DISPLAY_TIME = 300; // 5 segundos em frames (60 fps)
+
+  // Sistema de quests
+  private QuestManager questManager;
+
   // Noclip mode (para debug/cheat)
   private boolean noclipEnabled = false;
+
+  // Sistema de atordoamento
+  private boolean stunned = false;
+  private int stunTimer = 0;
 
   public Player(double x, double y, String spritePath) {
     this.x = x;
@@ -116,6 +132,7 @@ public class Player {
     this.floatingTexts = new ArrayList<>();
     this.skillManager = new SkillManager(this);
     this.inventory = new Inventory(); // Inicializa inventário com 20 slots
+    this.questManager = new QuestManager(); // Inicializa gerenciador de quests
     loadSprite(spritePath);
     initializeStartingItems(); // Adiciona itens iniciais
   }
@@ -135,6 +152,7 @@ public class Player {
     this.floatingTexts = new ArrayList<>();
     this.skillManager = new SkillManager(this);
     this.inventory = new Inventory(); // Inicializa inventário com 20 slots
+    this.questManager = new QuestManager(); // Inicializa gerenciador de quests
     loadSprite(spritePath);
     initializeStartingItems(); // Adiciona itens iniciais
   }
@@ -217,6 +235,23 @@ public class Player {
   }
 
   public void update() {
+    // Processar atordoamento
+    if (stunned) {
+      stunTimer--;
+      if (stunTimer <= 0) {
+        stunned = false;
+        System.out.println("✅ Player recuperou do atordoamento!");
+      }
+      // Bloquear movimento enquanto atordoado
+      dx = 0;
+      dy = 0;
+      up = down = left = right = false;
+
+      // Ainda processar cooldowns e outras coisas
+      processTimers();
+      return; // Não processar mais nada
+    }
+
     // Resetar velocidade
     dx = 0;
     dy = 0;
@@ -327,6 +362,9 @@ public class Player {
 
     // Regenerar mana baseado na sabedoria
     regenerateMana();
+
+    // Atualizar timer do GoldUI
+    updateGoldUI();
   }
 
   /**
@@ -395,6 +433,11 @@ public class Player {
       BufferedImage spriteToRender = (currentSprite != null) ? currentSprite : spriteRight1;
       g.drawImage(spriteToRender, screenX, screenY, WIDTH, HEIGHT, null);
 
+      // Renderizar efeito de atordoamento
+      if (stunned) {
+        renderStunEffect(g, screenX + WIDTH / 2, screenY);
+      }
+
       // DEBUG: Visualizar hitbox (descomente para debug)
       // g.setColor(Color.RED);
       // g.drawRect(screenX + HITBOX_OFFSET_X, screenY + HITBOX_OFFSET_Y,
@@ -403,13 +446,14 @@ public class Player {
       // Barra de vida removida - agora exibida na UI
     }
 
-    // Renderizar projéteis
-    for (Projectile p : projectiles) {
+    // Renderizar projéteis (usar cópia para evitar ConcurrentModificationException)
+    for (Projectile p : new ArrayList<>(projectiles)) {
       p.render(g, camera);
     }
 
-    // Renderizar textos flutuantes
-    for (FloatingText ft : floatingTexts) {
+    // Renderizar textos flutuantes (usar cópia para evitar
+    // ConcurrentModificationException)
+    for (FloatingText ft : new ArrayList<>(floatingTexts)) {
       ft.render(g, camera);
     }
   }
@@ -447,10 +491,17 @@ public class Player {
     double startX = x + WIDTH / 2.0;
     double startY = y + HEIGHT / 2.0;
 
-    // Calcular dano baseado nos atributos
+    // Calcular dano baseado nos atributos e equipamento
     int baseDamage = 10;
     int bonusDamage = stats.getDamageBonus();
-    int totalDamage = baseDamage + bonusDamage;
+    int weaponBonus = getTotalDamageBonus(); // Bônus da arma equipada
+    int totalDamage = baseDamage + bonusDamage + weaponBonus;
+
+    // Debug do dano
+    if (weaponBonus > 0) {
+      System.out.println("🗡️ Dano total: " + totalDamage + " (Base: " + baseDamage + " + Atributo: " + bonusDamage
+          + " + Arma: " + weaponBonus + ")");
+    }
 
     // Criar projétil baseado na classe
     Projectile projectile = null;
@@ -732,8 +783,21 @@ public class Player {
       System.out.println("⚔️ Fúria Berserk: IMUNE a atordoamento!");
       return false;
     }
-    // Player não tem sistema de stun implementado ainda, mas retorna true para
-    // indicar que seria atordoado
+
+    // Aplicar atordoamento
+    stunned = true;
+    stunTimer = duration;
+
+    // Parar movimento
+    dx = 0;
+    dy = 0;
+    up = down = left = right = false;
+
+    // Feedback visual
+    FloatingText stunText = new FloatingText(x + WIDTH / 2, y - 10, "ATORDOADO!", new Color(255, 255, 0));
+    floatingTexts.add(stunText);
+
+    System.out.println("💫 Player foi atordoado por " + (duration / 60.0) + " segundos!");
     return true;
   }
 
@@ -1079,4 +1143,211 @@ public class Player {
   public double getSpeed() {
     return speed;
   }
+
+  /**
+   * Adiciona gold ao jogador
+   */
+  public void addGold(int amount) {
+    gold += amount;
+    showGoldUI = true;
+    goldUITimer = GOLD_UI_DISPLAY_TIME;
+    addFloatingText("+" + amount + " Gold", new Color(255, 215, 0));
+    System.out.println("💰 +" + amount + " gold (Total: " + gold + ")");
+  }
+
+  /**
+   * Remove gold do jogador
+   */
+  public boolean removeGold(int amount) {
+    if (gold >= amount) {
+      gold -= amount;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Retorna quantidade de gold
+   */
+  public int getGold() {
+    return gold;
+  }
+
+  /**
+   * Força a exibição do UI de gold (ex: quando abre inventário)
+   */
+  public void showGoldUI() {
+    showGoldUI = true;
+    goldUITimer = GOLD_UI_DISPLAY_TIME;
+  }
+
+  /**
+   * Verifica se deve mostrar o UI de gold
+   */
+  public boolean shouldShowGoldUI() {
+    return showGoldUI;
+  }
+
+  /**
+   * Atualiza o timer do UI de gold
+   */
+  public void updateGoldUI() {
+    if (goldUITimer > 0) {
+      goldUITimer--;
+      if (goldUITimer <= 0) {
+        showGoldUI = false;
+      }
+    }
+  }
+
+  /**
+   * Retorna o gerenciador de quests
+   */
+  public QuestManager getQuestManager() {
+    return questManager;
+  }
+
+  /**
+   * Força a exibição do UI de gold
+   */
+  public void forceShowGoldUI() {
+    showGoldUI = true;
+    goldUITimer = GOLD_UI_DISPLAY_TIME;
+  }
+
+  /**
+   * Esconde o UI de gold
+   */
+  public void hideGoldUI() {
+    showGoldUI = false;
+    goldUITimer = 0;
+  }
+
+  /**
+   * Equipa uma arma
+   */
+  public void equipWeapon(com.rpggame.items.EquippableItem weapon) {
+    if (weapon != null && weapon.canEquip(this)) {
+      equippedWeapon = weapon;
+      System.out.println("⚔️ " + weapon.getName() + " equipado! (+" + weapon.getDamageBonus() + " dano)");
+    } else if (weapon != null) {
+      System.out.println("❌ Você não pode equipar " + weapon.getName());
+      System.out.println("   Requisitos: " + weapon.getMissingRequirements(this));
+    }
+  }
+
+  /**
+   * Desequipa a arma atual
+   */
+  public void unequipWeapon() {
+    if (equippedWeapon != null) {
+      System.out.println("⚔️ " + equippedWeapon.getName() + " desequipado");
+      equippedWeapon = null;
+    }
+  }
+
+  /**
+   * Retorna a arma equipada
+   */
+  public com.rpggame.items.EquippableItem getEquippedWeapon() {
+    return equippedWeapon;
+  }
+
+  /**
+   * Retorna o bônus de dano total (equipamento + outros)
+   */
+  public int getTotalDamageBonus() {
+    int bonus = 0;
+    if (equippedWeapon != null) {
+      bonus += equippedWeapon.getDamageBonus();
+    }
+    return bonus;
+  }
+
+  /**
+   * Processa todos os timers do player
+   */
+  private void processTimers() {
+    // Atualizar cooldown de ataque
+    if (attackCooldown > 0) {
+      attackCooldown--;
+      if (attackCooldown == 0) {
+        canAttack = true;
+      }
+    }
+
+    // Atualizar projéteis
+    for (int i = projectiles.size() - 1; i >= 0; i--) {
+      Projectile p = projectiles.get(i);
+      p.update();
+      if (tileMap != null) {
+        p.checkWallCollision(tileMap);
+      }
+      if (!p.isActive()) {
+        projectiles.remove(i);
+      }
+    }
+
+    // Atualizar textos flutuantes
+    for (int i = floatingTexts.size() - 1; i >= 0; i--) {
+      FloatingText ft = floatingTexts.get(i);
+      ft.update();
+      if (!ft.isActive()) {
+        floatingTexts.remove(i);
+      }
+    }
+
+    // Regeneração de mana
+    manaRegenTimer++;
+    if (manaRegenTimer >= 60) {
+      int regenAmount = (int) stats.getManaRegen();
+      if (regenAmount > 0) {
+        restoreMana(regenAmount);
+      }
+      manaRegenTimer = 0;
+    }
+
+    // Timer de UI de gold
+    if (showGoldUI && goldUITimer > 0) {
+      goldUITimer--;
+      if (goldUITimer <= 0) {
+        showGoldUI = false;
+      }
+    }
+  }
+
+  /**
+   * Renderiza o efeito visual de atordoamento (estrelas girando)
+   */
+  private void renderStunEffect(Graphics2D g, int centerX, int centerY) {
+    // Estrelas amarelas girando ao redor da cabeça do player
+    int numStars = 3;
+    double radius = 25;
+
+    // Usar stunTimer para animação de rotação
+    double angleOffset = (stunTimer / 10.0) * Math.PI * 2; // Gira conforme o tempo
+
+    g.setColor(new Color(255, 255, 0));
+    g.setFont(new Font("Arial", Font.BOLD, 20));
+
+    for (int i = 0; i < numStars; i++) {
+      double angle = (Math.PI * 2 / numStars) * i + angleOffset;
+      int starX = centerX + (int) (Math.cos(angle) * radius);
+      int starY = centerY + (int) (Math.sin(angle) * radius);
+
+      g.drawString("★", starX - 6, starY + 6);
+    }
+
+    // Indicador de tempo restante
+    if (stunTimer > 0) {
+      float alpha = Math.min(1.0f, stunTimer / 30.0f);
+      g.setColor(new Color(255, 255, 255, (int) (200 * alpha)));
+      g.setFont(new Font("Arial", Font.BOLD, 10));
+      String timeText = String.format("%.1fs", stunTimer / 60.0);
+      FontMetrics fm = g.getFontMetrics();
+      int textWidth = fm.stringWidth(timeText);
+      g.drawString(timeText, centerX - textWidth / 2, centerY - 35);
+    }
+  }
+
 }
