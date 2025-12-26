@@ -1074,4 +1074,12 @@ public class Goblin extends Enemy {
       }
     }
   }
+
+  /**
+   * Retorna o tipo do inimigo para o sistema de quests
+   */
+  @Override
+  protected String getEnemyType() {
+    return "Goblin";
+  }
 }

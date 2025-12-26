@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 import com.rpggame.entities.*;
+import com.rpggame.enemies.Golem.Golem;
 import com.rpggame.world.*;
 import com.rpggame.core.GamePanel;
 
@@ -20,6 +21,10 @@ public class EnemyManager {
   private Random random;
   private GoblinCouncil goblinCouncil;
   private String currentMapId;
+
+  // Sistema do boss Golem
+  private boolean golemSpawned = false;
+  private Golem activeGolem = null;
 
   // Controle de população
   private static final int MIN_ENEMIES = 1;
@@ -129,25 +134,36 @@ public class EnemyManager {
       }
     }
 
-    // Atualizar timer de respawn de famílias
+    // Verificar se Golem morreu e retomar spawn de goblins
+    if (activeGolem != null && !activeGolem.isAlive() && familyRespawnTimer == -1) {
+      System.out.println("💀 Golem foi derrotado! Retomando spawn de goblins...");
+      familyRespawnTimer = FAMILY_RESPAWN_DELAY;
+      activeGolem = null;
+    }
+
+    // Atualizar timer de respawn de famílias APENAS no mapa de territórios goblin
+    // Timer -1 = pausado (enquanto Golem está vivo)
     if (familyRespawnTimer > 0) {
-      familyRespawnTimer--;
+      // Só decrementar timer se estiver no mapa correto (goblin_territories)
+      if ("goblin_territories_25x25".equals(currentMapId)) {
+        familyRespawnTimer--;
 
-      // Debug: mostrar tempo restante a cada 60 frames (1 segundo)
-      if (familyRespawnTimer % 60 == 0) {
-        int secondsRemaining = familyRespawnTimer / 60;
-        System.out.println("⏱️ Nova família em " + secondsRemaining + " segundos... (Famílias atuais: "
-            + goblinFamilies.size() + "/" + MAX_FAMILIES + ")");
-      }
+        // Debug: mostrar tempo restante a cada 60 frames (1 segundo)
+        if (familyRespawnTimer % 60 == 0) {
+          int secondsRemaining = familyRespawnTimer / 60;
+          System.out.println("⏱️ Nova família em " + secondsRemaining + " segundos... (Famílias atuais: "
+              + goblinFamilies.size() + "/" + MAX_FAMILIES + ")");
+        }
 
-      if (familyRespawnTimer == 0 && goblinFamilies.size() < MAX_FAMILIES) {
-        // Não spawnar novas famílias se o império estiver ativo
-        if (!goblinCouncil.isGoblinEmpireActive()) {
-          System.out.println("🎯 Timer zerou! Chamando spawnNewFamily()...");
-          spawnNewFamily();
-        } else {
-          System.out.println("👑 Império Goblin está ativo - novas famílias não podem surgir!");
-          familyRespawnTimer = FAMILY_RESPAWN_DELAY; // Resetar timer para tentar depois
+        if (familyRespawnTimer == 0 && goblinFamilies.size() < MAX_FAMILIES) {
+          // Não spawnar novas famílias se o império estiver ativo
+          if (!goblinCouncil.isGoblinEmpireActive()) {
+            System.out.println("🎯 Timer zerou! Chamando spawnNewFamily()...");
+            spawnNewFamily();
+          } else {
+            System.out.println("👑 Império Goblin está ativo - novas famílias não podem surgir!");
+            familyRespawnTimer = FAMILY_RESPAWN_DELAY; // Resetar timer para tentar depois
+          }
         }
       }
     }
@@ -155,18 +171,22 @@ public class EnemyManager {
     // Atualizar lista de goblins para guerra
     updateGoblinWarLists();
 
-    Iterator<Enemy> iterator = enemies.iterator();
-    while (iterator.hasNext()) {
-      Enemy enemy = iterator.next();
+    // Usar cópia da lista para evitar ConcurrentModificationException
+    java.util.List<Enemy> enemiesToUpdate = new java.util.ArrayList<>(enemies);
+
+    for (Enemy enemy : enemiesToUpdate) {
+      if (!enemies.contains(enemy)) {
+        continue; // Inimigo já foi removido
+      }
 
       if (enemy.isAlive()) {
         enemy.update(player);
       } else {
         // Remove inimigos mortos
-        iterator.remove();
+        enemies.remove(enemy);
         System.out.println("Inimigo removido da lista");
 
-        // Se for um goblin, remover da família
+        // Se for um goblin, remover da família e atualizar quest
         if (enemy instanceof Goblin) {
           Goblin goblin = (Goblin) enemy;
           GoblinFamily family = goblin.getFamily();
@@ -252,8 +272,43 @@ public class EnemyManager {
     for (Enemy enemy : enemies) {
       if (enemy instanceof Goblin && enemy.isAlive()) {
         ((Goblin) enemy).renderVisionCone(g, camera);
+      } else if (enemy instanceof Golem && enemy.isAlive()) {
+        renderGolemVisionCone(g, camera, (Golem) enemy);
       }
     }
+  }
+
+  /**
+   * Renderiza o campo de visão do Golem (modo debug)
+   */
+  private void renderGolemVisionCone(Graphics2D g, Camera camera, Golem golem) {
+    int screenX = (int) (golem.getX() - camera.getX());
+    int screenY = (int) (golem.getY() - camera.getY());
+    int width = 64;
+    int height = 64;
+    int detectionRange = 200;
+
+    // Círculo de detecção vermelho translúcido
+    g.setColor(new Color(255, 0, 0, 40));
+    g.fillOval(
+        screenX + width / 2 - detectionRange,
+        screenY + height / 2 - detectionRange,
+        detectionRange * 2,
+        detectionRange * 2);
+
+    // Borda do círculo
+    g.setColor(new Color(255, 0, 0, 120));
+    g.setStroke(new java.awt.BasicStroke(2));
+    g.drawOval(
+        screenX + width / 2 - detectionRange,
+        screenY + height / 2 - detectionRange,
+        detectionRange * 2,
+        detectionRange * 2);
+
+    // Label "GOLEM"
+    g.setColor(Color.RED);
+    g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 12));
+    g.drawString("GOLEM", screenX + width / 2 - 25, screenY - 10);
   }
 
   /**
@@ -457,22 +512,22 @@ public class EnemyManager {
 
     System.out.println("Inicializando estruturas do vilarejo...");
 
-    // Tenda de mercador - 144x144 pixels (3x3 tiles) - T10 L7
-    structures.add(new Structure(420, 300, "MarketTent", "sprites/MarketTend.png", 144, 144, false));
+    // Igreja - largura reduzida (144x192 pixels)
+    structures.add(new Structure(466, 00, "Church", "sprites/curch.png", 144, 192, false));
 
-    // Casas - 120x120 pixels (2.5x2.5 tiles)
-    structures.add(new Structure(318, 185, "House", "sprites/House1.png", 120, 120, false)); // Casa1: +30px direita
-    structures.add(new Structure(624, 474, "House", "sprites/House2.png", 120, 120, false)); // Casa2: -40px no y
-    structures.add(new Structure(936, 474, "House", "sprites/House1.png", 120, 120, false)); // Casa3: -40px no y
+    // Tenda de mercador - reduzida 10% (130x130 pixels)
+    structures.add(new Structure(420, 300, "MarketTent", "sprites/MarketTend.png", 130, 130, false));
 
-    // Lâmpadas - 72x72 pixels (1.5x1.5 tiles) - maior e mais visíveis
-    structures.add(new Structure(612, 612, "Lamp", "sprites/Lamp.png", 72, 72, false));
-    structures.add(new Structure(480, 756, "Lamp", "sprites/Lamp.png", 72, 72, false));
-    structures.add(new Structure(612, 936, "Lamp", "sprites/Lamp.png", 72, 72, false));
-    structures.add(new Structure(612, 264, "Lamp", "sprites/Lamp.png", 72, 72, false));
+    // Casas - 2x2 tiles (96x96 pixels) - ajustado para proporção correta
+    structures.add(new Structure(318, 185, "House", "sprites/House1.png", 96, 96, false)); // Casa1
+    structures.add(new Structure(624, 474, "House", "sprites/House2.png", 96, 96, false)); // Casa2
+    structures.add(new Structure(936, 474, "House", "sprites/House1.png", 96, 96, false)); // Casa3
 
-    // Igreja - 192x192 pixels (4x4 tiles) - T11 L1
-    structures.add(new Structure(466, 00, "Church", "sprites/curch.png", 192, 192, false));
+    // Lâmpadas - 1x1 tile (48x48 pixels) - ajustado para tamanho de tile
+    structures.add(new Structure(612, 612, "Lamp", "sprites/Lamp.png", 48, 48, false));
+    structures.add(new Structure(480, 756, "Lamp", "sprites/Lamp.png", 48, 48, false));
+    structures.add(new Structure(612, 936, "Lamp", "sprites/Lamp.png", 48, 48, false));
+    structures.add(new Structure(612, 264, "Lamp", "sprites/Lamp.png", 48, 48, false));
 
     System.out.println("✅ " + structures.size() + " estruturas decorativas adicionadas ao vilarejo");
   }
@@ -644,6 +699,13 @@ public class EnemyManager {
    */
   private void spawnNewFamily() {
     System.out.println("\n🔔 spawnNewFamily() CHAMADO! Famílias atuais: " + goblinFamilies.size() + "/" + MAX_FAMILIES);
+
+    // Não spawnar em mapas seguros
+    if ("village".equals(currentMapId) || "cave".equals(currentMapId)) {
+      System.out.println("❌ Tentativa de spawn em mapa seguro (" + currentMapId + "). Cancelando.");
+      familyRespawnTimer = 600; // Tentar novamente em 10 segundos
+      return;
+    }
 
     if (goblinFamilies.size() >= MAX_FAMILIES) {
       System.out.println("❌ Já temos " + MAX_FAMILIES + " famílias. Cancelando spawn.");
@@ -827,6 +889,28 @@ public class EnemyManager {
     // Remover família da lista
     goblinFamilies.remove(family);
 
+    // DEBUG: Verificar estado das famílias
+    System.out.println("📊 Famílias restantes: " + goblinFamilies.size());
+    System.out.println("🗺️ Mapa atual: " + currentMapId);
+    System.out.println("🗿 Golem já foi spawnado? " + golemSpawned);
+
+    // Verificar se todas as famílias foram derrotadas e spawnar o Golem
+    // Aceitar tanto "goblin_territories" quanto "goblin_territories_25x25"
+    boolean isGoblinMap = currentMapId != null && currentMapId.startsWith("goblin_territories");
+
+    if (goblinFamilies.isEmpty() && !golemSpawned && isGoblinMap) {
+      System.out.println("✅ TODAS AS CONDIÇÕES ATENDIDAS! Tentando spawnar Golem...");
+      checkAndSpawnGolem();
+    } else {
+      System.out.println("❌ Condições para spawn do Golem não atendidas:");
+      if (!goblinFamilies.isEmpty())
+        System.out.println("   - Ainda há " + goblinFamilies.size() + " família(s)");
+      if (golemSpawned)
+        System.out.println("   - Golem já foi spawnado");
+      if (!isGoblinMap)
+        System.out.println("   - Mapa incorreto: " + currentMapId);
+    }
+
     // Iniciar timer de respawn de nova família (3 minutos)
     // Mas NÃO respawnar se o império foi derrotado
     if (!isEmpire && goblinFamilies.size() < MAX_FAMILIES) {
@@ -848,6 +932,149 @@ public class EnemyManager {
         break;
       }
     }
+  }
+
+  /**
+   * Verifica se deve spawnar o Golem (50% de chance)
+   */
+  private void checkAndSpawnGolem() {
+    if (random.nextDouble() < 0.5) {
+      spawnGolem();
+    } else {
+      System.out.println("🗿 O Guardião do Equilíbrio não surgiu... o ecossistema permanece em paz.");
+    }
+  }
+
+  /**
+   * Verifica se uma posição está no campo de visão do player (sem paredes no
+   * meio)
+   */
+  private boolean isPositionVisibleToPlayer(int x, int y) {
+    if (player == null || tileMap == null)
+      return false;
+
+    double playerCenterX = player.getX() + player.getWidth() / 2.0;
+    double playerCenterY = player.getY() + player.getHeight() / 2.0;
+    double targetX = x + 32; // Centro do tile
+    double targetY = y + 32;
+
+    // Verificar distância
+    double distance = Math.sqrt(
+        Math.pow(targetX - playerCenterX, 2) +
+            Math.pow(targetY - playerCenterY, 2));
+
+    // Se está muito longe (fora da tela), não é visível
+    if (distance > 600)
+      return false;
+
+    // Ray casting para verificar se há paredes no caminho
+    int steps = (int) (distance / 8); // Verificar a cada 8 pixels
+    double dx = (targetX - playerCenterX) / steps;
+    double dy = (targetY - playerCenterY) / steps;
+
+    for (int i = 0; i < steps; i++) {
+      double checkX = playerCenterX + dx * i;
+      double checkY = playerCenterY + dy * i;
+
+      int tileX = (int) (checkX / GamePanel.TILE_SIZE);
+      int tileY = (int) (checkY / GamePanel.TILE_SIZE);
+
+      if (!tileMap.isWalkable(tileX, tileY)) {
+        return false; // Há uma parede no caminho
+      }
+    }
+
+    return true; // Caminho livre até o alvo
+  }
+
+  /**
+   * Spawna o boss Golem em local fora do campo de visão do player
+   */
+  private void spawnGolem() {
+    System.out.println("\n" +
+        "═══════════════════════════════════════════════════\n" +
+        "🗿 O GOLEM DESPERTA! 🗿\n" +
+        "Guardião do Equilíbrio do Ecossistema\n" +
+        "O desequilíbrio causado pela extinção dos goblins\n" +
+        "despertou um antigo guardião de pedra...\n" +
+        "═══════════════════════════════════════════════════\n");
+
+    // Tentar encontrar posição fora do campo de visão
+    int spawnX = 0, spawnY = 0;
+    boolean foundSpot = false;
+    int attempts = 0;
+    int maxAttempts = 50;
+
+    while (!foundSpot && attempts < maxAttempts) {
+      // Gerar posição aleatória no mapa
+      spawnX = random.nextInt(tileMap.getWidth() - 4) * GamePanel.TILE_SIZE;
+      spawnY = random.nextInt(tileMap.getHeight() - 4) * GamePanel.TILE_SIZE;
+
+      // Verificar se é caminhável
+      int tileX = spawnX / GamePanel.TILE_SIZE;
+      int tileY = spawnY / GamePanel.TILE_SIZE;
+
+      if (tileMap.isWalkable(tileX, tileY) &&
+          tileMap.isWalkable(tileX + 1, tileY) &&
+          tileMap.isWalkable(tileX, tileY + 1) &&
+          tileMap.isWalkable(tileX + 1, tileY + 1)) {
+
+        // Verificar se NÃO está visível pelo player
+        if (!isPositionVisibleToPlayer(spawnX, spawnY)) {
+          foundSpot = true;
+        }
+      }
+      attempts++;
+    }
+
+    // Fallback: centro do mapa se não encontrar spot
+    if (!foundSpot) {
+      spawnX = (tileMap.getWidth() / 2) * GamePanel.TILE_SIZE;
+      spawnY = (tileMap.getHeight() / 2) * GamePanel.TILE_SIZE;
+      System.out.println("⚠️ Não encontrou posição escondida, usando centro do mapa");
+    } else {
+      System.out.println("✅ Posição escondida encontrada após " + attempts + " tentativas");
+    }
+
+    activeGolem = new Golem(spawnX, spawnY);
+    activeGolem.setTileMap(tileMap);
+    activeGolem.setEnemyManager(this);
+
+    addEnemy(activeGolem);
+    golemSpawned = true;
+
+    // PAUSAR spawn de goblins enquanto Golem está vivo
+    familyRespawnTimer = -1; // Timer negativo = pausado
+
+    System.out.println("✅ Golem criado e adicionado à lista de inimigos!");
+    System.out.println("📍 Posição: (" + spawnX + ", " + spawnY + ")");
+    System.out.println("⏸️ Spawn de goblins PAUSADO até Golem ser derrotado");
+  }
+
+  /**
+   * Verifica colisões das pedras do Golem com o player
+   */
+  public void checkGolemStoneCollisions() {
+    if (activeGolem == null || !activeGolem.isAlive()) {
+      return;
+    }
+
+    // As pedras já verificam colisão internamente no update
+    // Este método fica disponível para futuras expansões
+  }
+
+  /**
+   * Retorna se o Golem está ativo
+   */
+  public boolean isGolemActive() {
+    return activeGolem != null && activeGolem.isAlive();
+  }
+
+  /**
+   * Retorna o Golem ativo
+   */
+  public Golem getActiveGolem() {
+    return activeGolem;
   }
 
   /**

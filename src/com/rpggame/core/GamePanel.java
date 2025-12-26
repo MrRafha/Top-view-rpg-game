@@ -21,6 +21,10 @@ import com.rpggame.ui.DialogBox;
 import com.rpggame.ui.SkillSlotUI;
 import com.rpggame.ui.InventoryScreen;
 import com.rpggame.ui.DeveloperConsole;
+import com.rpggame.ui.QuestUI;
+import com.rpggame.ui.GoldUI;
+import com.rpggame.ui.QuestChoiceBox;
+import com.rpggame.ui.ShopUI;
 
 /**
  * Painel principal onde o jogo é renderizado
@@ -49,9 +53,17 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private DialogBox dialogBox;
   private NPC currentTalkingNPC = null;
   private boolean showingDialog = false;
+  private boolean waitingForQuestChoice = false; // Flag para aguardar escolha S/N
+  private MerchantNPC merchantNPC; // Referência para o mercador (para a loja)
 
   // Sistema de UI de habilidades
   private SkillSlotUI skillSlotUI;
+
+  // Sistema de UI de quests e gold
+  private QuestUI questUI;
+  private GoldUI goldUI;
+  private QuestChoiceBox questChoiceBox;
+  private ShopUI shopUI;
 
   // Sistema de mapas e transições
   private MapManager mapManager;
@@ -106,6 +118,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Inicializar sistema de diálogos
     dialogBox = new DialogBox();
+    questChoiceBox = new QuestChoiceBox();
     npcs = new java.util.ArrayList<>();
 
     // Inicializar sistema de transições
@@ -129,8 +142,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   public void setPlayerClass(String playerClass, String spritePath) {
     // Verificar se o tileMap já foi inicializado antes de criar o player
     if (tileMap != null) {
-      // Posição inicial fixa no mapa village
-      player = new Player(638, 260, spritePath);
+      // Posição inicial fixa no mapa village (x:558, y:217)
+      player = new Player(558, 217, spritePath);
       player.setTileMap(tileMap);
 
       // Reinicializar o gerenciador de inimigos com o novo player
@@ -148,8 +161,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   public void setPlayerClass(String playerClass, String spritePath, CharacterStats stats) {
     // Conectar o mapa ao jogador para verificação de colisão
     if (tileMap != null) {
-      // Posição inicial fixa no mapa village (x:638, y:260)
-      player = new Player(638, 260, spritePath, playerClass, stats);
+      // Posição inicial fixa no mapa village (x:558, y:217)
+      player = new Player(558, 217, spritePath, playerClass, stats);
       player.setTileMap(tileMap);
 
       // Criar o gerenciador de inimigos com o novo player
@@ -163,8 +176,12 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
         skillSlotUI = new SkillSlotUI(player.getSkillManager(), Game.SCREEN_WIDTH);
       }
 
+      // Inicializar UI de quests e gold
+      questUI = new QuestUI(player.getQuestManager());
+      goldUI = new GoldUI(player);
+
       // Inicializar tela de inventário
-      inventoryScreen = new InventoryScreen(player.getInventory());
+      inventoryScreen = new InventoryScreen(player.getInventory(), player);
       inventoryScreen.updateLayout(Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT);
 
       // Inicializar console de desenvolvedor
@@ -349,11 +366,26 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (showingDialog && dialogBox != null) {
       String npcName = currentTalkingNPC != null ? currentTalkingNPC.getName() : "Sistema";
       dialogBox.render(g2d, npcName, getWidth(), getHeight());
+
+      // Renderizar caixa de escolha de quest sobre o diálogo
+      if (waitingForQuestChoice && questChoiceBox != null) {
+        questChoiceBox.render(g2d, getWidth(), getHeight());
+      }
     }
 
     // Renderizar inventário se estiver visível
     if (inventoryScreen != null && inventoryScreen.isInventoryVisible()) {
       inventoryScreen.render(g2d);
+    }
+
+    // Renderizar janela de quests se estiver visível (por cima do inventário)
+    if (questUI != null && questUI.isVisible()) {
+      questUI.render(g2d);
+    }
+
+    // Renderizar loja se estiver visível
+    if (shopUI != null && shopUI.isVisible()) {
+      shopUI.render(g2d);
     }
 
     // Renderizar transição de mapa (sempre por último, em cima de tudo)
@@ -431,6 +463,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Slots de habilidades (canto superior direito)
     if (skillSlotUI != null) {
       skillSlotUI.render(g);
+    }
+
+    // UI de Gold (canto superior direito)
+    if (goldUI != null) {
+      goldUI.render(g);
     }
 
     // Instruções de controle removidas para interface mais limpa
@@ -617,8 +654,47 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       return;
     }
 
+    // Sistema de escolha de quest com setas e Enter
+    if (waitingForQuestChoice && currentTalkingNPC instanceof MerchantNPC) {
+      MerchantNPC merchant = (MerchantNPC) currentTalkingNPC;
+
+      // Setas para navegar entre Sim/Não
+      if (e.getKeyCode() == KeyEvent.VK_UP || e.getKeyCode() == KeyEvent.VK_W) {
+        questChoiceBox.selectPrevious();
+        repaint();
+        return;
+      } else if (e.getKeyCode() == KeyEvent.VK_DOWN || e.getKeyCode() == KeyEvent.VK_S) {
+        questChoiceBox.selectNext();
+        repaint();
+        return;
+      }
+
+      // Enter ou Space para confirmar escolha
+      if (e.getKeyCode() == KeyEvent.VK_ENTER || e.getKeyCode() == KeyEvent.VK_SPACE) {
+        if (questChoiceBox.isYesSelected()) {
+          // Aceitar quest
+          merchant.acceptQuest(player);
+          waitingForQuestChoice = false;
+          questChoiceBox.hide();
+          endDialog();
+        } else {
+          // Recusar quest
+          merchant.declineQuest(player);
+          waitingForQuestChoice = false;
+          questChoiceBox.hide();
+          // Mostrar diálogo de recusa
+          currentTalkingNPC.resetDialog();
+          dialogBox.setText(currentTalkingNPC.getCurrentDialog());
+        }
+        repaint();
+        return;
+      }
+    }
+
     // Tecla C para abrir tela de características
-    if (e.getKeyCode() == KeyEvent.VK_C) {
+    if (e.getKeyCode() == KeyEvent.VK_C)
+
+    {
       openCharacterScreen();
       return;
     }
@@ -627,19 +703,102 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (e.getKeyCode() == KeyEvent.VK_I) {
       if (inventoryScreen != null) {
         inventoryScreen.toggleVisibility();
+
+        // Mostrar GoldUI quando abrir inventário, esconder quando fechar
+        if (player != null) {
+          if (inventoryScreen.isInventoryVisible()) {
+            player.forceShowGoldUI();
+          } else {
+            player.hideGoldUI();
+          }
+        }
+
         repaint();
       }
       return;
     }
 
-    // Tecla V para ativar/desativar modo debug
+    // Tecla V para toggle de debug (vision cones)
     if (e.getKeyCode() == KeyEvent.VK_V) {
       showVisionCones = !showVisionCones;
-      System.out.println("� Modo Debug: " + (showVisionCones ? "ATIVADO" : "DESATIVADO") +
-          " (Campo de visão, contadores de inimigos, posição do player)");
+      repaint();
       return;
     }
 
+    // Tecla Q para abrir janela de quests
+    if (e.getKeyCode() == KeyEvent.VK_Q) {
+      if (questUI != null) {
+        questUI.updatePosition(getWidth(), getHeight());
+        questUI.toggle();
+        repaint();
+      }
+      return;
+    }
+
+    // Tecla L para abrir loja (apenas se estiver próximo do mercador e loja
+    // desbloqueada)
+    if (e.getKeyCode() == KeyEvent.VK_L) {
+      if (merchantNPC != null && merchantNPC.isShopUnlocked() && merchantNPC.canInteract()) {
+        if (shopUI != null) {
+          shopUI.updatePosition(getWidth(), getHeight());
+          shopUI.show();
+          repaint();
+        }
+      } else if (merchantNPC != null && !merchantNPC.isShopUnlocked() && merchantNPC.canInteract()) {
+        System.out.println("🏪 Complete a quest do mercador para desbloquear a loja!");
+      }
+      return;
+    }
+
+    // Tecla ESC para fechar telas abertas
+    if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+      boolean closedSomething = false;
+
+      // Fechar tela de características se estiver aberta
+      if (showingCharacterScreen) {
+        showingCharacterScreen = false;
+        if (characterScreen != null) {
+          characterScreen.setVisible(false);
+        }
+        closedSomething = true;
+      }
+
+      // Fechar loja se estiver aberta
+      if (shopUI != null && shopUI.isVisible()) {
+        shopUI.hide();
+        closedSomething = true;
+      }
+
+      // Fechar questUI se estiver aberta
+      if (questUI != null && questUI.isVisible()) {
+        questUI.setVisible(false);
+        closedSomething = true;
+      }
+
+      // Fechar inventário se estiver aberto
+      if (inventoryScreen != null && inventoryScreen.isInventoryVisible()) {
+        inventoryScreen.toggleVisibility();
+        // Esconder GoldUI quando fechar inventário com ESC
+        if (player != null) {
+          player.hideGoldUI();
+        }
+        closedSomething = true;
+      }
+
+      if (closedSomething) {
+        repaint();
+        return;
+      }
+    }
+
+    // Delegar para shopUI se estiver visível
+    if (shopUI != null && shopUI.isVisible()) {
+      shopUI.keyPressed(e);
+      repaint();
+      return;
+    }
+
+    // Delegar para o player (WASD, Space, números, etc)
     player.keyPressed(e);
   }
 
@@ -700,7 +859,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
       // Criar inventoryScreen se ainda não existe
       if (inventoryScreen == null) {
-        inventoryScreen = new InventoryScreen(player.getInventory());
+        inventoryScreen = new InventoryScreen(player.getInventory(), player);
         inventoryScreen.updateLayout(Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT);
       }
 
@@ -793,9 +952,17 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     if ("village".equals(currentMapId)) {
       // Vila: Mercador, Aldeão, Sábio
-      npcs.add(new MerchantNPC(500, 400));
+      merchantNPC = new MerchantNPC(500, 400);
+      npcs.add(merchantNPC);
       npcs.add(new VillagerNPC(300, 300));
       npcs.add(new WiseManNPC(900, 500));
+
+      // Inicializar ShopUI com o inventário do mercador
+      if (player != null && shopUI == null) {
+        shopUI = new ShopUI(merchantNPC.getShopInventory(), player);
+        shopUI.updatePosition(Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT);
+      }
+
       System.out.println("🏘️ NPCs da vila criados: " + npcs.size());
     } else if ("goblin_territories".equals(currentMapId)) {
       // Territórios Goblin: Guards protegendo a entrada da vila (ao redor do spawn
@@ -822,6 +989,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     if (showingDialog && dialogBox != null) {
       dialogBox.update();
+      questChoiceBox.update();
     }
   }
 
@@ -853,7 +1021,14 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
         else if (currentTalkingNPC != null) {
           boolean hasMore = currentTalkingNPC.nextDialog();
           if (hasMore) {
-            dialogBox.setText(currentTalkingNPC.getCurrentDialog());
+            String newDialog = currentTalkingNPC.getCurrentDialog();
+            dialogBox.setText(newDialog);
+
+            // Verificar se é uma pergunta de quest (contém "(S/N)")
+            if (newDialog != null && newDialog.contains("(S/N)")) {
+              waitingForQuestChoice = true;
+              questChoiceBox.show();
+            }
           } else {
             endDialog();
           }
@@ -878,6 +1053,34 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     currentTalkingNPC = npc;
     showingDialog = true;
     npc.resetDialog();
+
+    // Se é o MerchantNPC, verificar status das quests
+    if (npc instanceof MerchantNPC && player != null) {
+      MerchantNPC merchant = (MerchantNPC) npc;
+
+      // Verificar se a quest foi completada
+      if (merchant.completeQuest(player)) {
+        // Quest completada! Diálogos já foram atualizados no método completeQuest
+      }
+      // Verificar status da quest ativa
+      else {
+        merchant.checkQuestStatus(player);
+
+        // Se a quest ainda não foi criada e não foi oferecida, criar e oferecer
+        Quest goblinQuest = player.getQuestManager().getQuestById("merchant_goblin_hunt");
+        if (goblinQuest == null && !merchant.isQuestGiven() && !merchant.isQuestOffered()) {
+          merchant.createGoblinQuest(player);
+          // Atualizar diálogos para mostrar a oferta da quest
+          merchant.updateDialogues(merchant.getQuestOfferDialogues());
+          merchant.setQuestOffered(true);
+        }
+        // Se a quest existe mas não foi aceita ainda, oferecer novamente
+        else if (goblinQuest != null && goblinQuest.isAvailable() && !merchant.isQuestGiven()) {
+          merchant.updateDialogues(merchant.getQuestOfferDialogues());
+        }
+      }
+    }
+
     dialogBox.setText(npc.getCurrentDialog());
 
     // Informar ao jogador que está em diálogo (bloquear movimento)
@@ -922,8 +1125,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
    */
   private void endDialog() {
     showingDialog = false;
+    waitingForQuestChoice = false;
     currentTalkingNPC = null;
     dialogBox.reset();
+    questChoiceBox.hide();
     skillUnlockDialogs = null;
     currentSkillUnlockIndex = 0;
 

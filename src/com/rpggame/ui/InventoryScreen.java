@@ -2,6 +2,8 @@ package com.rpggame.ui;
 
 import com.rpggame.items.Inventory;
 import com.rpggame.items.ItemStack;
+import com.rpggame.items.EquippableItem;
+import com.rpggame.entities.Player;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -20,6 +22,7 @@ import javax.swing.JPanel;
  */
 public class InventoryScreen extends JPanel implements KeyListener {
   private Inventory inventory;
+  private Player player;
   private boolean isVisible;
 
   // Layout do grid (retangular 5x4)
@@ -51,8 +54,9 @@ public class InventoryScreen extends JPanel implements KeyListener {
   /**
    * Construtor do InventoryScreen.
    */
-  public InventoryScreen(Inventory inventory) {
+  public InventoryScreen(Inventory inventory, Player player) {
     this.inventory = inventory;
+    this.player = player;
     this.isVisible = false;
 
     setOpaque(false);
@@ -209,6 +213,21 @@ public class InventoryScreen extends JPanel implements KeyListener {
         int textWidth = g2d.getFontMetrics().stringWidth(quantityText);
         g2d.drawString(quantityText, x + SLOT_SIZE - textWidth - 4, y + SLOT_SIZE - 4);
       }
+
+      // Desenha indicador "E" verde se item estiver equipado
+      if (player != null && stack.getItem() instanceof EquippableItem) {
+        EquippableItem equippable = (EquippableItem) stack.getItem();
+        if (player.getEquippedWeapon() == equippable) {
+          // Fundo verde semi-transparente
+          g2d.setColor(new Color(0, 255, 0, 100));
+          g2d.fillRoundRect(x + 2, y + 2, 18, 18, 4, 4);
+
+          // Letra E verde
+          g2d.setColor(new Color(0, 255, 0));
+          g2d.setFont(new Font("Arial", Font.BOLD, 16));
+          g2d.drawString("E", x + 6, y + 16);
+        }
+      }
     }
   }
 
@@ -349,9 +368,23 @@ public class InventoryScreen extends JPanel implements KeyListener {
     } else if (keyCode == KeyEvent.VK_D) {
       moveSelection(1, 0); // Direita
     }
-    // Enter para usar item
+    // Enter para usar item ou equipar/desequipar
     else if (keyCode == KeyEvent.VK_ENTER) {
-      if (inventory.useItem(selectedSlot)) {
+      ItemStack stack = inventory.getSlot(selectedSlot);
+      if (stack != null && stack.getItem() instanceof EquippableItem && player != null) {
+        EquippableItem equippable = (EquippableItem) stack.getItem();
+
+        // Verificar se já está equipado
+        if (player.getEquippedWeapon() == equippable) {
+          // Desequipar
+          player.unequipWeapon();
+        } else {
+          // Equipar
+          player.equipWeapon(equippable);
+        }
+        repaint();
+      } else if (inventory.useItem(selectedSlot)) {
+        // Usar item consumível normalmente
         System.out.println("Item usado do slot " + selectedSlot);
         repaint();
       }

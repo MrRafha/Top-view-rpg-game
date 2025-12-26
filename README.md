@@ -47,7 +47,7 @@ java -cp bin com.rpggame.core.Game
 |-------|------|
 | **WASD** | Movimentação do personagem |
 | **Espaço** | Atacar inimigos |
-| **1, 2, 3, 4** | **NOVO v2.0!** Usar habilidades especiais |
+| **1, 2, 3, 4** | Usar habilidades especiais |
 | **E** | Interagir com NPCs |
 | **C** | Abrir tela de características |
 | **V** | Toggle campo de visão (modo debug) |

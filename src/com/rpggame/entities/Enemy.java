@@ -483,9 +483,18 @@ public abstract class Enemy {
     // Dar experiência ao jogador
     if (target != null) {
       target.gainExperience(experienceReward);
+
+      // Dar gold ao jogador (2 gold por inimigo)
+      target.addGold(2);
+
+      // Notificar o QuestManager sobre a morte do inimigo
+      String enemyType = getEnemyType();
+      if (enemyType != null) {
+        target.getQuestManager().onEnemyKilled(enemyType);
+      }
     }
 
-    System.out.println("Inimigo morreu! XP: " + experienceReward);
+    System.out.println("Inimigo morreu! XP: " + experienceReward + " | Gold: +2");
   }
 
   /**
@@ -745,6 +754,14 @@ public abstract class Enemy {
         tileMap.isWalkable(rightTile, topTile) &&
         tileMap.isWalkable(leftTile, bottomTile) &&
         tileMap.isWalkable(rightTile, bottomTile);
+  }
+
+  /**
+   * Retorna o tipo do inimigo (para quests)
+   * Sobrescrever nas subclasses para retornar o tipo correto
+   */
+  protected String getEnemyType() {
+    return null; // Classes filhas devem sobrescrever
   }
 
   /**

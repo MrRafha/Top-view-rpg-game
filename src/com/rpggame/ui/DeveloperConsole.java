@@ -1,7 +1,9 @@
 package com.rpggame.ui;
 
 import com.rpggame.entities.Player;
+import com.rpggame.entities.Enemy;
 import com.rpggame.systems.ExperienceSystem;
+import com.rpggame.systems.EnemyManager;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
@@ -18,6 +20,7 @@ public class DeveloperConsole {
   private int maxOutputLines = 10;
 
   private Player player;
+  private EnemyManager enemyManager;
 
   // Configurações visuais
   private static final int CONSOLE_HEIGHT = 250;
@@ -29,8 +32,9 @@ public class DeveloperConsole {
 
   public DeveloperConsole(Player player) {
     this.player = player;
+    this.enemyManager = player.getEnemyManager();
     addOutputMessage("Console de Desenvolvedor - Digite um comando e pressione Enter");
-    addOutputMessage("Comandos: noclip, maxlevel");
+    addOutputMessage("Comandos: noclip, maxlevel, kill");
   }
 
   public void toggle() {
@@ -89,6 +93,12 @@ public class DeveloperConsole {
 
     String cmd = command.toLowerCase().trim();
 
+    // Verificar se é comando com argumentos
+    if (cmd.startsWith("kill ")) {
+      executeKill(command);
+      return;
+    }
+
     switch (cmd) {
       case "noclip":
         executeNoclip();
@@ -98,10 +108,17 @@ public class DeveloperConsole {
         executeMaxLevel();
         break;
 
+      case "spawngolem":
+        executeSpawnGolem();
+        break;
+
       case "help":
         addOutputMessage("Comandos disponíveis:");
         addOutputMessage("  noclip - Atravessa paredes e aumenta velocidade");
         addOutputMessage("  maxlevel - Sobe para level 10");
+        addOutputMessage("  kill <entidade> <quantidade|all> - Mata inimigos");
+        addOutputMessage("    Exemplos: kill goblins all, kill goblins 5");
+        addOutputMessage("  spawngolem - Força o spawn do Golem boss");
         break;
 
       default:
@@ -157,6 +174,100 @@ public class DeveloperConsole {
         addOutputMessage("Erro ao subir de nível: " + e.getMessage());
       }
     }).start();
+  }
+
+  private void executeKill(String command) {
+    if (enemyManager == null) {
+      addOutputMessage("ERRO: EnemyManager não disponível");
+      return;
+    }
+
+    // Parse do comando: kill <entidade> <quantidade|all>
+    String[] parts = command.trim().split("\\s+");
+    if (parts.length != 3) {
+      addOutputMessage("Uso: kill <entidade> <quantidade|all>");
+      addOutputMessage("Exemplo: kill goblins all, kill goblins 5");
+      return;
+    }
+
+    String entity = parts[1].toLowerCase();
+    String amountStr = parts[2].toLowerCase();
+
+    // Verificar tipo de entidade
+    if (!entity.equals("goblins")) {
+      addOutputMessage("Entidade desconhecida: " + entity);
+      addOutputMessage("Entidades disponíveis: goblins");
+      return;
+    }
+
+    // Obter lista de inimigos vivos
+    ArrayList<Enemy> aliveEnemies = new ArrayList<>();
+    for (Enemy enemy : enemyManager.getEnemies()) {
+      if (enemy.isAlive()) {
+        aliveEnemies.add(enemy);
+      }
+    }
+
+    if (aliveEnemies.isEmpty()) {
+      addOutputMessage("Nenhum goblin vivo encontrado");
+      return;
+    }
+
+    int toKill = 0;
+    if (amountStr.equals("all")) {
+      toKill = aliveEnemies.size();
+    } else {
+      try {
+        toKill = Integer.parseInt(amountStr);
+        if (toKill <= 0) {
+          addOutputMessage("Quantidade deve ser maior que 0");
+          return;
+        }
+        toKill = Math.min(toKill, aliveEnemies.size());
+      } catch (NumberFormatException e) {
+        addOutputMessage("Quantidade inválida: " + amountStr);
+        addOutputMessage("Use um número ou 'all'");
+        return;
+      }
+    }
+
+    // Matar os inimigos e dar XP
+    int totalXP = 0;
+    int killed = 0;
+    for (int i = 0; i < toKill && i < aliveEnemies.size(); i++) {
+      Enemy enemy = aliveEnemies.get(i);
+      int enemyXP = enemy.getExperienceReward();
+
+      // Matar o inimigo instantaneamente
+      enemy.takeDamage(999999);
+
+      // Dar XP ao player
+      player.gainExperience(enemyXP);
+      totalXP += enemyXP;
+      killed++;
+    }
+
+    addOutputMessage("💀 " + killed + " goblins eliminados!");
+    addOutputMessage("✨ +" + totalXP + " XP ganho");
+    addOutputMessage("Level atual: " + player.getExperienceSystem().getCurrentLevel());
+  }
+
+  private void executeSpawnGolem() {
+    if (enemyManager == null) {
+      addOutputMessage("ERRO: EnemyManager não disponível");
+      return;
+    }
+
+    // Forçar spawn do Golem usando reflexão para acessar método privado
+    try {
+      java.lang.reflect.Method spawnMethod = enemyManager.getClass().getDeclaredMethod("spawnGolem");
+      spawnMethod.setAccessible(true);
+      spawnMethod.invoke(enemyManager);
+      addOutputMessage("🗿 Golem forçado a spawnar!");
+    } catch (Exception e) {
+      addOutputMessage("❌ Erro ao spawnar Golem: " + e.getMessage());
+      e.printStackTrace();
+    }
   }
 
   private void addOutputMessage(String message) {
