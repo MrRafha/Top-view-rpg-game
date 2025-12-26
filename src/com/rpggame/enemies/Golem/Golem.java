@@ -45,6 +45,11 @@ public class Golem extends Enemy {
   private static final int ENRAGE_TIME = 3600; // 1 minuto até enrage (60fps * 60s)
   private boolean enraged = false;
 
+  // Animação de movimento (balanço)
+  private int walkAnimationCounter = 0;
+  private static final double WALK_SWAY_AMOUNT = 3.0; // Pixels de balanço
+  private static final int WALK_ANIMATION_SPEED = 16; // Velocidade da animação
+
   /**
    * Construtor do Golem
    */
@@ -297,6 +302,11 @@ public class Golem extends Enemy {
   public void update(Player player) {
     super.update(player);
 
+    // Atualizar animação de caminhada se estiver se movendo
+    if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+      walkAnimationCounter++;
+    }
+
     // Atualizar pedras ativas
     java.util.Iterator<GolemStone> iterator = activeStones.iterator();
     while (iterator.hasNext()) {
@@ -317,9 +327,16 @@ public class Golem extends Enemy {
     int screenX = (int) (x - camera.getX());
     int screenY = (int) (y - camera.getY());
 
-    // Renderizar sprite atual
+    // Calcular offset de balanço se estiver se movendo
+    int swayOffsetX = 0;
+    if (Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) {
+      double swayAngle = (walkAnimationCounter / (double) WALK_ANIMATION_SPEED) * Math.PI * 2;
+      swayOffsetX = (int) (Math.sin(swayAngle) * WALK_SWAY_AMOUNT);
+    }
+
+    // Renderizar sprite atual com balanço
     if (currentSprite != null) {
-      g.drawImage(currentSprite, screenX, screenY, width, height, null);
+      g.drawImage(currentSprite, screenX + swayOffsetX, screenY, width, height, null);
     } else {
       // Fallback - retângulo cinza
       g.setColor(Color.GRAY);
