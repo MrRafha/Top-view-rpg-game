@@ -16,6 +16,7 @@ import com.rpggame.npcs.VillagerNPC;
 import com.rpggame.npcs.WiseManNPC;
 import com.rpggame.world.*;
 import com.rpggame.systems.*;
+import com.rpggame.systems.MusicManager;
 import com.rpggame.ui.CharacterScreen;
 import com.rpggame.ui.DialogBox;
 import com.rpggame.ui.SkillSlotUI;
@@ -69,6 +70,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private MapManager mapManager;
   private MapTransition mapTransition;
 
+  // Sistema de música
+  private MusicManager musicManager;
+
   // Sistema de morte
   private boolean playerDead = false;
   private boolean deathTransitionStarted = false;
@@ -103,6 +107,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Inicializar sistema de mapas primeiro
     mapManager = new MapManager();
 
+    // Inicializar sistema de música
+    musicManager = new MusicManager();
+
     // Criar o mapa de tiles
     tileMap = new TileMap();
 
@@ -111,6 +118,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (initialMap != null) {
       tileMap.reloadMap(initialMap.getFilePath(), mapManager.getCurrentMapId());
       System.out.println("✅ Mapa inicial carregado: " + initialMap.getName());
+
+      // Iniciar música do mapa inicial
+      if (musicManager != null) {
+        musicManager.playMusicForMap(mapManager.getCurrentMapId());
+      }
     }
 
     // Criar a câmera
@@ -970,6 +982,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       npcs.add(new GuardNPC(480, 144)); // Esquerda do spawn (tile 10, 3)
       npcs.add(new GuardNPC(672, 144)); // Direita do spawn (tile 14, 3)
       System.out.println("⚔️ Guards dos territórios criados: " + npcs.size());
+    } else if ("secret_area".equals(currentMapId)) {
+      // Área secreta: sem NPCs (zona segura)
+      System.out.println("🌿 Área secreta - sem NPCs");
     }
     // Outros mapas podem não ter NPCs
   }
@@ -1200,6 +1215,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     String mapId;
     if (mapPath.contains("village")) {
       mapId = "village";
+    } else if (mapPath.contains("secret_area")) {
+      mapId = "secret_area";
     } else if (mapPath.contains("goblin_territories")) {
       mapId = "goblin_territories";
     } else if (mapPath.contains("cave") || mapPath.contains("new_map")) {
@@ -1221,6 +1238,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Atualizar mapa atual no MapManager
     mapManager.setCurrentMap(mapId);
+
+    // Tocar música do novo mapa
+    if (musicManager != null) {
+      musicManager.playMusicForMap(mapId);
+    }
 
     // Reinicializar inimigos
     if (enemyManager != null) {

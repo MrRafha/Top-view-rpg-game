@@ -2,7 +2,7 @@ package com.rpggame.core;
 
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
-import com.rpggame.ui.CombinedCharacterScreen;
+import com.rpggame.ui.MainMenuScreen;
 
 /**
  * Classe principal do jogo RPG 2.5D.
@@ -10,7 +10,7 @@ import com.rpggame.ui.CombinedCharacterScreen;
 public class Game {
   public static final int SCREEN_WIDTH = 1024;
   public static final int SCREEN_HEIGHT = 800;
-  public static final String GAME_TITLE = "RPG 2.5D - Open World";
+  public static final String GAME_TITLE = "Echoes of Forgotten Quests";
 
   private JFrame frame;
   // private GamePanel gamePanel; // TODO: Implementar se necessário
@@ -30,15 +30,15 @@ public class Game {
     frame.setResizable(false);
     frame.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
 
-    // Iniciar com a tela combinada de criação de personagem
-    CombinedCharacterScreen characterScreen = new CombinedCharacterScreen(frame);
-    frame.add(characterScreen);
+    // Iniciar com o menu principal
+    MainMenuScreen mainMenu = new MainMenuScreen(frame);
+    frame.add(mainMenu);
 
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
 
-    // Focar no painel para receber input do teclado
-    characterScreen.requestFocusInWindow();
+    // Focar no painel para receber input
+    mainMenu.requestFocusInWindow();
   }
 
   /**

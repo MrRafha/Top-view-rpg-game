@@ -457,7 +457,7 @@ public class EnemyManager {
       return;
 
     // Não spawnar goblins em mapas de vila ou outros mapas seguros
-    if ("village".equals(currentMapId) || "cave".equals(currentMapId)) {
+    if ("village".equals(currentMapId) || "cave".equals(currentMapId) || "secret_area".equals(currentMapId)) {
       // Adicionar estruturas decorativas no vilarejo
       if ("village".equals(currentMapId)) {
         initializeVillageStructures();

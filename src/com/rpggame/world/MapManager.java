@@ -33,6 +33,13 @@ public class MapManager {
         12, 22 // Spawn em tile (12, 22) - logo acima dos portais
     ));
 
+    // Área secreta acessível pela vitória régia
+    maps.put("secret_area", new MapData(
+        "maps/secret_area.txt",
+        "Área Secreta",
+        12, 22 // Spawn em tile (12, 22) - logo acima do portal
+    ));
+
     currentMapId = "village"; // Mapa inicial: Vila da Praia
     System.out.println("🗺️ MapManager inicializado com " + maps.size() + " mapas");
   }
