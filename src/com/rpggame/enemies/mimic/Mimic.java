@@ -56,7 +56,20 @@ public class Mimic extends Enemy {
   private double tongueTargetY = 0;
   private double tongueLength = 0;
   private static final double MAX_TONGUE_LENGTH = 150.0;
-  private static final double TONGUE_SPEED = 10.0;
+  private static final double TONGUE_SPEED = 3.0; // Velocidade reduzida para dar tempo de desviar
+
+  // Sistema de puxar pela língua
+  private boolean pullingToPlayer = false;
+  private static final double PULL_SPEED = 8.0; // Velocidade que o Mimic se puxa
+  private double pullTargetX = 0;
+  private double pullTargetY = 0;
+
+  // Sistema de grab (prender player)
+  private boolean playerGrabbed = false;
+  private int escapeProgress = 0;
+  private static final int ESCAPE_REQUIRED = 15; // Precisa apertar Space 15 vezes
+  private int grabDamageTimer = 0;
+  private static final int GRAB_DAMAGE_INTERVAL = 60; // 1 dano por segundo
 
   /**
    * Construtor do Mimic.
@@ -70,7 +83,7 @@ public class Mimic extends Enemy {
   protected void initializeStats() {
     this.maxHealth = 80;
     this.currentHealth = maxHealth;
-    this.damage = 25;
+    this.damage = 10; // Dano reduzido porque agora prende o player
     this.speed = 1.5;
     this.experienceReward = 100;
     this.width = 48;
@@ -83,12 +96,12 @@ public class Mimic extends Enemy {
    * Carrega todos os sprites do Mimic.
    */
   private void loadAllSprites() {
-    disguisedSprite = loadSpriteFile("sprites/Mimic.png");
+    disguisedSprite = loadSpriteFile("sprites/ClosedChest.png"); // Usa sprite do baú fechado
     attack1Sprite = loadSpriteFile("sprites/MimicAttack1.png");
     attack2Sprite = loadSpriteFile("sprites/MimicAttack2.png");
-    activeSprite = loadSpriteFile("sprites/MimicAttack2.png"); // Usa attack2 como sprite ativo
+    activeSprite = loadSpriteFile("sprites/Mimic.png"); // Sprite do Mimic revelado
 
-    if (disguisedSprite != null && attack1Sprite != null && attack2Sprite != null) {
+    if (disguisedSprite != null && attack1Sprite != null && attack2Sprite != null && activeSprite != null) {
       System.out.println("✅ Sprites do Mimic carregados");
     } else {
       System.err.println("❌ Erro ao carregar sprites do Mimic");
@@ -153,14 +166,56 @@ public class Mimic extends Enemy {
         stateTimer--;
         attackAnimFrame++;
 
-        // Executar ataque no final do timer
-        if (stateTimer <= 0 && !hasAttacked) {
-          executeInitialAttack();
-          hasAttacked = true;
-        }
+        // Se está puxando pela língua
+        if (pullingToPlayer) {
+          updatePulling();
+        } else {
+          // Executar ataque no final do timer
+          if (stateTimer <= 0 && !hasAttacked) {
+            executeInitialAttack();
+            hasAttacked = true;
+          }
 
-        // Processar ataque de língua
-        if (tongueAttacking) {
+          // Processar ataque de língua
+          if (tongueAttacking) {
+            tongueAttackTimer++;
+
+            // Primeira metade: língua estendendo
+            if (tongueAttackTimer < TONGUE_ATTACK_DURATION / 2) {
+              tongueLength += TONGUE_SPEED;
+              if (tongueLength > MAX_TONGUE_LENGTH) {
+                tongueLength = MAX_TONGUE_LENGTH;
+              }
+
+              // Verificar colisão com player no pico do ataque
+              if (tongueLength >= MAX_TONGUE_LENGTH * 0.8) {
+                checkTongueCollision();
+              }
+            } else {
+              // Segunda metade: língua retraindo (somente se não está puxando)
+              if (!pullingToPlayer) {
+                tongueLength -= TONGUE_SPEED;
+                if (tongueLength <= 0) {
+                  tongueLength = 0;
+                  tongueAttacking = false;
+                  state = MimicState.ACTIVE;
+                  System.out.println("💥 Mimic completou ataque inicial!");
+                }
+              }
+            }
+          }
+        }
+        break;
+
+      case ACTIVE:
+        // Se player está preso, processar grab
+        if (playerGrabbed) {
+          updateGrab();
+        } else if (pullingToPlayer) {
+          // Se está puxando pela língua, continuar processando
+          updatePulling();
+        } else if (tongueAttacking) {
+          // Se está atacando com língua, processar ataque
           tongueAttackTimer++;
 
           // Primeira metade: língua estendendo
@@ -170,37 +225,131 @@ public class Mimic extends Enemy {
               tongueLength = MAX_TONGUE_LENGTH;
             }
 
-            // Verificar colisão com player no pico do ataque
+            // Verificar colisão com player
             if (tongueLength >= MAX_TONGUE_LENGTH * 0.8) {
               checkTongueCollision();
             }
           } else {
-            // Segunda metade: língua retraindo
-            tongueLength -= TONGUE_SPEED;
-            if (tongueLength <= 0) {
-              tongueLength = 0;
-              tongueAttacking = false;
-              state = MimicState.ACTIVE;
-              System.out.println("💥 Mimic completou ataque inicial!");
+            // Segunda metade: língua retraindo (se não está puxando)
+            if (!pullingToPlayer) {
+              tongueLength -= TONGUE_SPEED;
+              if (tongueLength <= 0) {
+                tongueLength = 0;
+                tongueAttacking = false;
+                System.out.println("💥 Mimic retraiu a língua!");
+              }
             }
           }
-        }
-        break;
+        } else {
+          // Comportamento normal: perseguir e atacar com língua
+          if (distanceToPlayer <= detectionRange) {
+            moveTowardsPlayer();
 
-      case ACTIVE:
-        // Comportamento normal de inimigo
-        if (distanceToPlayer <= detectionRange) {
-          moveTowardsPlayer();
-
-          // Ataque normal
-          if (distanceToPlayer <= attackRange && attackCooldown <= 0) {
-            attackPlayer();
+            // Ataque de língua quando estiver no alcance
+            if (distanceToPlayer <= MAX_TONGUE_LENGTH && attackCooldown <= 0) {
+              executeInitialAttack();
+              attackCooldown = ATTACK_COOLDOWN_TIME;
+            }
           }
         }
         break;
       default:
         break;
     }
+  }
+
+  /**
+   * Atualiza estado do grab (player preso).
+   */
+  private void updateGrab() {
+    if (target == null) {
+      releasePlayer();
+      return;
+    }
+
+    // Aplicar dano periódico
+    grabDamageTimer++;
+    if (grabDamageTimer >= GRAB_DAMAGE_INTERVAL) {
+      target.takeDamage(damage);
+      grabDamageTimer = 0;
+      System.out.println("💢 Mimic está esmagando o player! Dano: " + damage);
+    }
+
+    // Manter player na posição do Mimic
+    target.setPosition(x, y);
+
+    // Verificar se player escapou
+    if (escapeProgress >= ESCAPE_REQUIRED) {
+      releasePlayer();
+      System.out.println("✅ Player escapou do Mimic!");
+    }
+  }
+
+  /**
+   * Atualiza o estado de puxar pela língua.
+   */
+  private void updatePulling() {
+    if (target == null) {
+      pullingToPlayer = false;
+      tongueLength = 0;
+      state = MimicState.ACTIVE;
+      return;
+    }
+
+    // Calcular direção até o player
+    double deltaX = pullTargetX - x;
+    double deltaY = pullTargetY - y;
+    double distanceToPlayer = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+    // Se chegou perto do player, ativa o grab
+    if (distanceToPlayer <= 30) {
+      playerGrabbed = true;
+      escapeProgress = 0;
+      grabDamageTimer = 0;
+      pullingToPlayer = false;
+      tongueLength = 0;
+      state = MimicState.ACTIVE; // Muda para estado ativo mas com grab ativo
+      System.out.println("👾 Mimic engoliu o player! Aperte SPACE repetidamente para escapar!");
+      return;
+    }
+
+    // Mover Mimic em direção ao player
+    if (distanceToPlayer > 0) {
+      double normalizedX = deltaX / distanceToPlayer;
+      double normalizedY = deltaY / distanceToPlayer;
+
+      x += normalizedX * PULL_SPEED;
+      y += normalizedY * PULL_SPEED;
+
+      // Retrair a língua gradualmente
+      tongueLength = Math.max(0, distanceToPlayer);
+    }
+  }
+
+  /**
+   * Libera o player do grab.
+   */
+  private void releasePlayer() {
+    playerGrabbed = false;
+    escapeProgress = 0;
+    grabDamageTimer = 0;
+  }
+
+  /**
+   * Processa tentativa de escape (chamado quando player aperta Space).
+   */
+  public void processEscapeAttempt() {
+    if (playerGrabbed) {
+      escapeProgress++;
+      System.out.println("🔨 Progresso de escape: " + escapeProgress + "/" + ESCAPE_REQUIRED);
+    }
+  }
+
+  /**
+   * Retorna se o player está preso.
+   */
+  public boolean isPlayerGrabbed() {
+    return playerGrabbed;
   }
 
   /**
@@ -256,9 +405,12 @@ public class Mimic extends Enemy {
                 + Math.pow(target.getY() - tongueTargetY, 2));
 
         if (playerDistToTarget <= 60) {
-          // Player não se moveu, acertou!
-          target.takeDamage(damage);
-          System.out.println("💀 Língua do Mimic acertou! Dano: " + damage);
+          // Player não se moveu, Mimic vai se puxar até ele!
+          pullingToPlayer = true;
+          pullTargetX = target.getX();
+          pullTargetY = target.getY();
+          tongueAttacking = false; // Para de estender a língua
+          System.out.println("🪢 Mimic agarrou o player! Puxando-se pela língua!");
         } else {
           // Player se moveu e esquivou!
           System.out.println("✅ Player esquivou da língua do Mimic!");
@@ -324,13 +476,13 @@ public class Mimic extends Enemy {
         break;
 
       case REVEALING:
-        // Alternar entre disfarçado e attack1
-        currentSprite = (stateTimer / 10) % 2 == 0 ? disguisedSprite : attack1Sprite;
+        // Alternar entre baú fechado e Mimic revelado
+        currentSprite = (stateTimer / 10) % 2 == 0 ? disguisedSprite : activeSprite;
         break;
 
       case ATTACKING:
-        // Sempre mostrar sprite base durante ataque
-        currentSprite = disguisedSprite;
+        // Sempre mostrar Mimic revelado durante ataque
+        currentSprite = activeSprite;
 
         // Desenhar aviso de perigo
         if (!tongueAttacking) {
@@ -339,7 +491,8 @@ public class Mimic extends Enemy {
         break;
 
       case ACTIVE:
-        currentSprite = disguisedSprite; // Usar sprite base quando ativo
+        // Usar sprite de Mimic revelado quando ativo
+        currentSprite = activeSprite;
         break;
       default:
         break;
@@ -354,8 +507,8 @@ public class Mimic extends Enemy {
       g.fillRect(screenX, screenY, width, height);
     }
 
-    // Renderizar língua se estiver atacando
-    if (tongueAttacking && tongueLength > 0) {
+    // Renderizar língua se estiver atacando ou puxando
+    if ((tongueAttacking || pullingToPlayer) && tongueLength > 0) {
       renderTongue(g, screenX, screenY);
     }
 
@@ -370,9 +523,12 @@ public class Mimic extends Enemy {
    * Renderiza a língua do Mimic durante ataque usando gráficos Swing.
    */
   private void renderTongue(Graphics2D g, int screenX, int screenY) {
-    // Calcular direção da língua
-    double deltaX = tongueTargetX - x;
-    double deltaY = tongueTargetY - y;
+    // Calcular direção da língua baseado no estado
+    double targetX = pullingToPlayer ? pullTargetX : tongueTargetX;
+    double targetY = pullingToPlayer ? pullTargetY : tongueTargetY;
+
+    double deltaX = targetX - x;
+    double deltaY = targetY - y;
     double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
     if (distance > 0) {
@@ -507,6 +663,13 @@ public class Mimic extends Enemy {
    */
   public boolean isDisguised() {
     return state == MimicState.DISGUISED;
+  }
+
+  /**
+   * Retorna o progresso de escape (0-15).
+   */
+  public int getEscapeProgress() {
+    return escapeProgress;
   }
 
   /**

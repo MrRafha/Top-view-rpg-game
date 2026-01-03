@@ -438,9 +438,68 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       mapTransition.render(g2d, getWidth(), getHeight());
     }
 
+    // Renderizar indicador de escape se player estiver preso
+    renderEscapeIndicator(g2d);
+
     // Renderizar tela de morte (se ativa)
     if (showingDeathScreen) {
       renderDeathScreen(g2d);
+    }
+  }
+
+  /**
+   * Renderiza indicador de progresso de escape quando player está preso no Mimic.
+   */
+  private void renderEscapeIndicator(Graphics2D g) {
+    if (enemyManager == null)
+      return;
+
+    for (com.rpggame.entities.Enemy enemy : enemyManager.getEnemies()) {
+      if (enemy instanceof com.rpggame.enemies.mimic.Mimic) {
+        com.rpggame.enemies.mimic.Mimic mimic = (com.rpggame.enemies.mimic.Mimic) enemy;
+        if (mimic.isPlayerGrabbed()) {
+          // Fundo semi-transparente
+          g.setColor(new Color(0, 0, 0, 150));
+          int boxWidth = 400;
+          int boxHeight = 80;
+          int boxX = (getWidth() - boxWidth) / 2;
+          int boxY = getHeight() / 2 - 100;
+          g.fillRoundRect(boxX, boxY, boxWidth, boxHeight, 10, 10);
+
+          // Texto de instrução
+          g.setColor(Color.RED);
+          g.setFont(new Font("Arial", Font.BOLD, 24));
+          String text = "APERTE SPACE PARA ESCAPAR!";
+          FontMetrics fm = g.getFontMetrics();
+          int textWidth = fm.stringWidth(text);
+          g.drawString(text, (getWidth() - textWidth) / 2, boxY + 30);
+
+          // Barra de progresso
+          int barWidth = 300;
+          int barHeight = 20;
+          int barX = (getWidth() - barWidth) / 2;
+          int barY = boxY + 50;
+
+          // Fundo da barra
+          g.setColor(Color.DARK_GRAY);
+          g.fillRect(barX, barY, barWidth, barHeight);
+
+          // Progresso (pegar do método público)
+          int progress = mimic.getEscapeProgress();
+          double progressPercent = Math.min(1.0, progress / 15.0);
+          int progressWidth = (int) (barWidth * progressPercent);
+
+          g.setColor(new Color(0, 255, 0));
+          g.fillRect(barX, barY, progressWidth, barHeight);
+
+          // Borda da barra
+          g.setColor(Color.WHITE);
+          g.setStroke(new BasicStroke(2));
+          g.drawRect(barX, barY, barWidth, barHeight);
+
+          break;
+        }
+      }
     }
   }
 
@@ -879,6 +938,21 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       shopUI.keyPressed(e);
       repaint();
       return;
+    }
+
+    // Verificar se player está preso no Mimic ANTES de qualquer outra ação
+    if (e.getKeyCode() == KeyEvent.VK_SPACE && enemyManager != null) {
+      for (com.rpggame.entities.Enemy enemy : enemyManager.getEnemies()) {
+        if (enemy instanceof com.rpggame.enemies.mimic.Mimic) {
+          com.rpggame.enemies.mimic.Mimic mimic = (com.rpggame.enemies.mimic.Mimic) enemy;
+          if (mimic.isPlayerGrabbed()) {
+            mimic.processEscapeAttempt();
+            System.out.println("🎮 Player apertou Space! Progresso: " + mimic.getEscapeProgress() + "/15");
+            repaint();
+            return; // Não processar ataque do player
+          }
+        }
+      }
     }
 
     // Delegar para o player (WASD, Space, números, etc)
