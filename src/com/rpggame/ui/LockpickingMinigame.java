@@ -7,10 +7,14 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.KeyEvent;
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Set;
 
 /**
  * Minigame de lockpicking para abrir baús.
- * Player precisa apertar F quando o marcador estiver na área verde
+ * Player precisa apertar F quando o marcador estiver na área verde.
+ * Sistema baseado em pontos discretos (0-360) para evitar bugs de ângulos.
  */
 public class LockpickingMinigame {
   private boolean active = false;
@@ -22,13 +26,15 @@ public class LockpickingMinigame {
   private int centerY = 400; // Centro da tela (800/2)
   private int radius = 100;
 
-  // Área verde (sucesso)
-  private double greenStartAngle = 45; // Graus
-  private double greenArcAngle = 30; // Tamanho da área verde
+  // Sistema de pontos discretos
+  private static final int TOTAL_POINTS = 360; // 0-359
+  private static final int GREEN_ZONE_SIZE = 20; // 20 pontos verdes
+  private Set<Integer> greenZoneIndices = new HashSet<>();
 
   // Marcador rotativo
-  private double markerAngle = 0;
-  private double markerSpeed = 3.0; // Velocidade de rotação
+  private int currentMarkerIndex = 0;
+  private int markerSpeed = 2; // Velocidade em pontos por frame
+  private int dotRadius = 3; // Raio de cada ponto no círculo
 
   // Cores
   private Color backgroundColor = new Color(0, 0, 0, 200);
@@ -45,12 +51,19 @@ public class LockpickingMinigame {
     active = true;
     success = false;
     finished = false;
-    markerAngle = 0;
+    currentMarkerIndex = 0;
 
-    // Randomizar posição da zona verde
-    greenStartAngle = Math.random() * 360;
+    // Sortear 10 índices consecutivos para serem a zona verde
+    Random random = new Random();
+    int greenStart = random.nextInt(TOTAL_POINTS);
+
+    greenZoneIndices.clear();
+    for (int i = 0; i < GREEN_ZONE_SIZE; i++) {
+      greenZoneIndices.add((greenStart + i) % TOTAL_POINTS);
+    }
 
     System.out.println("🔓 Minigame de lockpicking iniciado!");
+    System.out.println("  Zona verde começa no índice: " + greenStart);
   }
 
   /**
@@ -60,10 +73,10 @@ public class LockpickingMinigame {
     if (!active || finished)
       return;
 
-    // Rotacionar marcador
-    markerAngle += markerSpeed;
-    if (markerAngle >= 360) {
-      markerAngle -= 360;
+    // Avançar marcador pelos pontos
+    currentMarkerIndex += markerSpeed;
+    if (currentMarkerIndex >= TOTAL_POINTS) {
+      currentMarkerIndex = currentMarkerIndex % TOTAL_POINTS;
     }
   }
 
@@ -78,29 +91,13 @@ public class LockpickingMinigame {
     }
 
     if (keyCode == KeyEvent.VK_F) {
-      // Ambos agora usam o sistema visual (0°=Norte/topo)
-      // Comparar markerAngle diretamente com greenStartAngle
-      double normalizedMarker = markerAngle % 360;
-      double greenStart = greenStartAngle % 360;
-      double greenEnd = (greenStartAngle + greenArcAngle) % 360;
-
-      boolean inGreenZone = false;
-
-      // Se a zona verde não cruza 0°
-      if (greenEnd > greenStart) {
-        inGreenZone = normalizedMarker >= greenStart && normalizedMarker <= greenEnd;
-      } else {
-        // Zona verde cruza 0° (ex: 350° - 10°)
-        inGreenZone = normalizedMarker >= greenStart || normalizedMarker <= greenEnd;
-      }
-
-      success = inGreenZone;
+      // Verificar se o índice atual está na zona verde
+      success = greenZoneIndices.contains(currentMarkerIndex);
       finished = true;
 
       System.out.println("🎯 Tentativa de lockpicking:");
-      System.out.println("  Marcador: " + String.format("%.1f", normalizedMarker) + "°");
-      System.out.println("  Zona verde: " + String.format("%.1f", greenStart) + "° - "
-          + String.format("%.1f", greenEnd) + "°");
+      System.out.println("  Marcador no índice: " + currentMarkerIndex);
+      System.out.println("  Zona verde: " + greenZoneIndices);
       System.out.println("  Resultado: " + (success ? "✅ SUCESSO!" : "❌ FALHOU!"));
 
       return success;
@@ -134,38 +131,42 @@ public class LockpickingMinigame {
     g.setColor(backgroundColor);
     g.fillRect(0, 0, screenWidth, screenHeight);
 
-    // Círculo principal (preto)
-    g.setColor(circleColor);
-    g.fillOval(centerX - radius, centerY - radius, radius * 2, radius * 2);
+    // Renderizar todos os 360 pontos ao redor do círculo
+    for (int i = 0; i < TOTAL_POINTS; i++) {
+      // Calcular posição de cada ponto (começando do topo, 0° = Norte)
+      double angleRadians = Math.toRadians(i - 90); // -90 para começar no topo
+      int pointX = centerX + (int) (Math.cos(angleRadians) * radius);
+      int pointY = centerY + (int) (Math.sin(angleRadians) * radius);
 
-    // Zona verde (área de sucesso) - renderizar no sistema visual (0°=Norte)
-    // fillArc usa 0°=Leste, então subtraímos 90° para alinhar com o topo
-    double greenStartVisual = greenStartAngle - 90;
-    g.setColor(greenZoneColor);
-    g.fillArc(
-        centerX - radius,
-        centerY - radius,
-        radius * 2,
-        radius * 2,
-        (int) greenStartVisual,
-        (int) greenArcAngle);
+      // Determinar cor do ponto
+      Color pointColor;
+      if (i == currentMarkerIndex) {
+        // Marcador atual - amarelo/dourado
+        pointColor = markerColor;
+      } else if (greenZoneIndices.contains(i)) {
+        // Zona verde
+        pointColor = greenZoneColor;
+      } else {
+        // Ponto normal - branco
+        pointColor = Color.WHITE;
+      }
 
-    // Borda do círculo
-    g.setColor(Color.WHITE);
-    g.setStroke(new BasicStroke(3));
-    g.drawOval(centerX - radius, centerY - radius, radius * 2, radius * 2);
+      g.setColor(pointColor);
+      g.fillOval(pointX - dotRadius, pointY - dotRadius, dotRadius * 2, dotRadius * 2);
+    }
 
-    // Marcador (linha do centro para a borda) - também renderizar no sistema visual
-    double markerRadians = Math.toRadians(markerAngle - 90); // -90 para começar no topo
+    // Linha do marcador (do centro até o ponto atual)
+    double markerRadians = Math.toRadians(currentMarkerIndex - 90);
     int markerEndX = centerX + (int) (Math.cos(markerRadians) * radius);
     int markerEndY = centerY + (int) (Math.sin(markerRadians) * radius);
 
     g.setColor(markerColor);
-    g.setStroke(new BasicStroke(4));
+    g.setStroke(new BasicStroke(3));
     g.drawLine(centerX, centerY, markerEndX, markerEndY);
 
-    // Ponto no final do marcador
-    g.fillOval(markerEndX - 6, markerEndY - 6, 12, 12);
+    // Círculo central
+    g.setColor(circleColor);
+    g.fillOval(centerX - 10, centerY - 10, 20, 20);
 
     // Instruções
     g.setColor(Color.WHITE);
