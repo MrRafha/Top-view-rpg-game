@@ -9,6 +9,8 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 
 import com.rpggame.entities.Player;
+import com.rpggame.entities.Chest;
+import com.rpggame.enemies.mimic.Mimic;
 import com.rpggame.npcs.NPC;
 import com.rpggame.npcs.MerchantNPC;
 import com.rpggame.npcs.GuardNPC;
@@ -16,6 +18,7 @@ import com.rpggame.npcs.VillagerNPC;
 import com.rpggame.npcs.WiseManNPC;
 import com.rpggame.world.*;
 import com.rpggame.systems.*;
+import com.rpggame.systems.MusicManager;
 import com.rpggame.ui.CharacterScreen;
 import com.rpggame.ui.DialogBox;
 import com.rpggame.ui.SkillSlotUI;
@@ -25,6 +28,7 @@ import com.rpggame.ui.QuestUI;
 import com.rpggame.ui.GoldUI;
 import com.rpggame.ui.QuestChoiceBox;
 import com.rpggame.ui.ShopUI;
+import com.rpggame.ui.LockpickingMinigame;
 
 /**
  * Painel principal onde o jogo é renderizado
@@ -65,9 +69,18 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private QuestChoiceBox questChoiceBox;
   private ShopUI shopUI;
 
+  // Sistema de baús e minigame
+  private java.util.ArrayList<Chest> chests;
+  private LockpickingMinigame lockpickingMinigame;
+  private boolean playingMinigame = false;
+  private Chest currentChest = null;
+
   // Sistema de mapas e transições
   private MapManager mapManager;
   private MapTransition mapTransition;
+
+  // Sistema de música
+  private MusicManager musicManager;
 
   // Sistema de morte
   private boolean playerDead = false;
@@ -103,6 +116,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Inicializar sistema de mapas primeiro
     mapManager = new MapManager();
 
+    // Inicializar sistema de música
+    musicManager = new MusicManager();
+
     // Criar o mapa de tiles
     tileMap = new TileMap();
 
@@ -111,6 +127,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (initialMap != null) {
       tileMap.reloadMap(initialMap.getFilePath(), mapManager.getCurrentMapId());
       System.out.println("✅ Mapa inicial carregado: " + initialMap.getName());
+
+      // Iniciar música do mapa inicial
+      if (musicManager != null) {
+        musicManager.playMusicForMap(mapManager.getCurrentMapId());
+      }
     }
 
     // Criar a câmera
@@ -120,6 +141,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     dialogBox = new DialogBox();
     questChoiceBox = new QuestChoiceBox();
     npcs = new java.util.ArrayList<>();
+
+    // Inicializar sistema de baús
+    chests = new java.util.ArrayList<>();
+    lockpickingMinigame = new LockpickingMinigame();
 
     // Inicializar sistema de transições
     mapTransition = new MapTransition();
@@ -244,6 +269,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (!playerDead && player != null && !player.isAlive()) {
       playerDead = true;
       deathTransitionStarted = false;
+      // Parar a música quando o player morre
+      if (musicManager != null) {
+        musicManager.stopMusic();
+      }
       System.out.println("💀 Player morreu!");
     }
 
@@ -285,6 +314,14 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Atualizar NPCs
     updateNPCs();
+
+    // Atualizar baús
+    updateChests();
+
+    // Atualizar minigame se estiver ativo
+    if (playingMinigame && lockpickingMinigame != null) {
+      lockpickingMinigame.update();
+    }
 
     // Atualizar inimigos
     if (enemyManager != null) {
@@ -351,6 +388,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Renderizar NPCs
     renderNPCs(g2d);
 
+    // Renderizar baús
+    renderChests(g2d);
+
     // Renderizar o jogador
     player.render(g2d, camera);
 
@@ -361,6 +401,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Renderizar UI
     renderUI(g2d);
+
+    // Renderizar minigame por cima de tudo se estiver ativo
+    if (playingMinigame && lockpickingMinigame != null) {
+      lockpickingMinigame.render(g2d, getWidth(), getHeight());
+    }
 
     // Renderizar DialogBox se estiver mostrando
     if (showingDialog && dialogBox != null) {
@@ -393,9 +438,68 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       mapTransition.render(g2d, getWidth(), getHeight());
     }
 
+    // Renderizar indicador de escape se player estiver preso
+    renderEscapeIndicator(g2d);
+
     // Renderizar tela de morte (se ativa)
     if (showingDeathScreen) {
       renderDeathScreen(g2d);
+    }
+  }
+
+  /**
+   * Renderiza indicador de progresso de escape quando player está preso no Mimic.
+   */
+  private void renderEscapeIndicator(Graphics2D g) {
+    if (enemyManager == null)
+      return;
+
+    for (com.rpggame.entities.Enemy enemy : enemyManager.getEnemies()) {
+      if (enemy instanceof com.rpggame.enemies.mimic.Mimic) {
+        com.rpggame.enemies.mimic.Mimic mimic = (com.rpggame.enemies.mimic.Mimic) enemy;
+        if (mimic.isPlayerGrabbed()) {
+          // Fundo semi-transparente
+          g.setColor(new Color(0, 0, 0, 150));
+          int boxWidth = 400;
+          int boxHeight = 80;
+          int boxX = (getWidth() - boxWidth) / 2;
+          int boxY = getHeight() / 2 - 100;
+          g.fillRoundRect(boxX, boxY, boxWidth, boxHeight, 10, 10);
+
+          // Texto de instrução
+          g.setColor(Color.RED);
+          g.setFont(new Font("Arial", Font.BOLD, 24));
+          String text = "APERTE SPACE PARA ESCAPAR!";
+          FontMetrics fm = g.getFontMetrics();
+          int textWidth = fm.stringWidth(text);
+          g.drawString(text, (getWidth() - textWidth) / 2, boxY + 30);
+
+          // Barra de progresso
+          int barWidth = 300;
+          int barHeight = 20;
+          int barX = (getWidth() - barWidth) / 2;
+          int barY = boxY + 50;
+
+          // Fundo da barra
+          g.setColor(Color.DARK_GRAY);
+          g.fillRect(barX, barY, barWidth, barHeight);
+
+          // Progresso (pegar do método público)
+          int progress = mimic.getEscapeProgress();
+          double progressPercent = Math.min(1.0, progress / 15.0);
+          int progressWidth = (int) (barWidth * progressPercent);
+
+          g.setColor(new Color(0, 255, 0));
+          g.fillRect(barX, barY, progressWidth, barHeight);
+
+          // Borda da barra
+          g.setColor(Color.WHITE);
+          g.setStroke(new BasicStroke(2));
+          g.drawRect(barX, barY, barWidth, barHeight);
+
+          break;
+        }
+      }
     }
   }
 
@@ -648,6 +752,44 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       return;
     }
 
+    // Tecla F para baús e minigame
+    if (e.getKeyCode() == KeyEvent.VK_F) {
+      if (playingMinigame && lockpickingMinigame != null) {
+        // Está jogando minigame - tentar abrir baú
+        boolean success = lockpickingMinigame.handleInput(KeyEvent.VK_F);
+        if (success && currentChest != null) {
+          // Sucesso! Abrir baú e dar recompensas
+          currentChest.open();
+          String[] rewards = currentChest.getRewards();
+          System.out.println("✅ Baú aberto! Recompensas: " + rewards[0] + ", " + rewards[1]);
+
+          // Adicionar itens ao inventário do player
+          if (player != null) {
+            for (String reward : rewards) {
+              if ("health_potion".equals(reward)) {
+                player.getInventory().addItem(new com.rpggame.items.consumables.HealthPotion(player, 50), 1);
+              } else if ("mana_potion".equals(reward)) {
+                player.getInventory().addItem(new com.rpggame.items.consumables.ManaPotion(player, 30), 1);
+              }
+            }
+          }
+
+          playingMinigame = false;
+          currentChest = null;
+        } else if (lockpickingMinigame.isFinished() && !success) {
+          // Falhou - reiniciar minigame
+          System.out.println("❌ Falhou no minigame! Tente novamente.");
+          lockpickingMinigame.reset();
+        }
+        repaint();
+        return;
+      } else {
+        // Verificar se há baú próximo para interagir
+        checkChestInteraction();
+        return;
+      }
+    }
+
     // Tecla E para interagir com NPCs
     if (e.getKeyCode() == KeyEvent.VK_E) {
       interactWithNearbyNPC();
@@ -796,6 +938,21 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       shopUI.keyPressed(e);
       repaint();
       return;
+    }
+
+    // Verificar se player está preso no Mimic ANTES de qualquer outra ação
+    if (e.getKeyCode() == KeyEvent.VK_SPACE && enemyManager != null) {
+      for (com.rpggame.entities.Enemy enemy : enemyManager.getEnemies()) {
+        if (enemy instanceof com.rpggame.enemies.mimic.Mimic) {
+          com.rpggame.enemies.mimic.Mimic mimic = (com.rpggame.enemies.mimic.Mimic) enemy;
+          if (mimic.isPlayerGrabbed()) {
+            mimic.processEscapeAttempt();
+            System.out.println("🎮 Player apertou Space! Progresso: " + mimic.getEscapeProgress() + "/15");
+            repaint();
+            return; // Não processar ataque do player
+          }
+        }
+      }
     }
 
     // Delegar para o player (WASD, Space, números, etc)
@@ -970,8 +1127,74 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       npcs.add(new GuardNPC(480, 144)); // Esquerda do spawn (tile 10, 3)
       npcs.add(new GuardNPC(672, 144)); // Direita do spawn (tile 14, 3)
       System.out.println("⚔️ Guards dos territórios criados: " + npcs.size());
+    } else if ("secret_area".equals(currentMapId)) {
+      // Área secreta: sem NPCs, mas com Mimic e Baú
+      System.out.println("🌿 Área secreta - sem NPCs");
+
+      // Spawnar 1 Mimic e 1 Baú
+      if (enemyManager != null) {
+        spawnMimicAndChest();
+      }
     }
     // Outros mapas podem não ter NPCs
+  }
+
+  /**
+   * Spawna 1 Mimic e 1 Baú no mapa secret_area.
+   */
+  private void spawnMimicAndChest() {
+    // Limpar listas primeiro
+    chests.clear();
+
+    // Coordenadas para spawnar (centro do mapa aproximadamente)
+    // Mimic na posição (300, 400)
+    Mimic mimic = new Mimic(300, 400);
+    enemyManager.addEnemy(mimic);
+    System.out.println("👹 Mimic spawnado em (300, 400)");
+
+    // Baú na posição (600, 400) - distante do mimic para criar confusão
+    Chest chest = new Chest(600, 400);
+    chests.add(chest);
+    System.out.println("📦 Baú spawnado em (600, 400)");
+  }
+
+  /**
+   * Atualiza todos os baús.
+   */
+  private void updateChests() {
+    if (player == null) {
+      return;
+    }
+
+    for (Chest chest : chests) {
+      chest.update(player);
+    }
+  }
+
+  /**
+   * Renderiza todos os baús.
+   */
+  private void renderChests(Graphics2D g) {
+    for (Chest chest : chests) {
+      chest.render(g, camera, tileMap.getFogOfWar());
+    }
+  }
+
+  /**
+   * Verifica interação com baús próximos.
+   */
+  private void checkChestInteraction() {
+    for (Chest chest : chests) {
+      if (chest.canInteract()) {
+        // Iniciar minigame
+        currentChest = chest;
+        playingMinigame = true;
+        lockpickingMinigame.reset();
+        System.out.println("🎮 Iniciando minigame de lockpicking!");
+        repaint();
+        return;
+      }
+    }
   }
 
   /*
@@ -1200,6 +1423,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     String mapId;
     if (mapPath.contains("village")) {
       mapId = "village";
+    } else if (mapPath.contains("secret_area")) {
+      mapId = "secret_area";
     } else if (mapPath.contains("goblin_territories")) {
       mapId = "goblin_territories";
     } else if (mapPath.contains("cave") || mapPath.contains("new_map")) {
@@ -1221,6 +1446,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Atualizar mapa atual no MapManager
     mapManager.setCurrentMap(mapId);
+
+    // Tocar música do novo mapa
+    if (musicManager != null) {
+      musicManager.playMusicForMap(mapId);
+    }
 
     // Reinicializar inimigos
     if (enemyManager != null) {

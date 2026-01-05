@@ -331,17 +331,47 @@ public class TileMap {
   public void setupPortals(String currentMapId) {
     portals.clear();
 
-    // Procurar tiles PORTAL no mapa e criar portais automaticamente
+    // Procurar tiles PORTAL e WALKABLE_WATER no mapa e criar portais
+    // automaticamente
     for (int y = 0; y < MAP_HEIGHT; y++) {
       for (int x = 0; x < MAP_WIDTH; x++) {
-        if (map[y][x] == TileType.PORTAL) {
-          // Verificar qual é o mapa atual para definir destino
-          boolean isVillageMap = "village".equals(currentMapId);
+        boolean isPortalTile = map[y][x] == TileType.PORTAL;
+        boolean isWaterlilyPortal = false;
 
-          if (isVillageMap) {
-            // Village -> Goblin Territories
-            portals.add(new Portal(x, y, "goblin_territories", 0, 0, "Portal dos Territórios"));
-            System.out.println("🌀 Portal Village encontrado em (" + x + ", " + y + ") -> Goblin Territories");
+        // No village, a vitória régia na linha 15 (y=15) é um portal
+        if ("village".equals(currentMapId) && map[y][x] == TileType.WALKABLE_WATER) {
+          if (y == 15 && x == 0) {
+            isWaterlilyPortal = true;
+          }
+        }
+
+        // Na secret area, o WALKABLE_WATER ou PORTAL na direita é a saída
+        if ("secret_area".equals(currentMapId) && map[y][x] == TileType.WALKABLE_WATER) {
+          if (y == 15 && x >= 23) {
+            isWaterlilyPortal = true;
+          }
+        }
+
+        if (isPortalTile || isWaterlilyPortal) {
+          // Definir destino do portal baseado no mapa atual e posição
+
+          if ("village".equals(currentMapId)) {
+            // Village tem dois portais
+            if ((y >= 15 && y <= 16 && x <= 2) || isWaterlilyPortal) {
+              // Portal da vitória régia (canto superior esquerdo) -> Secret Area
+              // Spawna do lado direito na secret area (onde está o portal de volta)
+              portals.add(new Portal(x, y, "secret_area", 23, 15, "Passagem Secreta"));
+              System.out.println("🌀 Portal Village encontrado em (" + x + ", " + y + ") -> Secret Area");
+            } else {
+              // Portal sul -> Goblin Territories
+              portals.add(new Portal(x, y, "goblin_territories", 0, 0, "Portal dos Territórios"));
+              System.out.println("🌀 Portal Village encontrado em (" + x + ", " + y + ") -> Goblin Territories");
+            }
+          } else if ("secret_area".equals(currentMapId)) {
+            // Secret Area -> Village (volta pelo mesmo portal da vitória régia)
+            // Spawna ao lado do portal da vitória régia
+            portals.add(new Portal(x, y, "village", 2, 15, "Portal da Vila"));
+            System.out.println("🌀 Portal Secret Area encontrado em (" + x + ", " + y + ") -> Village");
           } else {
             // Goblin Territories -> Village
             portals.add(new Portal(x, y, "village", 0, 0, "Portal da Vila"));

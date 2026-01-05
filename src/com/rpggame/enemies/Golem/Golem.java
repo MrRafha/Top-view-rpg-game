@@ -27,8 +27,8 @@ public class Golem extends Enemy {
   private String facingDirection = "front"; // "front", "back", "left", "right"
 
   // Sistema de ataque
-  private static final int ATTACK_WINDUP_TIME = 90; // 1.5 segundos de preparação
-  private static final int ATTACK_RECOVERY_TIME = 180; // 3 segundos de cooldown
+  private static final int ATTACK_WINDUP_TIME = 45; // 0.75 segundos de preparação
+  private static final int ATTACK_RECOVERY_TIME = 90; // 1.5 segundos de cooldown
   private boolean preparingAttack = false;
   private int attackWindupTimer = 0;
   private double targetTileX = 0;

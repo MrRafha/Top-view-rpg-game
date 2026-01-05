@@ -4,6 +4,50 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ---
 
+## [2.4.0] - 2026-01-05
+
+### ⚡ Adicionado
+- **Novo Inimigo: Mimic** 🦎
+  - 200 HP com comportamento de emboscada
+  - Disfarce perfeito como baú fechado (ClosedChest.png)
+  - Sistema de estados: DISGUISED → REVEALING → ATTACKING → ACTIVE
+  - Ataque de língua com alcance de 150 pixels e 10 de dano
+  - Velocidade da língua ajustada (5.0) para melhor jogabilidade
+  - Mecânica de captura: Mimic se puxa até o jogador ao acertar
+  - Sistema de grab/suffocation com escape por SPACE (15x)
+  - Dano contínuo de 10/segundo enquanto capturado
+  - Barra de progresso visual para tentativas de escape
+  - Sprites: ClosedChest.png (disfarce) e Mimic.png (revelado)
+  - Animação de língua vermelha durante ataques
+- **Mapa Secret Area** 🗺️
+  - Novo mapa secreto acessível via portal na vila
+  - Contém Mimic e baú normal para testes
+  - OST exclusiva: SecretAreaOST.wav
+
+### 🔧 Melhorado
+- **Sistema de Lockpicking - Reimplementação Completa** 🔓
+  - Substituído sistema de ângulos por **pontos discretos** (0-359)
+  - 360 pontos renderizados como círculos de 3px
+  - 10 pontos consecutivos aleatórios para zona verde
+  - Marcador dourado percorre os pontos
+  - Verificação determinística: `greenZoneIndices.contains(currentMarkerIndex)`
+  - Visual mais claro com todos os pontos visíveis
+  - Elimina bugs de conversão de coordenadas
+- **Sistema de Audio** 🎵
+  - Música para automaticamente quando jogador morre
+  - Evita sobreposição com tela de game over
+
+### 🐛 Corrigido
+- Lockpicking detectando falha mesmo com marcador na zona verde
+- Imprecisões causadas por conversões entre sistemas de ângulos
+- Hitbox da língua do Mimic (aumentada de 40px para 60px)
+- Sprites incorretos do Mimic (não usa mais MimicAttack1/2)
+- Ataque de língua não funcionando durante perseguição
+- Sistema de escape com SPACE não respondendo
+- Música continuando após morte do jogador
+
+---
+
 ## [2.3.0] - 2025-12-26
 
 ### ⚡ Adicionado

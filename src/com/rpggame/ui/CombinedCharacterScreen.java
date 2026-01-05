@@ -22,6 +22,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import com.rpggame.core.GamePanel;
 import com.rpggame.systems.CharacterStats;
+import com.rpggame.systems.MusicManager;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -35,6 +36,7 @@ import javax.swing.SwingConstants;
  */
 public class CombinedCharacterScreen extends JPanel implements ActionListener {
   private JFrame parentFrame;
+  private MusicManager musicManager;
 
   // Sprites das classes
   private BufferedImage warriorSprite;
@@ -95,8 +97,12 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
   public CombinedCharacterScreen(JFrame parentFrame) {
     this.parentFrame = parentFrame;
     this.stats = new CharacterStats("Warrior");
+    this.musicManager = new MusicManager();
     loadSprites();
     initializeUi();
+
+    // Tocar música da tela de criação de personagem
+    musicManager.playMusicByPath("songs/MainOST.wav");
   }
 
   private void loadSprites() {
@@ -674,6 +680,11 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
   }
 
   private void startGame() {
+    // Parar música da tela de criação
+    if (musicManager != null) {
+      musicManager.stopMusic();
+    }
+
     String spritePath = com.rpggame.world.ResourceResolver.getResourcePath("sprites/" + selectedClass + "Player.png");
 
     // Remover a tela atual
