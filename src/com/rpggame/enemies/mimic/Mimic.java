@@ -56,7 +56,7 @@ public class Mimic extends Enemy {
   private double tongueTargetY = 0;
   private double tongueLength = 0;
   private static final double MAX_TONGUE_LENGTH = 150.0;
-  private static final double TONGUE_SPEED = 3.0; // Velocidade reduzida para dar tempo de desviar
+  private static final double TONGUE_SPEED = 6.0; // Aumentado para garantir que atinja 80% (120 unidades) em 20 frames
 
   // Sistema de puxar pela língua
   private boolean pullingToPlayer = false;
@@ -147,7 +147,7 @@ public class Mimic extends Enemy {
         if (distanceToPlayer <= DETECTION_RADIUS) {
           state = MimicState.REVEALING;
           stateTimer = REVEAL_TIME;
-          System.out.println("👹 Mimic revelando!");
+          System.out.println("👹 Mimic revelando! Player a " + distanceToPlayer + " unidades");
         }
         break;
 
@@ -189,6 +189,8 @@ public class Mimic extends Enemy {
 
               // Verificar colisão com player no pico do ataque
               if (tongueLength >= MAX_TONGUE_LENGTH * 0.8) {
+                System.out.println(
+                    "🔍 [DEBUG PRÉ-CHECK] Língua atingiu 80%! Length: " + tongueLength + "/" + MAX_TONGUE_LENGTH);
                 checkTongueCollision();
               }
             } else {
@@ -227,6 +229,8 @@ public class Mimic extends Enemy {
 
             // Verificar colisão com player
             if (tongueLength >= MAX_TONGUE_LENGTH * 0.8) {
+              System.out.println(
+                  "🔍 [DEBUG PRÉ-CHECK ACTIVE] Língua atingiu 80%! Length: " + tongueLength + "/" + MAX_TONGUE_LENGTH);
               checkTongueCollision();
             }
           } else {
@@ -267,6 +271,8 @@ public class Mimic extends Enemy {
       return;
     }
 
+    System.out.println("🔍 [DEBUG] Update Grab - Escape: " + escapeProgress + "/" + ESCAPE_REQUIRED);
+
     // Aplicar dano periódico
     grabDamageTimer++;
     if (grabDamageTimer >= GRAB_DAMAGE_INTERVAL) {
@@ -301,6 +307,8 @@ public class Mimic extends Enemy {
     double deltaY = pullTargetY - y;
     double distanceToPlayer = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
+    System.out.println("🔍 [DEBUG] Puxando player... Distância: " + distanceToPlayer + " (precisa <= 30)");
+
     // Se chegou perto do player, ativa o grab
     if (distanceToPlayer <= 30) {
       playerGrabbed = true;
@@ -309,6 +317,17 @@ public class Mimic extends Enemy {
       pullingToPlayer = false;
       tongueLength = 0;
       state = MimicState.ACTIVE; // Muda para estado ativo mas com grab ativo
+
+      System.out.println("🔍 [DEBUG] Mimic chegou perto! Ativando GRAB!");
+
+      // Bloquear movimento do player
+      if (target instanceof com.rpggame.entities.Player) {
+        ((com.rpggame.entities.Player) target).setGrabbed(true);
+        System.out.println("🔍 [DEBUG] setGrabbed(true) chamado no Player!");
+      } else {
+        System.out.println("❌ [DEBUG] Target NÃO é uma instância de Player!");
+      }
+
       System.out.println("👾 Mimic engoliu o player! Aperte SPACE repetidamente para escapar!");
       return;
     }
@@ -333,6 +352,11 @@ public class Mimic extends Enemy {
     playerGrabbed = false;
     escapeProgress = 0;
     grabDamageTimer = 0;
+
+    // Liberar movimento do player
+    if (target instanceof com.rpggame.entities.Player) {
+      ((com.rpggame.entities.Player) target).setGrabbed(false);
+    }
   }
 
   /**
@@ -380,6 +404,8 @@ public class Mimic extends Enemy {
       return;
     }
 
+    System.out.println("🔍 [DEBUG] Verificando colisão da língua - Length: " + tongueLength + "/" + MAX_TONGUE_LENGTH);
+
     // Calcular posição da ponta da língua
     double deltaX = tongueTargetX - x;
     double deltaY = tongueTargetY - y;
@@ -397,12 +423,16 @@ public class Mimic extends Enemy {
           Math.pow(tongueTargetX - tongueEndX, 2)
               + Math.pow(tongueTargetY - tongueEndY, 2));
 
+      System.out.println("🔍 [DEBUG] Distância da língua ao alvo: " + distToTarget + " (precisa <= 60)");
+
       // Se a ponta da língua chegou perto do alvo, verificar se player ainda está lá
       if (distToTarget <= 60) {
         // Verificar se o player ATUAL está perto da posição alvo (hitbox maior)
         double playerDistToTarget = Math.sqrt(
             Math.pow(target.getX() - tongueTargetX, 2)
                 + Math.pow(target.getY() - tongueTargetY, 2));
+
+        System.out.println("🔍 [DEBUG] Player atual dist do alvo: " + playerDistToTarget + " (precisa <= 60)");
 
         if (playerDistToTarget <= 60) {
           // Player não se moveu, Mimic vai se puxar até ele!
@@ -411,6 +441,7 @@ public class Mimic extends Enemy {
           pullTargetY = target.getY();
           tongueAttacking = false; // Para de estender a língua
           System.out.println("🪢 Mimic agarrou o player! Puxando-se pela língua!");
+          System.out.println("🔍 [DEBUG] Pull ativado! Target: (" + pullTargetX + ", " + pullTargetY + ")");
         } else {
           // Player se moveu e esquivou!
           System.out.println("✅ Player esquivou da língua do Mimic!");
@@ -680,5 +711,20 @@ public class Mimic extends Enemy {
       state = MimicState.REVEALING;
       stateTimer = REVEAL_TIME;
     }
+  }
+
+  /**
+   * Override do método die() para garantir que o player seja liberado ao morrer.
+   */
+  @Override
+  protected void die() {
+    // Liberar o player se estiver preso
+    if (playerGrabbed) {
+      releasePlayer();
+      System.out.println("💀 Mimic morreu e liberou o player!");
+    }
+
+    // Chamar o método da classe pai
+    super.die();
   }
 }

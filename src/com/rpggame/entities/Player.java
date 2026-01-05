@@ -88,6 +88,9 @@ public class Player {
   // Controle de movimento durante diálogos
   private boolean inDialog = false;
 
+  // Controle de movimento quando preso por inimigo
+  private boolean grabbed = false;
+
   // Estado de Fúria Berserk
   private boolean berserkActive = false;
 
@@ -252,6 +255,19 @@ public class Player {
       return; // Não processar mais nada
     }
 
+    // Verificar se está preso pelo Mimic ou outro inimigo
+    if (grabbed) {
+      System.out.println("🔒 [DEBUG Player] Movimento BLOQUEADO - Player está grabbed!");
+      // Bloquear completamente o movimento
+      dx = 0;
+      dy = 0;
+      up = down = left = right = false;
+
+      // Ainda processar cooldowns e outras coisas
+      processTimers();
+      return; // Não processar mais nada
+    }
+
     // Resetar velocidade
     dx = 0;
     dy = 0;
@@ -259,8 +275,8 @@ public class Player {
     // Calcular velocidade efetiva (dobra se estiver em fúria berserk)
     double effectiveSpeed = berserkActive ? speed * 2.0 : speed;
 
-    // Só permite movimento se não estiver em diálogo
-    if (!inDialog) {
+    // Só permite movimento se não estiver em diálogo ou preso
+    if (!inDialog && !grabbed) {
       // Calcular movimento baseado nas teclas pressionadas
       if (up)
         dy = -effectiveSpeed;
@@ -314,8 +330,8 @@ public class Player {
       }
     }
 
-    // Processar ataque (só se não estiver em diálogo)
-    if (spacePressed && canAttack && !inDialog) {
+    // Processar ataque (só se não estiver em diálogo ou preso)
+    if (spacePressed && canAttack && !inDialog && !grabbed) {
       attack();
     }
 
@@ -1056,6 +1072,21 @@ public class Player {
    */
   public boolean isInDialog() {
     return inDialog;
+  }
+
+  /**
+   * Define se o jogador está sendo preso por um inimigo (não pode se mover)
+   */
+  public void setGrabbed(boolean grabbed) {
+    System.out.println("🔍 [DEBUG Player] setGrabbed chamado! Valor: " + grabbed + " | Anterior: " + this.grabbed);
+    this.grabbed = grabbed;
+  }
+
+  /**
+   * Retorna se o jogador está sendo preso
+   */
+  public boolean isGrabbed() {
+    return grabbed;
   }
 
   /**
