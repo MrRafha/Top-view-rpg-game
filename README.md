@@ -3,9 +3,18 @@
 Um RPG 2D em Java com sistema completo de habilidades, classes únicas e combate estratégico.
 
 ![Java](https://img.shields.io/badge/Java-11+-orange)
-![Version](https://img.shields.io/badge/Version-2.0.0-brightgreen)
+![Version](https://img.shields.io/badge/Version-2.4.0-brightgreen)
 ![Status](https://img.shields.io/badge/Status-Complete-green)
 ![License](https://img.shields.io/badge/License-MIT-blue)
+---
+
+## 🎥 Demonstração da Gameplay
+
+[![Veja o vídeo no YouTube](https://img.youtube.com/vi/wAn6dHbmP9M/0.jpg)](https://youtu.be/wAn6dHbmP9M)
+
+📌 **Clique na imagem acima** para assistir ao vídeo da gameplay.
+
+---
 
 ## 🚀 Como Jogar
 
@@ -13,10 +22,10 @@ Um RPG 2D em Java com sistema completo de habilidades, classes únicas e combate
 
 **Baixe e jogue em segundos:**
 
-1. **Baixe** o arquivo `RPG-Game-v2.0.jar` na pasta [releases](https://github.com/MrRafha/Top-view-rpg-game/releases)
+1. **Baixe** o arquivo `RPG-Game-v2.4.0.jar` na pasta [releases](https://github.com/MrRafha/Top-view-rpg-game/releases)
 2. **Execute** o JAR:
    ```bash
-   java -jar RPG-Game-v2.0.jar
+   java -jar RPG-Game-v2.4.0.jar
    ```
 
 **✅ Requisitos**: 
