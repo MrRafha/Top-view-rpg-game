@@ -24,6 +24,9 @@ public class Goblin extends Enemy {
   private boolean fleeing = false;
   private double fearLevel = 0.0; // 0.0 a 1.0
   private int allyCheckTimer = 0;
+  private boolean cachedHasNearbyAllies = false;
+  private static final double ALLY_SUPPORT_RADIUS = GamePanel.TILE_SIZE * 3.0; // ~3 tiles
+  private static final double ALLY_SUPPORT_RADIUS_SQ = ALLY_SUPPORT_RADIUS * ALLY_SUPPORT_RADIUS;
   private static final int ALLY_CHECK_INTERVAL = 30; // Verifica aliados a cada 0.5s
 
   // Sistema de visão para stealth
@@ -283,7 +286,9 @@ public class Goblin extends Enemy {
     updateFacingDirection();
 
     // Atualizar timers
-    allyCheckTimer--;
+    if (allyCheckTimer > 0) {
+      allyCheckTimer--;
+    }
 
     // Verificar decisões do conselho goblin
     boolean allianceActive = goblinCouncil != null && goblinCouncil.isAllianceAgainstPlayerActive();
@@ -366,9 +371,11 @@ public class Goblin extends Enemy {
       boolean shouldEngage = family.shouldPursuePlayer((Player) target);
 
       if (!shouldEngage) {
-        // Líder decidiu não perseguir
-        fleeing = true;
+        // Líder decidiu não perseguir: recuar para patrulha em vez de fuga permanente
+        fleeing = false;
         aggressive = false;
+        fearLevel = Math.max(0.0, fearLevel - 0.02);
+        patrol();
         return;
       }
     }
@@ -377,6 +384,7 @@ public class Goblin extends Enemy {
     if (!hasNearbyAllies) {
       // Sozinho: fugir!
       fleeing = true;
+      aggressive = false;
       fearLevel = Math.min(1.0, fearLevel + 0.02);
     } else {
       // Com aliados: lutar!
@@ -392,7 +400,7 @@ public class Goblin extends Enemy {
         fleeing = false;
         fearLevel = Math.max(0.0, fearLevel - 0.05);
       }
-    } else if (aggressive && hasNearbyAllies) {
+    } else if (aggressive) {
       engagePlayer(distanceToPlayer);
     } else {
       patrol();
@@ -534,22 +542,29 @@ public class Goblin extends Enemy {
    * Verifica se há aliados próximos (mesma família)
    */
   private boolean hasNearbyAllies() {
-    if (allyCheckTimer > 0 || family == null) {
-      return false; // Usar cache para performance
+    if (family == null) {
+      cachedHasNearbyAllies = false;
+      return false;
     }
 
-    allyCheckTimer = ALLY_CHECK_INTERVAL;
+    if (allyCheckTimer <= 0) {
+      cachedHasNearbyAllies = false;
+      allyCheckTimer = ALLY_CHECK_INTERVAL;
 
-    for (Goblin ally : family.getMembers()) {
-      if (ally != this) {
-        double distance = Math.sqrt(
-            Math.pow(ally.getX() - x, 2) + Math.pow(ally.getY() - y, 2));
-        if (distance <= 80.0) { // Aliado próximo
-          return true;
+      for (Goblin ally : family.getMembers()) {
+        if (ally != this) {
+          double allyDx = ally.getX() - x;
+          double allyDy = ally.getY() - y;
+          double distanceSq = allyDx * allyDx + allyDy * allyDy;
+          if (distanceSq <= ALLY_SUPPORT_RADIUS_SQ) { // Aliado próximo (~3 tiles)
+            cachedHasNearbyAllies = true;
+            break;
+          }
         }
       }
     }
-    return false;
+
+    return cachedHasNearbyAllies;
   }
 
   /**
@@ -602,6 +617,8 @@ public class Goblin extends Enemy {
 
   public void setFamily(GoblinFamily family) {
     this.family = family;
+    allyCheckTimer = 0;
+    cachedHasNearbyAllies = false;
   }
 
   public boolean isFleeing() {

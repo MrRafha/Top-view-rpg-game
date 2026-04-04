@@ -460,15 +460,13 @@ public class Player {
       // Barra de vida removida - agora exibida na UI
     }
 
-    // Renderizar projéteis (usar cópia para evitar ConcurrentModificationException)
-    for (Projectile p : new ArrayList<>(projectiles)) {
-      p.render(g, camera);
+    // Renderizar com iteração indexada para evitar alocação por frame.
+    for (int i = 0; i < projectiles.size(); i++) {
+      projectiles.get(i).render(g, camera);
     }
 
-    // Renderizar textos flutuantes (usar cópia para evitar
-    // ConcurrentModificationException)
-    for (FloatingText ft : new ArrayList<>(floatingTexts)) {
-      ft.render(g, camera);
+    for (int i = 0; i < floatingTexts.size(); i++) {
+      floatingTexts.get(i).render(g, camera);
     }
   }
 

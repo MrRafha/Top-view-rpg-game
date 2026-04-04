@@ -6,6 +6,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseEvent;
+import java.util.Arrays;
 
 import com.rpggame.entities.Player;
 import com.rpggame.entities.Chest;
@@ -93,6 +94,17 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   // FPS
   private final int FPS = 60;
   private final long TARGET_TIME = 1000000000 / FPS;
+
+  // Instrumentacao de performance
+  private static final int PERF_SAMPLE_WINDOW = 600;
+  private static final long PERF_LOG_INTERVAL_NANOS = 5_000_000_000L;
+  private final long[] frameCpuSamples = new long[PERF_SAMPLE_WINDOW];
+  private int frameCpuSampleCount = 0;
+  private int frameCpuSampleIndex = 0;
+  private int lateFrameCount = 0;
+  private long fogUpdateNanosAccum = 0;
+  private int fogUpdateCount = 0;
+  private long lastPerfLogNanos = System.nanoTime();
 
   public GamePanel() {
     setPreferredSize(new Dimension(Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT));
@@ -238,24 +250,79 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
   @Override
   public void run() {
-    long startTime, elapsed, wait;
+    long nextFrameTime = System.nanoTime();
 
     while (running) {
-      startTime = System.nanoTime();
+      long frameStart = System.nanoTime();
 
       update();
       repaint();
 
-      elapsed = System.nanoTime() - startTime;
-      wait = TARGET_TIME - elapsed;
+      long frameCpuNanos = System.nanoTime() - frameStart;
 
-      if (wait > 0) {
+      nextFrameTime += TARGET_TIME;
+      long sleepNanos = nextFrameTime - System.nanoTime();
+
+      if (sleepNanos > 0) {
         try {
-          Thread.sleep(wait / 1000000);
+          long sleepMillis = sleepNanos / 1_000_000L;
+          int sleepNanoPart = (int) (sleepNanos % 1_000_000L);
+          Thread.sleep(sleepMillis, sleepNanoPart);
         } catch (InterruptedException e) {
-          e.printStackTrace();
+          Thread.currentThread().interrupt();
+          running = false;
         }
+      } else {
+        // Se atrasou, evita acumular lag indefinidamente e ressincroniza o relógio.
+        nextFrameTime = frameStart;
       }
+
+      recordPerformanceMetrics(frameCpuNanos, sleepNanos <= 0);
+    }
+  }
+
+  private void recordPerformanceMetrics(long frameCpuNanos, boolean lateFrame) {
+    frameCpuSamples[frameCpuSampleIndex] = frameCpuNanos;
+    frameCpuSampleIndex = (frameCpuSampleIndex + 1) % PERF_SAMPLE_WINDOW;
+    if (frameCpuSampleCount < PERF_SAMPLE_WINDOW) {
+      frameCpuSampleCount++;
+    }
+
+    if (lateFrame) {
+      lateFrameCount++;
+    }
+
+    long now = System.nanoTime();
+    if (frameCpuSampleCount < PERF_SAMPLE_WINDOW || now - lastPerfLogNanos < PERF_LOG_INTERVAL_NANOS) {
+      return;
+    }
+
+    long[] sorted = Arrays.copyOf(frameCpuSamples, frameCpuSampleCount);
+    Arrays.sort(sorted);
+
+    double avgMs = 0.0;
+    for (long sample : sorted) {
+      avgMs += sample / 1_000_000.0;
+    }
+    avgMs /= frameCpuSampleCount;
+
+    double p95Ms = sorted[(int) Math.floor((frameCpuSampleCount - 1) * 0.95)] / 1_000_000.0;
+    double p99Ms = sorted[(int) Math.floor((frameCpuSampleCount - 1) * 0.99)] / 1_000_000.0;
+    double latePct = (lateFrameCount * 100.0) / frameCpuSampleCount;
+    double fogAvgMs = fogUpdateCount > 0 ? (fogUpdateNanosAccum / 1_000_000.0) / fogUpdateCount : 0.0;
+
+    System.out.printf("📊 PERF | frameCPU avg=%.2fms p95=%.2fms p99=%.2fms late=%.1f%% | fogAvg=%.3fms updates=%d%n",
+        avgMs, p95Ms, p99Ms, latePct, fogAvgMs, fogUpdateCount);
+
+    lateFrameCount = 0;
+    fogUpdateNanosAccum = 0;
+    fogUpdateCount = 0;
+    lastPerfLogNanos = now;
+  }
+
+  private void requestUiRefresh() {
+    if (!running) {
+      repaint();
     }
   }
 
@@ -305,6 +372,12 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     }
 
     player.update();
+
+    // Atualizar fog apenas no ciclo de update para manter paintComponent leve
+    long fogStart = System.nanoTime();
+    tileMap.updateFogOfWar(player);
+    fogUpdateNanosAccum += (System.nanoTime() - fogStart);
+    fogUpdateCount++;
 
     // Verificar desbloqueio de habilidade pendente
     if (player.getPendingSkillUnlock() > 0 && !showingDialog) {
@@ -737,7 +810,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (e.getKeyCode() == KeyEvent.VK_QUOTE) {
       if (developerConsole != null) {
         developerConsole.toggle();
-        repaint();
+        requestUiRefresh();
       }
       return;
     }
@@ -746,7 +819,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (developerConsole != null && developerConsole.isVisible()) {
       boolean needsRepaint = developerConsole.keyPressed(e);
       if (needsRepaint) {
-        repaint();
+        requestUiRefresh();
       }
       return;
     }
@@ -780,7 +853,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
           System.out.println("❌ Falhou no minigame! Tente novamente.");
           lockpickingMinigame.reset();
         }
-        repaint();
+        requestUiRefresh();
         return;
       } else {
         // Verificar se há baú próximo para interagir
@@ -802,11 +875,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       // Setas para navegar entre Sim/Não
       if (e.getKeyCode() == KeyEvent.VK_UP || e.getKeyCode() == KeyEvent.VK_W) {
         questChoiceBox.selectPrevious();
-        repaint();
+        requestUiRefresh();
         return;
       } else if (e.getKeyCode() == KeyEvent.VK_DOWN || e.getKeyCode() == KeyEvent.VK_S) {
         questChoiceBox.selectNext();
-        repaint();
+        requestUiRefresh();
         return;
       }
 
@@ -827,7 +900,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
           currentTalkingNPC.resetDialog();
           dialogBox.setText(currentTalkingNPC.getCurrentDialog());
         }
-        repaint();
+        requestUiRefresh();
         return;
       }
     }
@@ -854,7 +927,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
           }
         }
 
-        repaint();
+        requestUiRefresh();
       }
       return;
     }
@@ -862,7 +935,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Tecla V para toggle de debug (vision cones)
     if (e.getKeyCode() == KeyEvent.VK_V) {
       showVisionCones = !showVisionCones;
-      repaint();
+      requestUiRefresh();
       return;
     }
 
@@ -871,7 +944,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       if (questUI != null) {
         questUI.updatePosition(getWidth(), getHeight());
         questUI.toggle();
-        repaint();
+        requestUiRefresh();
       }
       return;
     }
@@ -883,7 +956,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
         if (shopUI != null) {
           shopUI.updatePosition(getWidth(), getHeight());
           shopUI.show();
-          repaint();
+          requestUiRefresh();
         }
       } else if (merchantNPC != null && !merchantNPC.isShopUnlocked() && merchantNPC.canInteract()) {
         System.out.println("🏪 Complete a quest do mercador para desbloquear a loja!");
@@ -927,7 +1000,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       }
 
       if (closedSomething) {
-        repaint();
+        requestUiRefresh();
         return;
       }
     }
@@ -935,7 +1008,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Delegar para shopUI se estiver visível
     if (shopUI != null && shopUI.isVisible()) {
       shopUI.keyPressed(e);
-      repaint();
+      requestUiRefresh();
       return;
     }
 
@@ -947,7 +1020,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
           if (mimic.isPlayerGrabbed()) {
             mimic.processEscapeAttempt();
             System.out.println("🎮 Player apertou Space! Progresso: " + mimic.getEscapeProgress() + "/15");
-            repaint();
+            requestUiRefresh();
             return; // Não processar ataque do player
           }
         }
@@ -1190,7 +1263,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
         playingMinigame = true;
         lockpickingMinigame.reset();
         System.out.println("🎮 Iniciando minigame de lockpicking!");
-        repaint();
+        requestUiRefresh();
         return;
       }
     }

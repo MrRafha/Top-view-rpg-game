@@ -17,6 +17,23 @@ import com.rpggame.entities.Player;
  * personalizados
  */
 public class TileMap {
+  private static final Color GRASS_A = new Color(34, 139, 34);
+  private static final Color GRASS_B = new Color(0, 100, 0);
+  private static final Color STONE_A = new Color(128, 128, 128);
+  private static final Color STONE_B = new Color(105, 105, 105);
+  private static final Color WALL_COLOR = new Color(64, 64, 64);
+  private static final Color WATER_A = new Color(0, 100, 200);
+  private static final Color WATER_B = new Color(0, 120, 220);
+  private static final Color DIRT_COLOR = new Color(101, 67, 33);
+  private static final Color SAND_COLOR = new Color(238, 203, 173);
+
+  private static final Color BORDER_GRASS = new Color(0, 80, 0);
+  private static final Color BORDER_STONE = new Color(70, 70, 70);
+  private static final Color BORDER_WALL = new Color(32, 32, 32);
+  private static final Color BORDER_WATER = new Color(0, 70, 140);
+  private static final Color BORDER_DIRT = new Color(80, 50, 20);
+  private static final Color BORDER_SAND = new Color(200, 170, 140);
+
   private final int TILE_SIZE = GamePanel.TILE_SIZE;
   private final int MAP_WIDTH = GamePanel.MAP_WIDTH;
   private final int MAP_HEIGHT = GamePanel.MAP_HEIGHT;
@@ -26,6 +43,8 @@ public class TileMap {
 
   // Sistema de fog of war
   private FogOfWar fogOfWar;
+  private int lastFogPlayerTileX = -1;
+  private int lastFogPlayerTileY = -1;
 
   // Cache de sprites dos tiles
   private Map<TileType, BufferedImage> tileSprites;
@@ -141,9 +160,6 @@ public class TileMap {
   }
 
   public void render(Graphics2D g, Camera camera, Player player) {
-    // Atualizar fog of war
-    fogOfWar.updateVisibility(player, map);
-
     // Calcular quais tiles estão visíveis na tela
     int startX = Math.max(0, (int) (camera.getX() / TILE_SIZE));
     int endX = Math.min(MAP_WIDTH, (int) ((camera.getX() + Game.SCREEN_WIDTH) / TILE_SIZE) + 1);
@@ -182,45 +198,65 @@ public class TileMap {
     fogOfWar.render(g, camera, map);
   }
 
+  /**
+   * Atualiza fog of war apenas quando o jogador muda de tile.
+   */
+  public void updateFogOfWar(Player player) {
+    if (player == null || fogOfWar == null || map == null) {
+      return;
+    }
+
+    int playerTileX = (int) (player.getX() / TILE_SIZE);
+    int playerTileY = (int) (player.getY() / TILE_SIZE);
+
+    if (playerTileX == lastFogPlayerTileX && playerTileY == lastFogPlayerTileY) {
+      return;
+    }
+
+    fogOfWar.updateVisibility(player, map);
+    lastFogPlayerTileX = playerTileX;
+    lastFogPlayerTileY = playerTileY;
+  }
+
   private Color getTileColor(TileType tileType, int x, int y) {
     switch (tileType) {
       case GRASS:
         // Variação sutil de cor para grama (GRASS)
-        return (x + y) % 2 == 0 ? new Color(34, 139, 34) : new Color(0, 100, 0);
+        return (x + y) % 2 == 0 ? GRASS_A : GRASS_B;
       case STONE:
         // Pedra cinza com textura rochosa (STONE - não caminhável)
-        return (x + y) % 2 == 0 ? new Color(128, 128, 128) : new Color(105, 105, 105);
+        return (x + y) % 2 == 0 ? STONE_A : STONE_B;
       case WALL:
         // Borda/Parede mais escura e sólida (BORDER)
-        return new Color(64, 64, 64); // Cinza escuro para bordas
+        return WALL_COLOR; // Cinza escuro para bordas
       case WATER:
         // Água com variação azul (mantém como WATER)
-        return (x + y) % 2 == 0 ? new Color(0, 100, 200) : new Color(0, 120, 220);
+        return (x + y) % 2 == 0 ? WATER_A : WATER_B;
       case DIRT:
-        return new Color(101, 67, 33); // Marrom terra
+        return DIRT_COLOR; // Marrom terra
       case SAND:
-        return new Color(238, 203, 173); // Bege
+        return SAND_COLOR; // Bege
       default:
-        return new Color(34, 139, 34); // Verde padrão
+        return GRASS_A; // Verde padrão
     }
   }
 
   private Color getTileBorderColor(TileType tileType) {
     switch (tileType) {
       case GRASS:
-        return new Color(0, 80, 0); // Borda verde escura para grama
+        return BORDER_GRASS; // Borda verde escura para grama
       case STONE:
-        return new Color(70, 70, 70); // Borda cinza mais escura para pedras
+        return BORDER_STONE; // Borda cinza mais escura para pedras
       case WALL:
-        return new Color(32, 32, 32); // Borda preta para bordas/paredes
+        return BORDER_WALL; // Borda preta para bordas/paredes
       case WATER:
-        return new Color(0, 70, 140); // Borda azul escura para água
+        return BORDER_WATER; // Borda azul escura para água
       case DIRT:
-        return new Color(80, 50, 20);
+        return BORDER_DIRT;
       case SAND:
-        return new Color(200, 170, 140);
+        return BORDER_SAND;
       default:
-        return new Color(0, 80, 0);
+        return BORDER_GRASS;
     }
   }
 
@@ -417,6 +453,8 @@ public class TileMap {
     try {
       map = MapLoader.loadMapFromFile(mapPath);
       fogOfWar = new FogOfWar(MAP_WIDTH, MAP_HEIGHT);
+      lastFogPlayerTileX = -1;
+      lastFogPlayerTileY = -1;
       setupPortals(mapId);
       System.out.println("🗺️ Mapa recarregado: " + mapPath);
     } catch (Exception e) {

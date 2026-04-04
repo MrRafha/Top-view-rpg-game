@@ -11,6 +11,9 @@ import com.rpggame.systems.CharacterStats;
  * do jogador
  */
 public class FogOfWar {
+  private static final Color UNEXPLORED_FOG_COLOR = new Color(0, 0, 0, 200);
+  private static final Color EXPLORED_FOG_COLOR = new Color(0, 0, 0, 100);
+
   private boolean[][] explored; // Tiles que já foram explorados
   private boolean[][] visible; // Tiles atualmente visíveis
   private int mapWidth, mapHeight;
@@ -145,11 +148,11 @@ public class FogOfWar {
 
         if (!explored[tileY][tileX]) {
           // Tile não explorado - fog completo
-          g.setColor(new Color(0, 0, 0, 200));
+          g.setColor(UNEXPLORED_FOG_COLOR);
           g.fillRect(screenX, screenY, GamePanel.TILE_SIZE, GamePanel.TILE_SIZE);
         } else if (!visible[tileY][tileX]) {
           // Tile explorado mas não visível - fog parcial
-          g.setColor(new Color(0, 0, 0, 100));
+          g.setColor(EXPLORED_FOG_COLOR);
           g.fillRect(screenX, screenY, GamePanel.TILE_SIZE, GamePanel.TILE_SIZE);
         }
         // Tiles visíveis não têm fog

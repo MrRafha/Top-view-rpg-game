@@ -171,30 +171,25 @@ public class EnemyManager {
     // Atualizar lista de goblins para guerra
     updateGoblinWarLists();
 
-    // Usar cópia da lista para evitar ConcurrentModificationException
-    java.util.List<Enemy> enemiesToUpdate = new java.util.ArrayList<>(enemies);
-
-    for (Enemy enemy : enemiesToUpdate) {
-      if (!enemies.contains(enemy)) {
-        continue; // Inimigo já foi removido
-      }
+    for (int i = enemies.size() - 1; i >= 0; i--) {
+      Enemy enemy = enemies.get(i);
 
       if (enemy.isAlive()) {
         enemy.update(player);
-      } else {
-        // Remove inimigos mortos
-        enemies.remove(enemy);
-        System.out.println("Inimigo removido da lista");
+        continue;
+      }
 
-        // Se for um goblin, remover da família e atualizar quest
-        if (enemy instanceof Goblin) {
-          Goblin goblin = (Goblin) enemy;
-          GoblinFamily family = goblin.getFamily();
-          if (family != null) {
-            boolean familyDefeated = family.removeMember(goblin);
-            if (familyDefeated) {
-              handleFamilyDefeated(family);
-            }
+      enemies.remove(i);
+      System.out.println("Inimigo removido da lista");
+
+      // Se for um goblin, remover da família e atualizar quest
+      if (enemy instanceof Goblin) {
+        Goblin goblin = (Goblin) enemy;
+        GoblinFamily family = goblin.getFamily();
+        if (family != null) {
+          boolean familyDefeated = family.removeMember(goblin);
+          if (familyDefeated) {
+            handleFamilyDefeated(family);
           }
         }
       }
