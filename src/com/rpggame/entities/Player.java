@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import com.rpggame.world.*;
 import com.rpggame.systems.*;
 import com.rpggame.core.GamePanel;
-import com.rpggame.core.Game;
 import com.rpggame.items.Inventory;
 import com.rpggame.items.consumables.HealthPotion;
 import com.rpggame.items.consumables.ManaPotion;
@@ -436,40 +435,6 @@ public class Player {
     }
   }
 
-  public void render(Graphics2D g, Camera camera) {
-    int screenX = (int) (x - camera.getX());
-    int screenY = (int) (y - camera.getY());
-
-    // Só renderizar se estiver na tela
-    if (screenX > -WIDTH && screenX < Game.SCREEN_WIDTH &&
-        screenY > -HEIGHT && screenY < Game.SCREEN_HEIGHT) {
-      // Renderizar sprite atual com tamanho correto
-      BufferedImage spriteToRender = (currentSprite != null) ? currentSprite : spriteRight1;
-      g.drawImage(spriteToRender, screenX, screenY, WIDTH, HEIGHT, null);
-
-      // Renderizar efeito de atordoamento
-      if (stunned) {
-        renderStunEffect(g, screenX + WIDTH / 2, screenY);
-      }
-
-      // DEBUG: Visualizar hitbox (descomente para debug)
-      // g.setColor(Color.RED);
-      // g.drawRect(screenX + HITBOX_OFFSET_X, screenY + HITBOX_OFFSET_Y,
-      // HITBOX_WIDTH, HITBOX_HEIGHT);
-
-      // Barra de vida removida - agora exibida na UI
-    }
-
-    // Renderizar com iteração indexada para evitar alocação por frame.
-    for (int i = 0; i < projectiles.size(); i++) {
-      projectiles.get(i).render(g, camera);
-    }
-
-    for (int i = 0; i < floatingTexts.size(); i++) {
-      floatingTexts.get(i).render(g, camera);
-    }
-  }
-
   private void attack() {
     if (!canAttack)
       return;
@@ -487,13 +452,11 @@ public class Player {
     int weaponBonus = getTotalDamageBonus(); // Bônus da arma equipada
     int totalDamage = baseDamage + bonusDamage + weaponBonus;
 
-    // Debug do dano
     if (weaponBonus > 0) {
       System.out.println("🗡️ Dano total: " + totalDamage + " (Base: " + baseDamage + " + Atributo: " + bonusDamage
           + " + Arma: " + weaponBonus + ")");
     }
 
-    // Criar projétil baseado na classe
     Projectile projectile = null;
     switch (playerClass.toLowerCase()) {
       case "mage":
@@ -503,10 +466,11 @@ public class Player {
         projectile = new Projectile(startX, startY, facing, Projectile.ARROW, totalDamage);
         break;
       case "warrior":
-        // Guerreiro faz um ataque corpo a corpo à frente
         double slashX = startX + Math.cos(facing) * 30;
         double slashY = startY + Math.sin(facing) * 30;
         projectile = new Projectile(slashX, slashY, facing, Projectile.SWORD_SLASH, totalDamage);
+        break;
+      default:
         break;
     }
 
@@ -514,7 +478,6 @@ public class Player {
       projectiles.add(projectile);
     }
 
-    // Verificar se há estruturas vulneráveis próximas para atacar diretamente
     checkAndAttackNearbyStructures(totalDamage);
   }
 
@@ -726,6 +689,18 @@ public class Player {
     return projectiles;
   }
 
+  public BufferedImage getCurrentSprite() {
+    return currentSprite != null ? currentSprite : spriteRight1;
+  }
+
+  public boolean isStunned() {
+    return stunned;
+  }
+
+  public ArrayList<FloatingText> getFloatingTexts() {
+    return floatingTexts;
+  }
+
   // Setters
   public void takeDamage(int damage) {
     // Verificar evasão baseada na destreza
@@ -885,6 +860,14 @@ public class Player {
    */
   public double getFacingDirection() {
     return facing;
+  }
+
+  public boolean isFacingLeft() {
+    return facingLeft;
+  }
+
+  public boolean isMoving() {
+    return isMoving;
   }
 
   private void updatePositionWithCollision(double dx, double dy) {
@@ -1322,40 +1305,6 @@ public class Player {
       if (goldUITimer <= 0) {
         showGoldUI = false;
       }
-    }
-  }
-
-  /**
-   * Renderiza o efeito visual de atordoamento (estrelas girando)
-   */
-  private void renderStunEffect(Graphics2D g, int centerX, int centerY) {
-    // Estrelas amarelas girando ao redor da cabeça do player
-    int numStars = 3;
-    double radius = 25;
-
-    // Usar stunTimer para animação de rotação
-    double angleOffset = (stunTimer / 10.0) * Math.PI * 2; // Gira conforme o tempo
-
-    g.setColor(new Color(255, 255, 0));
-    g.setFont(new Font("Arial", Font.BOLD, 20));
-
-    for (int i = 0; i < numStars; i++) {
-      double angle = (Math.PI * 2 / numStars) * i + angleOffset;
-      int starX = centerX + (int) (Math.cos(angle) * radius);
-      int starY = centerY + (int) (Math.sin(angle) * radius);
-
-      g.drawString("★", starX - 6, starY + 6);
-    }
-
-    // Indicador de tempo restante
-    if (stunTimer > 0) {
-      float alpha = Math.min(1.0f, stunTimer / 30.0f);
-      g.setColor(new Color(255, 255, 255, (int) (200 * alpha)));
-      g.setFont(new Font("Arial", Font.BOLD, 10));
-      String timeText = String.format("%.1fs", stunTimer / 60.0);
-      FontMetrics fm = g.getFontMetrics();
-      int textWidth = fm.stringWidth(timeText);
-      g.drawString(timeText, centerX - textWidth / 2, centerY - 35);
     }
   }
 

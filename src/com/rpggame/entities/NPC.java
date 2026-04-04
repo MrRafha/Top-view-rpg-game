@@ -6,7 +6,6 @@ import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import com.rpggame.world.Camera;
 
 /**
  * Classe para NPCs com os quais o jogador pode interagir e conversar
@@ -86,7 +85,7 @@ public class NPC {
     width = 48;
     height = 48;
     sprite = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-    Graphics2D g = sprite.createGraphics();
+    Graphics g = sprite.getGraphics();
 
     // Desenhar NPC padrão (pessoa simples)
     g.setColor(new Color(100, 100, 200)); // Azul
@@ -109,46 +108,6 @@ public class NPC {
             Math.pow(player.getY() - y, 2));
 
     showInteractionPrompt = distance <= INTERACTION_RANGE;
-  }
-
-  /**
-   * Renderiza o NPC
-   */
-  public void render(Graphics2D g, Camera camera) {
-    int screenX = (int) (x - camera.getX());
-    int screenY = (int) (y - camera.getY());
-
-    // Desenhar sprite com escala maior (1.5x)
-    if (sprite != null) {
-      int scaledWidth = (int) (width * 1.5);
-      int scaledHeight = (int) (height * 1.5);
-      g.drawImage(sprite, screenX, screenY, scaledWidth, scaledHeight, null);
-    }
-
-    // Desenhar indicador de interação (E)
-    if (showInteractionPrompt) {
-      drawInteractionPrompt(g, screenX, screenY);
-    }
-  }
-
-  /**
-   * Desenha o indicador de interação acima do NPC
-   */
-  private void drawInteractionPrompt(Graphics2D g, int screenX, int screenY) {
-    int promptY = screenY - 15;
-    int promptX = screenX + (int) (width * 1.5) / 2; // Ajustado para o tamanho escalado
-
-    // Fundo do prompt
-    g.setColor(new Color(0, 0, 0, 180));
-    g.fillRoundRect(promptX - 12, promptY - 12, 24, 20, 5, 5);
-
-    // Borda branca
-    g.setColor(Color.WHITE);
-    g.drawRoundRect(promptX - 12, promptY - 12, 24, 20, 5, 5);
-
-    // Letra E
-    g.setFont(new Font("Arial", Font.BOLD, 14));
-    g.drawString("E", promptX - 5, promptY + 4);
   }
 
   /**

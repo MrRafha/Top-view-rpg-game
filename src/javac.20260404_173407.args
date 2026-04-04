@@ -1,0 +1,5 @@
+-d
+..\\bin
+-encoding
+UTF-8
+com\\rpggame\\core\\Game.java

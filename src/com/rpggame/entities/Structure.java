@@ -5,7 +5,6 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.InputStream;
-import com.rpggame.world.Camera;
 
 /**
  * Representa uma estrutura no mapa (como cabanas de goblins)
@@ -90,71 +89,10 @@ public class Structure {
             }
 
             if (originalSprite != null) {
-                // Redimensionar para tamanho adequado
-                sprite = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-                Graphics2D g2d = sprite.createGraphics();
-                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                        RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-                g2d.drawImage(originalSprite, 0, 0, width, height, null);
-                g2d.dispose();
+                sprite = originalSprite;
             }
         } catch (Exception e) {
             System.out.println("Erro ao carregar sprite da estrutura: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Renderiza a estrutura
-     */
-    public void render(Graphics2D g, Camera camera) {
-        int screenX = (int) (x - camera.getX());
-        int screenY = (int) (y - camera.getY());
-
-        if (isDestroyed) {
-            // Renderizar cabana destruída (cinza escuro apenas)
-            g.setColor(new Color(64, 64, 64));
-            g.fillRect(screenX, screenY, width, height);
-            g.setColor(Color.RED);
-            g.drawRect(screenX, screenY, width - 1, height - 1);
-        } else {
-            if (sprite != null) {
-                g.drawImage(sprite, screenX, screenY, null);
-            } else {
-                // Fallback: retângulo colorido
-                g.setColor(new Color(139, 69, 19)); // Marrom
-                g.fillRect(screenX, screenY, width, height);
-                g.setColor(Color.BLACK);
-                g.drawRect(screenX, screenY, width - 1, height - 1);
-            }
-
-            // Borda vermelha se vulnerável
-            if (isVulnerable) {
-                g.setColor(Color.RED);
-                g.setStroke(new BasicStroke(2));
-                g.drawRect(screenX - 1, screenY - 1, width + 1, height + 1);
-                g.setStroke(new BasicStroke(1)); // Restaurar stroke padrão
-            }
-
-            // Barra de vida se vulnerável e danificada
-            if (isVulnerable && currentHealth < maxHealth) {
-                int barWidth = width;
-                int barHeight = 6;
-                int barX = screenX;
-                int barY = screenY - 10;
-
-                // Fundo da barra
-                g.setColor(Color.RED);
-                g.fillRect(barX, barY, barWidth, barHeight);
-
-                // Vida atual
-                int healthWidth = (int) ((double) currentHealth / maxHealth * barWidth);
-                g.setColor(Color.GREEN);
-                g.fillRect(barX, barY, healthWidth, barHeight);
-
-                // Borda da barra
-                g.setColor(Color.BLACK);
-                g.drawRect(barX, barY, barWidth, barHeight);
-            }
         }
     }
 
@@ -205,6 +143,10 @@ public class Structure {
 
     public Point getCenter() {
         return new Point((int) (x + width / 2), (int) (y + height / 2));
+    }
+
+    public BufferedImage getSprite() {
+        return sprite;
     }
 
     /**

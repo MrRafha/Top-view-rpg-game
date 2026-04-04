@@ -1,6 +1,10 @@
 package com.rpggame.entities;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.File;
@@ -8,7 +12,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import com.rpggame.core.GamePanel;
-import com.rpggame.world.Camera;
 import com.rpggame.world.TileMap;
 import com.rpggame.systems.EnemyManager;
 
@@ -149,7 +152,7 @@ public abstract class Enemy {
     width = 48;
     height = 48;
     sprite = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-    Graphics2D g = sprite.createGraphics();
+    Graphics g = sprite.getGraphics();
 
     // Fundo vermelho para inimigo
     g.setColor(Color.RED);
@@ -157,7 +160,6 @@ public abstract class Enemy {
 
     // Borda preta
     g.setColor(Color.BLACK);
-    g.setStroke(new BasicStroke(2));
     g.drawRect(1, 1, width - 3, height - 3);
 
     // Desenhar um "G" para Goblin
@@ -497,122 +499,12 @@ public abstract class Enemy {
     System.out.println("Inimigo morreu! XP: " + experienceReward + " | Gold: +2");
   }
 
-  /**
-   * Renderiza o inimigo na tela
-   */
-  public void render(Graphics2D g, Camera camera) {
-    if (!alive)
-      return;
-
-    int screenX = (int) (x - camera.getX());
-    int screenY = (int) (y - camera.getY());
-
-    // Desenhar sprite
-    if (sprite != null) {
-      g.drawImage(sprite, screenX, screenY, null);
-
-      // Se congelado, adicionar overlay azul
-      if (frozen) {
-        Composite oldComposite = g.getComposite();
-        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f));
-        g.setColor(new Color(150, 220, 255));
-        g.fillRect(screenX, screenY, width, height);
-
-        // Desenhar cristais de gelo
-        g.setColor(new Color(200, 240, 255));
-        g.setStroke(new BasicStroke(2));
-        g.drawLine(screenX + width / 2, screenY, screenX + width / 2, screenY + height);
-        g.drawLine(screenX, screenY + height / 2, screenX + width, screenY + height / 2);
-        g.drawLine(screenX + width / 4, screenY + height / 4, screenX + 3 * width / 4, screenY + 3 * height / 4);
-        g.drawLine(screenX + 3 * width / 4, screenY + height / 4, screenX + width / 4, screenY + 3 * height / 4);
-
-        g.setComposite(oldComposite);
-        g.setStroke(new BasicStroke(1));
-      }
-
-      // Se com medo, adicionar overlay amarelo pulsante
-      if (feared) {
-        Composite oldComposite = g.getComposite();
-        float pulse = 0.3f + 0.2f * (float) Math.sin(fearTimer * 0.2);
-        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, pulse));
-        g.setColor(new Color(255, 255, 100));
-        g.fillRect(screenX, screenY, width, height);
-
-        // Desenhar símbolo de exclamação
-        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.8f));
-        g.setColor(new Color(255, 200, 0));
-        g.setFont(new Font("Arial", Font.BOLD, 20));
-        g.drawString("!", screenX + width / 2 - 4, screenY - 5);
-
-        g.setComposite(oldComposite);
-      }
-
-      // Se encantado, adicionar overlay roxo brilhante
-      if (charmed) {
-        Composite oldComposite = g.getComposite();
-        float pulse = 0.4f + 0.3f * (float) Math.sin(charmTimer * 0.15);
-        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, pulse));
-        g.setColor(new Color(200, 100, 255));
-        g.fillRect(screenX, screenY, width, height);
-
-        // Desenhar símbolo de coração
-        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.9f));
-        g.setColor(new Color(220, 150, 255));
-        g.setFont(new Font("Arial", Font.BOLD, 18));
-        g.drawString("♥", screenX + width / 2 - 5, screenY - 5);
-
-        g.setComposite(oldComposite);
-      }
-
-      // Se atordoado, adicionar overlay amarelo escuro com estrelas
-      if (stunned) {
-        Composite oldComposite = g.getComposite();
-        float pulse = 0.3f + 0.2f * (float) Math.sin(stunTimer * 0.3);
-        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, pulse));
-        g.setColor(new Color(255, 200, 0));
-        g.fillRect(screenX, screenY, width, height);
-
-        // Desenhar estrelas girando
-        g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.9f));
-        g.setColor(new Color(255, 255, 100));
-        g.setFont(new Font("Arial", Font.BOLD, 16));
-
-        // Três estrelas girando ao redor da cabeça
-        for (int i = 0; i < 3; i++) {
-          double angle = (System.currentTimeMillis() * 0.003 + i * Math.PI * 2 / 3);
-          int starX = screenX + width / 2 + (int) (Math.cos(angle) * 20) - 4;
-          int starY = screenY - 10 + (int) (Math.sin(angle) * 15);
-          g.drawString("★", starX, starY);
-        }
-
-        g.setComposite(oldComposite);
-      }
-    }
-
-    // Desenhar barra de vida
-    drawHealthBar(g, screenX, screenY);
+  public BufferedImage getSprite() {
+    return sprite;
   }
 
-  /**
-   * Desenha a barra de vida do inimigo
-   */
-  private void drawHealthBar(Graphics2D g, int screenX, int screenY) {
-    int barWidth = width;
-    int barHeight = 4;
-    int barY = screenY - 8;
-
-    // Fundo da barra (vermelho)
-    g.setColor(Color.RED);
-    g.fillRect(screenX, barY, barWidth, barHeight);
-
-    // Vida atual (verde)
-    g.setColor(Color.GREEN);
-    int healthWidth = (int) ((double) currentHealth / maxHealth * barWidth);
-    g.fillRect(screenX, barY, healthWidth, barHeight);
-
-    // Borda da barra
-    g.setColor(Color.WHITE);
-    g.drawRect(screenX, barY, barWidth, barHeight);
+  public String getSpritePath() {
+    return spritePath;
   }
 
   // Getters
@@ -642,6 +534,41 @@ public abstract class Enemy {
 
   public int getExperienceReward() {
     return experienceReward;
+  }
+
+  public int getCurrentHealth() {
+    return currentHealth;
+  }
+
+  public int getMaxHealth() {
+    return maxHealth;
+  }
+
+  public String getEnemyTypeName() {
+    String type = getEnemyType();
+    return type != null ? type : getClass().getSimpleName();
+  }
+
+  /**
+   * Estado de IA compacto para snapshots do cliente.
+   */
+  public String getAiStateName() {
+    if (!alive) {
+      return "DEAD";
+    }
+    if (stunned) {
+      return "STUNNED";
+    }
+    if (frozen) {
+      return "FROZEN";
+    }
+    if (feared) {
+      return "FEARED";
+    }
+    if (charmed) {
+      return "CHARMED";
+    }
+    return aggressive ? "AGGRESSIVE" : "IDLE";
   }
 
   /**

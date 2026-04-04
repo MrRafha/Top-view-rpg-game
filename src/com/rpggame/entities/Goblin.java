@@ -1,7 +1,5 @@
 package com.rpggame.entities;
 
-import java.awt.*;
-import com.rpggame.world.Camera;
 import com.rpggame.core.GamePanel;
 
 /**
@@ -52,11 +50,6 @@ public class Goblin extends Enemy {
   private boolean isAttacking = false;
   private int attackEffectTimer = 0;
   private static final int ATTACK_EFFECT_DURATION = 15; // 0.25 segundos de efeito
-
-  // Efeito visual do slash
-  private double slashStartAngle = 0.0;
-  private double slashEndAngle = 0.0;
-  private int slashRadius = 40;
 
   // Sistema de spawn safety (evitar spawnar preso em paredes)
   private boolean inSpawnSafety = true;
@@ -159,13 +152,6 @@ public class Goblin extends Enemy {
   private void startAttackPreparation() {
     isPreparingAttack = true;
     attackPreparationTimer = ATTACK_PREPARATION_TIME;
-
-    // Calcular ângulos para o slash baseado na direção do target
-    if (target != null) {
-      double angleToTarget = Math.atan2(target.getY() - y, target.getX() - x);
-      slashStartAngle = angleToTarget - Math.PI / 4; // -45 graus
-      slashEndAngle = angleToTarget + Math.PI / 4; // +45 graus
-    }
 
     System.out.println("Goblin preparando ataque! CUIDADO!");
   }
@@ -824,214 +810,6 @@ public class Goblin extends Enemy {
     }
 
     return false;
-  }
-
-  /**
-   * Renderiza o campo de visão do goblin (opcional para debug)
-   */
-  public void renderVisionCone(Graphics2D g, Camera camera) {
-    if (!alive)
-      return;
-
-    // Posição na tela
-    int screenX = (int) (x - camera.getX());
-    int screenY = (int) (y - camera.getY());
-
-    // Só renderizar se o goblin estiver na tela
-    if (screenX < -100 || screenX > 900 || screenY < -100 || screenY > 700) {
-      return;
-    }
-
-    // Cor do cone de visão
-    if (playerSpotted) {
-      g.setColor(new Color(255, 0, 0, 30)); // Vermelho se detectou player
-    } else {
-      g.setColor(new Color(255, 255, 0, 20)); // Amarelo normal
-    }
-
-    // Calcular pontos do cone
-    int coneLength = (int) visionRange;
-    double leftAngle = facingDirection - visionAngle / 2;
-    double rightAngle = facingDirection + visionAngle / 2;
-
-    int[] xPoints = {
-        screenX + width / 2,
-        screenX + width / 2 + (int) (Math.cos(leftAngle) * coneLength),
-        screenX + width / 2 + (int) (Math.cos(rightAngle) * coneLength)
-    };
-
-    int[] yPoints = {
-        screenY + height / 2,
-        screenY + height / 2 + (int) (Math.sin(leftAngle) * coneLength),
-        screenY + height / 2 + (int) (Math.sin(rightAngle) * coneLength)
-    };
-
-    // Desenhar cone de visão
-    g.fillPolygon(xPoints, yPoints, 3);
-
-    // Desenhar área circular de detecção próxima com cores baseadas na
-    // personalidade
-    int circularRadius = (int) circularDetectionRange;
-
-    // Cores diferentes por personalidade
-    Color fillColor, borderColor;
-    switch (personality) {
-      case TIMID:
-        fillColor = new Color(100, 100, 255, 20); // Azul claro para tímidos
-        borderColor = new Color(100, 100, 255, 60);
-        break;
-      case AGGRESSIVE:
-        fillColor = new Color(255, 50, 50, 30); // Vermelho forte para agressivos
-        borderColor = new Color(255, 50, 50, 90);
-        break;
-      case LEADER:
-        fillColor = new Color(255, 215, 0, 35); // Dourado para líderes
-        borderColor = new Color(255, 215, 0, 100);
-        break;
-      default: // COMMON
-        fillColor = new Color(255, 100, 100, 25); // Vermelho padrão
-        borderColor = new Color(255, 100, 100, 80);
-        break;
-    }
-
-    g.setColor(fillColor);
-    g.fillOval(
-        screenX + width / 2 - circularRadius,
-        screenY + height / 2 - circularRadius,
-        circularRadius * 2,
-        circularRadius * 2);
-
-    // Desenhar contorno da área circular
-    g.setColor(borderColor);
-    g.drawOval(
-        screenX + width / 2 - circularRadius,
-        screenY + height / 2 - circularRadius,
-        circularRadius * 2,
-        circularRadius * 2);
-
-    // Desenhar linha de direção
-    g.setColor(playerSpotted ? Color.RED : Color.YELLOW);
-    g.drawLine(
-        screenX + width / 2,
-        screenY + height / 2,
-        screenX + width / 2 + (int) (Math.cos(facingDirection) * 30),
-        screenY + height / 2 + (int) (Math.sin(facingDirection) * 30));
-  }
-
-  /**
-   * Renderiza os efeitos visuais de ataque (preparação e execução)
-   */
-  public void renderAttackEffects(Graphics2D g, Camera camera) {
-    int screenX = (int) (x - camera.getX());
-    int screenY = (int) (y - camera.getY());
-
-    // Só renderizar se o goblin estiver na tela
-    if (screenX < -100 || screenX > 900 || screenY < -100 || screenY > 700) {
-      return;
-    }
-
-    int centerX = screenX + width / 2;
-    int centerY = screenY + height / 2;
-
-    // Renderizar indicador de preparação de ataque
-    if (isPreparingAttack) {
-      renderAttackWarning(g, centerX, centerY);
-    }
-
-    // Renderizar efeito visual do ataque
-    if (isAttacking) {
-      renderAttackSlash(g, centerX, centerY);
-    }
-  }
-
-  /**
-   * Renderiza o aviso visual de que o goblin está prestes a atacar
-   */
-  private void renderAttackWarning(Graphics2D g, int centerX, int centerY) {
-    // Calcular intensidade baseada no tempo restante
-    float intensity = 1.0f - ((float) attackPreparationTimer / ATTACK_PREPARATION_TIME);
-
-    // Cor vermelha piscante mais intensa conforme se aproxima do ataque
-    int alpha = (int) (100 + 155 * intensity); // De 100 a 255
-    Color warningColor = new Color(255, 0, 0, Math.min(255, alpha));
-
-    // Efeito de pulso - círculo que cresce
-    int pulseRadius = (int) (20 + 15 * intensity);
-    g.setColor(warningColor);
-    g.drawOval(centerX - pulseRadius, centerY - pulseRadius,
-        pulseRadius * 2, pulseRadius * 2);
-
-    // Círculo interno mais sólido
-    int innerRadius = (int) (5 + 10 * intensity);
-    Color innerColor = new Color(255, 100, 100, Math.min(255, alpha + 50));
-    g.setColor(innerColor);
-    g.fillOval(centerX - innerRadius, centerY - innerRadius,
-        innerRadius * 2, innerRadius * 2);
-
-    // Indicadores direcionais mostrando onde será o ataque
-    g.setStroke(new BasicStroke(2));
-    g.setColor(new Color(255, 255, 0, Math.min(255, alpha)));
-
-    // Linhas indicando a área de ataque
-    int indicatorLength = slashRadius / 2;
-    for (double angle = slashStartAngle; angle <= slashEndAngle; angle += Math.PI / 8) {
-      int endX = centerX + (int) (Math.cos(angle) * indicatorLength);
-      int endY = centerY + (int) (Math.sin(angle) * indicatorLength);
-      g.drawLine(centerX, centerY, endX, endY);
-    }
-  }
-
-  /**
-   * Renderiza o efeito visual do slash do ataque
-   */
-  private void renderAttackSlash(Graphics2D g, int centerX, int centerY) {
-    // Calcular intensidade baseada no tempo restante do efeito
-    float intensity = (float) attackEffectTimer / ATTACK_EFFECT_DURATION;
-
-    // Cor do slash - branco para amarelo
-    Color slashColor = new Color(255, 255, (int) (100 * intensity), (int) (200 * intensity));
-    g.setColor(slashColor);
-    g.setStroke(new BasicStroke(4));
-
-    // Desenhar múltiplas linhas para criar efeito de slash
-    int numLines = 5;
-    for (int i = 0; i < numLines; i++) {
-      double angle = slashStartAngle + (slashEndAngle - slashStartAngle) * i / (numLines - 1);
-
-      // Variar o comprimento das linhas para criar efeito mais natural
-      int lineLength = slashRadius + (int) (Math.random() * 10 - 5);
-
-      int endX = centerX + (int) (Math.cos(angle) * lineLength);
-      int endY = centerY + (int) (Math.sin(angle) * lineLength);
-
-      // Linha principal do slash
-      g.drawLine(centerX, centerY, endX, endY);
-
-      // Pequenas linhas perpendiculares para dar mais impacto
-      if (i % 2 == 0) {
-        double perpAngle = angle + Math.PI / 2;
-        int perpLength = 8;
-        int perpX1 = endX + (int) (Math.cos(perpAngle) * perpLength);
-        int perpY1 = endY + (int) (Math.sin(perpAngle) * perpLength);
-        int perpX2 = endX - (int) (Math.cos(perpAngle) * perpLength);
-        int perpY2 = endY - (int) (Math.sin(perpAngle) * perpLength);
-
-        g.setStroke(new BasicStroke(2));
-        g.drawLine(perpX1, perpY1, perpX2, perpY2);
-        g.setStroke(new BasicStroke(4));
-      }
-    }
-
-    // Efeito de partículas ao redor do slash
-    g.setColor(new Color(255, 200, 0, (int) (150 * intensity)));
-    for (int i = 0; i < 8; i++) {
-      double particleAngle = slashStartAngle + Math.random() * (slashEndAngle - slashStartAngle);
-      int particleDistance = slashRadius + (int) (Math.random() * 20);
-      int particleX = centerX + (int) (Math.cos(particleAngle) * particleDistance);
-      int particleY = centerY + (int) (Math.sin(particleAngle) * particleDistance);
-
-      g.fillOval(particleX - 2, particleY - 2, 4, 4);
-    }
   }
 
   /**

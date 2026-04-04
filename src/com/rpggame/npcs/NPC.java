@@ -223,6 +223,10 @@ public abstract class NPC {
     return name;
   }
 
+  public String getSpritePath() {
+    return spritePath;
+  }
+
   public double getX() {
     return x;
   }
@@ -263,5 +267,9 @@ public abstract class NPC {
    */
   public void setHasQuestCompleted(boolean hasQuestCompleted) {
     this.hasQuestCompleted = hasQuestCompleted;
+  }
+
+  public boolean hasQuestIndicator() {
+    return hasQuestAvailable || hasQuestCompleted;
   }
 }

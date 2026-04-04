@@ -1,13 +1,16 @@
 package com.rpggame.systems;
 
-import java.awt.*;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 import com.rpggame.entities.*;
 import com.rpggame.enemies.Golem.Golem;
 import com.rpggame.factions.FactionSystem;
-import com.rpggame.world.*;
+import com.rpggame.server.MapSimulation;
+import com.rpggame.world.TileMap;
+import com.rpggame.world.TileType;
 import com.rpggame.core.GamePanel;
 
 /**
@@ -252,100 +255,6 @@ public class EnemyManager {
       // Se já tem o máximo, não spawnar mais
       respawnTimer = RESPAWN_DELAY;
     }
-  }
-
-  /**
-   * Renderiza todos os inimigos.
-   */
-  public void render(Graphics2D g, Camera camera) {
-    for (Enemy enemy : enemies) {
-      if (enemy.isAlive()) {
-        enemy.render(g, camera);
-      }
-    }
-  }
-
-  /**
-   * Renderiza apenas inimigos visíveis pelo jogador.
-   */
-  public void render(Graphics2D g, Camera camera, FogOfWar fogOfWar) {
-    for (Enemy enemy : enemies) {
-      if (enemy.isAlive() && isEnemyVisible(enemy, fogOfWar)) {
-        enemy.render(g, camera);
-      }
-    }
-  }
-
-  /**
-   * Renderiza cones de visão dos goblins (debug)
-   */
-  public void renderVisionCones(Graphics2D g, Camera camera) {
-    for (Enemy enemy : enemies) {
-      if (enemy instanceof Goblin && enemy.isAlive()) {
-        ((Goblin) enemy).renderVisionCone(g, camera);
-      } else if (enemy instanceof Golem && enemy.isAlive()) {
-        renderGolemVisionCone(g, camera, (Golem) enemy);
-      }
-    }
-  }
-
-  /**
-   * Renderiza o campo de visão do Golem (modo debug)
-   */
-  private void renderGolemVisionCone(Graphics2D g, Camera camera, Golem golem) {
-    int screenX = (int) (golem.getX() - camera.getX());
-    int screenY = (int) (golem.getY() - camera.getY());
-    int width = 64;
-    int height = 64;
-    int detectionRange = 200;
-
-    // Círculo de detecção vermelho translúcido
-    g.setColor(new Color(255, 0, 0, 40));
-    g.fillOval(
-        screenX + width / 2 - detectionRange,
-        screenY + height / 2 - detectionRange,
-        detectionRange * 2,
-        detectionRange * 2);
-
-    // Borda do círculo
-    g.setColor(new Color(255, 0, 0, 120));
-    g.setStroke(new java.awt.BasicStroke(2));
-    g.drawOval(
-        screenX + width / 2 - detectionRange,
-        screenY + height / 2 - detectionRange,
-        detectionRange * 2,
-        detectionRange * 2);
-
-    // Label "GOLEM"
-    g.setColor(Color.RED);
-    g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 12));
-    g.drawString("GOLEM", screenX + width / 2 - 25, screenY - 10);
-  }
-
-  /**
-   * Renderiza efeitos visuais de ataque dos goblins
-   */
-  public void renderAttackEffects(Graphics2D g, Camera camera) {
-    for (Enemy enemy : enemies) {
-      if (enemy instanceof Goblin && enemy.isAlive()) {
-        ((Goblin) enemy).renderAttackEffects(g, camera);
-      }
-    }
-  }
-
-  /**
-   * Verifica se um inimigo está visível pelo jogador
-   */
-  private boolean isEnemyVisible(Enemy enemy, FogOfWar fogOfWar) {
-    if (fogOfWar == null)
-      return true;
-
-    // Calcular posição do inimigo em tiles
-    int enemyTileX = (int) (enemy.getX() / GamePanel.TILE_SIZE);
-    int enemyTileY = (int) (enemy.getY() / GamePanel.TILE_SIZE);
-
-    // Verificar se o tile do inimigo está visível
-    return fogOfWar.isVisible(enemyTileX, enemyTileY);
   }
 
   /**
@@ -813,15 +722,6 @@ public class EnemyManager {
   }
 
   /**
-   * Renderiza estruturas
-   */
-  public void renderStructures(Graphics2D g, Camera camera) {
-    for (Structure structure : structures) {
-      structure.render(g, camera);
-    }
-  }
-
-  /**
    * Retorna famílias de goblins
    */
   public ArrayList<GoblinFamily> getGoblinFamilies() {
@@ -1160,7 +1060,65 @@ public class EnemyManager {
   }
 
   /**
-   * Limpa todos os inimigos para troca de mapa
+   * Persiste o estado atual do mapa no MapSimulation antes de trocar de mapa.
+   * Chame este método ANTES de chamar loadFromSimulation para o próximo mapa.
+   */
+  public void saveToSimulation(MapSimulation sim) {
+    synchronized (sim) {
+      sim.getEnemies().clear();
+      sim.getEnemies().addAll(enemies);
+
+      sim.getGoblinFamilies().clear();
+      sim.getGoblinFamilies().addAll(goblinFamilies);
+
+      sim.getStructures().clear();
+      sim.getStructures().addAll(structures);
+
+      sim.setFamiliesInitialized(familiesInitialized);
+      sim.setRespawnTimer(respawnTimer);
+      sim.setFamilyRespawnTimer(familyRespawnTimer);
+    }
+
+    System.out.println("💾 Estado salvo para mapa '" + sim.getMapId() + "': "
+        + enemies.size() + " inimigos, " + goblinFamilies.size() + " famílias");
+  }
+
+  /**
+   * Restaura o estado de simulação de um mapa previamente visitado.
+   * Quando o mapa é visitado pela primeira vez (sim.isFamiliesInitialized() ==
+   * false),
+   * o chamador deve invocar initializeGoblinFamilies() em seguida.
+   */
+  public void loadFromSimulation(MapSimulation sim) {
+    synchronized (sim) {
+      enemies.clear();
+      enemies.addAll(sim.getEnemies());
+
+      goblinFamilies.clear();
+      goblinFamilies.addAll(sim.getGoblinFamilies());
+
+      structures.clear();
+      structures.addAll(sim.getStructures());
+
+      familiesInitialized = sim.isFamiliesInitialized();
+      respawnTimer = sim.getRespawnTimer();
+      familyRespawnTimer = sim.getFamilyRespawnTimer();
+    }
+
+    // Reconectar referências de TileMap e EnemyManager nos inimigos restaurados,
+    // pois o TileMap pode ter sido recarregado desde a última visita.
+    for (Enemy enemy : enemies) {
+      enemy.setTileMap(tileMap);
+      enemy.setEnemyManager(this);
+    }
+
+    System.out.println("📂 Estado restaurado para mapa '" + sim.getMapId() + "': "
+        + enemies.size() + " inimigos, " + goblinFamilies.size() + " famílias");
+  }
+
+  /**
+   * Limpa todos os inimigos para troca de mapa (sem persistência).
+   * Prefira saveToSimulation + loadFromSimulation para preservar estado.
    */
   public void clearAllEnemies() {
     enemies.clear();

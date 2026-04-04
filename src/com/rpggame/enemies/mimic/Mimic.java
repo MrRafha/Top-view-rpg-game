@@ -484,7 +484,6 @@ public class Mimic extends Enemy {
     }
   }
 
-  @Override
   public void render(Graphics2D g, Camera camera) {
     if (!alive) {
       return;

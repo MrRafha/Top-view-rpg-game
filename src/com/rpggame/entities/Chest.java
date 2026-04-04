@@ -1,15 +1,9 @@
 package com.rpggame.entities;
 
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.FontMetrics;
-import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import javax.imageio.ImageIO;
-
-import com.rpggame.world.Camera;
 
 /**
  * Baú que contém itens e requer um minigame para abrir.
@@ -90,42 +84,6 @@ public class Chest {
             + Math.pow(player.getY() - chestY, 2));
 
     playerNearby = distance <= 70;
-  }
-
-  /**
-   * Renderiza o baú.
-   */
-  public void render(Graphics2D g, Camera camera, com.rpggame.world.FogOfWar fogOfWar) {
-    // Verificar se está no campo de visão
-    int tileX = (int) (chestX / 48); // TILE_SIZE = 48
-    int tileY = (int) (chestY / 48);
-
-    if (fogOfWar != null && !fogOfWar.isVisible(tileX, tileY)) {
-      return; // Não renderizar se não estiver visível
-    }
-
-    int screenX = (int) (chestX - camera.getX());
-    int screenY = (int) (chestY - camera.getY());
-
-    BufferedImage currentSprite = opened ? openedSprite : closedSprite;
-
-    if (currentSprite != null) {
-      g.drawImage(currentSprite, screenX, screenY, width, height, null);
-    } else {
-      // Fallback
-      g.setColor(opened ? Color.GRAY : new Color(139, 69, 19));
-      g.fillRect(screenX, screenY, width, height);
-    }
-
-    // Mostrar indicador de interação
-    if (playerNearby && !opened) {
-      g.setColor(Color.YELLOW);
-      g.setFont(new Font("Arial", Font.BOLD, 12));
-      String text = "[F] Abrir";
-      FontMetrics fm = g.getFontMetrics();
-      int textWidth = fm.stringWidth(text);
-      g.drawString(text, screenX + (width - textWidth) / 2, screenY - 5);
-    }
   }
 
   /**

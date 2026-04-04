@@ -32,6 +32,14 @@ import com.rpggame.ui.QuestChoiceBox;
 import com.rpggame.ui.ShopUI;
 import com.rpggame.ui.WorldMapUI;
 import com.rpggame.ui.LockpickingMinigame;
+import com.rpggame.factions.FactionSystem;
+import com.rpggame.factions.FactionType;
+import com.rpggame.factions.TerritoryType;
+import com.rpggame.server.MapSimulation;
+import com.rpggame.server.ServerLoop;
+import com.rpggame.server.WorldState;
+import com.rpggame.shared.WorldSnapshot;
+import com.rpggame.render.SnapshotRenderSystem;
 
 /**
  * Painel principal onde o jogo é renderizado
@@ -85,6 +93,16 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private static final int PORTAL_COOLDOWN_FRAMES = 30;
   private int portalCooldownFrames = 0;
   private boolean portalNeedsClear = false;
+
+  // Sistema de facções
+  private FactionSystem factionSystem;
+
+  // Persistência de mundo: estado de todos os mapas sobrevive a trocas de mapa
+  private WorldState worldState;
+  private ServerLoop serverLoop;
+  private volatile WorldSnapshot previousWorldSnapshot;
+  private volatile WorldSnapshot latestWorldSnapshot;
+  private volatile long latestSnapshotNanos = 0L;
 
   // Sistema de música
   private MusicManager musicManager;
@@ -205,6 +223,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       enemyManager = new EnemyManager(player, tileMap);
       player.setEnemyManager(enemyManager); // Conectar player ao enemy manager
       enemyManager.setCurrentMapId(mapManager.getCurrentMapId());
+      buildFactionSystem();
+      initWorldState();
       enemyManager.initializeGoblinFamilies(tileMap);
     } else {
       // Fallback para posição central se tileMap ainda não foi inicializado
@@ -224,6 +244,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       enemyManager = new EnemyManager(player, tileMap);
       player.setEnemyManager(enemyManager); // Conectar player ao enemy manager
       enemyManager.setCurrentMapId(mapManager.getCurrentMapId());
+      buildFactionSystem();
+      initWorldState();
       enemyManager.initializeGoblinFamilies(tileMap);
 
       // Inicializar UI de slots de habilidades
@@ -259,6 +281,66 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     } else {
       System.err.println("ERRO: TileMap não foi inicializado!");
     }
+  }
+
+  /**
+   * Constrói e conecta o FactionSystem com base nos mapas conhecidos.
+   * Deve ser chamado após criar o EnemyManager e antes de
+   * initializeGoblinFamilies.
+   */
+  private void buildFactionSystem() {
+    factionSystem = new FactionSystem();
+
+    // Registrar todos os mapas com seus tipos de território
+    factionSystem.registerMap("village", FactionType.HUMANS, TerritoryType.HUMAN_SETTLEMENT);
+    factionSystem.registerMap("goblin_village", FactionType.GOBLINS, TerritoryType.GOBLIN_TERRITORY);
+    factionSystem.registerMap("goblin_territories", FactionType.GOBLINS, TerritoryType.GOBLIN_TERRITORY);
+    factionSystem.registerMap("secret_area", FactionType.NEUTRAL, TerritoryType.SPECIAL_AREA);
+    factionSystem.registerMap("neutral_1", FactionType.NEUTRAL, TerritoryType.NEUTRAL_WILDS);
+    factionSystem.registerMap("neutral_2", FactionType.NEUTRAL, TerritoryType.NEUTRAL_WILDS);
+    factionSystem.registerMap("neutral_3", FactionType.NEUTRAL, TerritoryType.NEUTRAL_WILDS);
+    factionSystem.registerMap("neutral_4", FactionType.NEUTRAL, TerritoryType.NEUTRAL_WILDS);
+
+    // Conexões de adjacência (baseadas nas entradas dos templates)
+    factionSystem.connect("village", "secret_area");
+    factionSystem.connect("village", "goblin_territories");
+    factionSystem.connect("goblin_territories", "goblin_village");
+
+    // Valor estratégico — vila humana é o alvo mais valioso para goblins
+    factionSystem.setStrategicValue("village", 80);
+    factionSystem.setStrategicValue("goblin_territories", 50);
+
+    factionSystem.buildLeaderBrain();
+
+    // Conectar ao EnemyManager e QuestManager
+    enemyManager.setFactionSystem(factionSystem);
+    if (player != null && player.getQuestManager() != null) {
+      player.getQuestManager().setFactionSystem(factionSystem);
+    }
+
+    System.out.println("[FactionSystem] Inicializado com " + 8 + " mapas registrados.");
+  }
+
+  /**
+   * Cria o WorldState e o ServerLoop, e registra o mapa inicial como ativo.
+   * Deve ser chamado após buildFactionSystem() e antes de
+   * initializeGoblinFamilies().
+   */
+  private void initWorldState() {
+    // Parar loop anterior (reinício de partida)
+    if (serverLoop != null) {
+      serverLoop.stop();
+    }
+
+    worldState = new WorldState();
+    serverLoop = new ServerLoop(worldState);
+
+    // Marcar mapa inicial como ativo (jogador começa aqui)
+    String startMapId = mapManager.getCurrentMapId();
+    worldState.getOrCreate(startMapId).setHasActivePlayers(true);
+
+    serverLoop.start();
+    System.out.println("[WorldState] Iniciado. Mapa ativo: " + startMapId);
   }
 
   private void startGameLoop() {
@@ -448,6 +530,18 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Verificar se player está sobre um portal
     checkPortalCollision();
+
+    // Publicar contexto para que o ServerLoop gere snapshots consistentes.
+    if (serverLoop != null && mapManager != null) {
+      serverLoop.updateSnapshotContext(mapManager.getCurrentMapId(), player, factionSystem, npcs, chests);
+      WorldSnapshot newSnapshot = serverLoop.getLatestSnapshot();
+      if (newSnapshot != null
+          && (latestWorldSnapshot == null || newSnapshot.getTick() != latestWorldSnapshot.getTick())) {
+        previousWorldSnapshot = latestWorldSnapshot;
+        latestWorldSnapshot = newSnapshot;
+        latestSnapshotNanos = System.nanoTime();
+      }
+    }
   }
 
   @Override
@@ -476,34 +570,25 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Renderizar o mapa
     tileMap.render(g2d, camera, player);
 
-    // Renderizar estruturas (cabanas)
+    WorldSnapshot snapshot = latestWorldSnapshot;
+    WorldSnapshot previousSnapshot = previousWorldSnapshot;
+    double interpolationAlpha = SnapshotRenderSystem.computeInterpolationAlpha(latestSnapshotNanos);
+
+    // Renderizacao orientada a snapshot (Fase 2).
     if (enemyManager != null) {
-      enemyManager.renderStructures(g2d, camera);
+      SnapshotRenderSystem.renderStructures(g2d, camera, enemyManager.getStructures());
     }
+    SnapshotRenderSystem.renderEnemies(g2d, camera, previousSnapshot, snapshot, interpolationAlpha,
+        tileMap.getFogOfWar());
+    SnapshotRenderSystem.renderNpcs(g2d, camera, snapshot);
+    SnapshotRenderSystem.renderChests(g2d, camera, snapshot, tileMap.getFogOfWar());
+    SnapshotRenderSystem.renderProjectiles(g2d, camera, previousSnapshot, snapshot, interpolationAlpha);
+    SnapshotRenderSystem.renderPlayer(g2d, camera, previousSnapshot, snapshot, interpolationAlpha);
 
-    // Renderizar inimigos (apenas os visíveis)
-    if (enemyManager != null) {
-      enemyManager.render(g2d, camera, tileMap.getFogOfWar());
+    // Render de debug continua local no cliente.
+    if (showVisionCones) {
+      renderVisionCones(g2d);
     }
-
-    // Renderizar cones de visão (debug)
-    if (showVisionCones && enemyManager != null) {
-      enemyManager.renderVisionCones(g2d, camera);
-    }
-
-    // Renderizar efeitos visuais de ataque dos goblins
-    if (enemyManager != null) {
-      enemyManager.renderAttackEffects(g2d, camera);
-    }
-
-    // Renderizar NPCs
-    renderNPCs(g2d);
-
-    // Renderizar baús
-    renderChests(g2d);
-
-    // Renderizar o jogador
-    player.render(g2d, camera);
 
     // Renderizar habilidades do jogador (efeitos visuais)
     if (player.getSkillManager() != null) {
@@ -703,14 +788,22 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     int barHeight = 20;
     int barSpacing = 30;
 
+    WorldSnapshot snapshot = latestWorldSnapshot;
+    WorldSnapshot.SnapshotPlayer snapshotPlayer = getPrimarySnapshotPlayer(snapshot);
+
+    int currentHealth = snapshotPlayer != null ? snapshotPlayer.getHp() : player.getCurrentHealth();
+    int maxHealth = snapshotPlayer != null ? snapshotPlayer.getMaxHp() : player.getMaxHealth();
+    int currentMana = snapshotPlayer != null ? snapshotPlayer.getMana() : player.getCurrentMana();
+    int maxMana = snapshotPlayer != null ? snapshotPlayer.getMaxMana() : player.getMaxMana();
+
     // Barra de Vida
     drawBar(g, "VIDA", barX, barY, barWidth, barHeight,
-        player.getCurrentHealth(), player.getMaxHealth(),
+        currentHealth, maxHealth,
         Color.RED, Color.DARK_GRAY);
 
     // Barra de Mana
     drawBar(g, "MANA", barX, barY + barSpacing, barWidth, barHeight,
-        player.getCurrentMana(), player.getMaxMana(),
+        currentMana, maxMana,
         Color.BLUE, Color.DARK_GRAY);
 
     // Barra de XP
@@ -768,6 +861,13 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (developerConsole != null && developerConsole.isVisible()) {
       developerConsole.render((Graphics2D) g, getWidth(), getHeight());
     }
+  }
+
+  private WorldSnapshot.SnapshotPlayer getPrimarySnapshotPlayer(WorldSnapshot snapshot) {
+    if (snapshot == null || snapshot.getPlayers().isEmpty()) {
+      return null;
+    }
+    return snapshot.getPlayers().get(0);
   }
 
   /**
@@ -1305,15 +1405,6 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   }
 
   /**
-   * Renderiza todos os baús.
-   */
-  private void renderChests(Graphics2D g) {
-    for (Chest chest : chests) {
-      chest.render(g, camera, tileMap.getFogOfWar());
-    }
-  }
-
-  /**
    * Verifica interação com baús próximos.
    */
   private void checkChestInteraction() {
@@ -1349,13 +1440,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     }
   }
 
-  /**
-   * Renderiza NPCs
-   */
-  private void renderNPCs(Graphics2D g) {
-    for (NPC npc : npcs) {
-      npc.render(g, camera);
-    }
+  private void renderVisionCones(Graphics2D g) {
+    // Debug visual legado removido da camada de simulacao na Fase 2.
   }
 
   /**
@@ -1585,6 +1671,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Reinicializar fog of war
     tileMap.getFogOfWar().resetFog();
 
+    // Capturar mapa anterior ANTES de atualizar o MapManager
+    String previousMapId = mapManager.getCurrentMapId();
+
     // Atualizar mapa atual no MapManager
     mapManager.setCurrentMap(mapId);
 
@@ -1593,8 +1682,29 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       musicManager.playMusicForMap(mapId);
     }
 
-    // Reinicializar inimigos
-    if (enemyManager != null) {
+    // Persistir e restaurar estado de inimigos via WorldState
+    if (enemyManager != null && worldState != null) {
+      // Salvar estado do mapa que estamos deixando
+      MapSimulation previousSim = worldState.getOrCreate(previousMapId);
+      enemyManager.saveToSimulation(previousSim);
+      previousSim.setHasActivePlayers(false);
+
+      // Carregar (ou inicializar pela primeira vez) o novo mapa
+      enemyManager.setCurrentMapId(mapId);
+      MapSimulation nextSim = worldState.getOrCreate(mapId);
+      nextSim.setHasActivePlayers(true);
+
+      if (nextSim.isFamiliesInitialized()) {
+        // Mapa já foi visitado — restaurar estado persistido
+        enemyManager.loadFromSimulation(nextSim);
+      } else {
+        // Primeira visita — inicializar do zero e salvar imediatamente
+        enemyManager.loadFromSimulation(nextSim); // limpa listas internas
+        enemyManager.initializeGoblinFamilies(tileMap);
+        enemyManager.saveToSimulation(nextSim);
+      }
+    } else if (enemyManager != null) {
+      // Fallback sem WorldState (não deve ocorrer em uso normal)
       enemyManager.clearAllEnemies();
       enemyManager.setCurrentMapId(mapManager.getCurrentMapId());
       enemyManager.initializeGoblinFamilies(tileMap);
