@@ -1,50 +1,68 @@
 package com.rpggame.entities;
 
+import com.rpggame.factions.FactionRelationManager;
+import com.rpggame.factions.GoblinLeaderBrain;
+import com.rpggame.factions.LeaderDecision;
+import com.rpggame.factions.PlayerSuspicionTracker;
+import com.rpggame.factions.TerritoryTracker;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Representa uma família de goblins com território e hierarquia
+ * Representa a família goblin principal do mundo.
+ *
+ * NOTE: Sistema de múltiplas famílias e guerra entre famílias estão
+ * desativados por enquanto. Apenas 1 instância desta classe deve existir.
+ * O controle social agora é feito pelo GoblinLeaderBrain + FactionRelationManager.
  */
 public class GoblinFamily {
     private static int nextFamilyId = 1;
-    
+
     private int familyId;
     private String familyName;
     private ArrayList<Goblin> members;
     private Goblin leader;
     private Rectangle territory;
     private Point hutPosition;
-    
-    // Estados da família
-    private boolean atWar = false;
-    private GoblinFamily enemyFamily = null;
-    private int aggressionLevel = 0; // 0-10, quanto maior, mais agressiva
-    
+
+    // Estados da família — guerra entre famílias DESATIVADA
+    /** @deprecated Múltiplas famílias desativadas. Use FactionWarManager para guerra territorial. */
+    @Deprecated private boolean atWar = false;
+    /** @deprecated Múltiplas famílias desativadas. */
+    @Deprecated private GoblinFamily enemyFamily = null;
+
+    // Novo sistema social
+    private GoblinLeaderBrain leaderBrain;
+
     // Configurações de território
-    private static final int TERRITORY_SIZE = 300; // Território maior para mapa 25x25
-    private static final int MAX_FAMILY_SIZE = 4;
+    private static final int TERRITORY_SIZE = 300;
+    private static final int MAX_FAMILY_SIZE = 6;
     
     /**
-     * Construtor da família de goblins
+     * Construtor da família goblin principal.
      */
     public GoblinFamily(Point hutPosition, String name) {
-        this.familyId = nextFamilyId++;
-        this.familyName = name != null ? name : "Família " + familyId;
+        this.familyId   = nextFamilyId++;
+        this.familyName = name != null ? name : "Família Goblin";
         this.hutPosition = new Point(hutPosition);
         this.members = new ArrayList<>();
-        
-        // Definir território ao redor da cabana
+
         this.territory = new Rectangle(
-            hutPosition.x - TERRITORY_SIZE/2,
-            hutPosition.y - TERRITORY_SIZE/2,
+            hutPosition.x - TERRITORY_SIZE / 2,
+            hutPosition.y - TERRITORY_SIZE / 2,
             TERRITORY_SIZE,
             TERRITORY_SIZE
         );
-        
-        // Nível de agressão aleatório (personalidade da família)
-        this.aggressionLevel = (int)(Math.random() * 5) + 3; // 3-7
+    }
+
+    /**
+     * Inicializa o cérebro do líder (chamar após criar os gerenciadores de facções).
+     */
+    public void initLeaderBrain(FactionRelationManager relations,
+                                PlayerSuspicionTracker suspicion,
+                                TerritoryTracker territory) {
+        this.leaderBrain = new GoblinLeaderBrain(relations, suspicion, territory);
     }
     
     /**
@@ -115,90 +133,48 @@ public class GoblinFamily {
         return isInTerritory(player.getX(), player.getY());
     }
     
-  /**
-   * Toma decisão sobre perseguir o player fora do território
-   */
-  public boolean shouldPursuePlayer(Player player) {
-    if (leader == null) return false;
-    
-    // Se player está no território, sempre perseguir
-    if (isPlayerInTerritory(player)) {
-      return true;
-    }
-    
-    // Fora do território, considerar intimidação do player
-    double intimidationFactor = calculateIntimidationFactor(player);
-    
-    // Decisão baseada na agressividade ajustada pela intimidação
-    double distanceToTerritory = getDistanceToTerritory(player.getX(), player.getY());
-    double pursueThreshold = aggressionLevel * 30 * (1.0 - intimidationFactor); // Intimidação reduz perseguição
-    
-    boolean shouldPursue = distanceToTerritory < pursueThreshold;
-    
-    // Log da decisão do líder
-    if (intimidationFactor > 0.3) {
-      System.out.println("🛡️ " + familyName + " intimidado pelo carisma do jogador! Chance reduzida de perseguição.");
-    }
-    
-    return shouldPursue;
-  }
-  
-  /**
-   * Calcula fator de intimidação baseado no carisma do player
-   */
-  private double calculateIntimidationFactor(Player player) {
-    int playerCharisma = player.getStats().getCharisma();
-    int playerLevel = player.getExperienceSystem().getCurrentLevel();
-    
-    // Fator base do carisma (0.0 a 0.5)
-    double charismaFactor = Math.min(0.5, (playerCharisma - 5) * 0.05); // Carisma 5 = 0%, Carisma 15 = 50%
-    
-    // Bônus de nível (0.0 a 0.3)
-    double levelFactor = Math.min(0.3, (playerLevel - 1) * 0.05); // Cada nível adiciona 5% até 30%
-    
-    // Ajuste pela personalidade do líder
-    double personalityResistance = 1.0;
-    if (leader != null) {
-      switch (leader.getPersonality()) {
-        case AGGRESSIVE:
-          personalityResistance = 0.5; // Mais resistente à intimidação
-          break;
-        case LEADER:
-          personalityResistance = 0.7; // Moderadamente resistente
-          break;
-        case TIMID:
-          personalityResistance = 1.5; // Mais suscetível à intimidação
-          break;
-        case COMMON:
-        default:
-          personalityResistance = 1.0; // Resistência normal
-          break;
-      }
-    }
-    
-    return Math.min(0.8, (charismaFactor + levelFactor) * personalityResistance);
-  }    /**
-     * Calcula distância de um ponto ao território
+    /**
+     * Consulta o líder e retorna a decisão para agir sobre o jogador.
+     * Requer que initLeaderBrain() tenha sido chamado.
      */
-    private double getDistanceToTerritory(double x, double y) {
-        double dx = Math.max(0, Math.max(territory.x - x, x - (territory.x + territory.width)));
-        double dy = Math.max(0, Math.max(territory.y - y, y - (territory.y + territory.height)));
+    public LeaderDecision queryLeaderDecision(Player player, String playerMapId) {
+        if (leaderBrain == null) return LeaderDecision.IGNORE;
+
+        boolean inTerritory = isPlayerInTerritory(player);
+        boolean nearLeader  = leader != null && distanceTo(player.getX(), player.getY(),
+                                  leader.getX(), leader.getY()) < 100;
+
+        return leaderBrain.decide(inTerritory, nearLeader, false, playerMapId);
+    }
+
+    /**
+     * Compatibilidade com código legado do Goblin.java.
+     * Delega ao novo sistema de liderança quando disponível;
+     * caso contrário usa heurística simples de território.
+     */
+    public boolean shouldPursuePlayer(Player player) {
+        if (leaderBrain != null) {
+            LeaderDecision decision = queryLeaderDecision(player, "");
+            return decision == LeaderDecision.ATTACK || decision == LeaderDecision.EXPEL;
+        }
+        // Fallback: perseguir apenas dentro do território
+        return isPlayerInTerritory(player);
+    }
+
+    private double distanceTo(double x1, double y1, double x2, double y2) {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
         return Math.sqrt(dx * dx + dy * dy);
     }
-    
-    /**
-     * Declara guerra contra outra família
-     */
+
+    // Guerra entre famílias — mantido para compatibilidade, mas desativado no novo sistema
     public void declareWarAgainst(GoblinFamily enemy) {
         this.atWar = true;
         this.enemyFamily = enemy;
         enemy.atWar = true;
         enemy.enemyFamily = this;
     }
-    
-    /**
-     * Termina guerra (cessar fogo)
-     */
+
     public void endWar() {
         if (this.atWar && this.enemyFamily != null) {
             this.enemyFamily.atWar = false;
@@ -207,26 +183,22 @@ public class GoblinFamily {
         this.atWar = false;
         this.enemyFamily = null;
     }
-    
-    /**
-     * Verifica se dois goblins são inimigos (famílias diferentes em guerra)
-     */
+
     public boolean isEnemyOf(GoblinFamily otherFamily) {
         return this.atWar && this.enemyFamily == otherFamily;
     }
-    
+
     // Getters e Setters
-    public int getFamilyId() { return familyId; }
-    public String getFamilyName() { return familyName; }
-    public void setFamilyName(String name) { this.familyName = name; }
-    public List<Goblin> getMembers() { return new ArrayList<>(members); }
-    public Goblin getLeader() { return leader; }
-    public Rectangle getTerritory() { return new Rectangle(territory); }
-    public Point getHutPosition() { return new Point(hutPosition); }
-    public boolean isAtWar() { return atWar; }
-    public GoblinFamily getEnemyFamily() { return enemyFamily; }
-    public int getAggressionLevel() { return aggressionLevel; }
-    public int getMemberCount() { return members.size(); }
+    public int getFamilyId()                    { return familyId; }
+    public String getFamilyName()               { return familyName; }
+    public void setFamilyName(String name)      { this.familyName = name; }
+    public List<Goblin> getMembers()            { return new ArrayList<>(members); }
+    public Goblin getLeader()                   { return leader; }
+    public Rectangle getTerritory()             { return new Rectangle(territory); }
+    public Point getHutPosition()               { return new Point(hutPosition); }
+    public boolean isAtWar()                    { return atWar; }
+    public GoblinFamily getEnemyFamily()        { return enemyFamily; }
+    public int getMemberCount()                 { return members.size(); }
     
     /**
      * Verifica se a família foi derrotada (sem membros vivos)

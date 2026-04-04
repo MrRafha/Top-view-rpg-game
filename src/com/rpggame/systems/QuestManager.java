@@ -1,6 +1,7 @@
 package com.rpggame.systems;
 
 import java.util.ArrayList;
+import com.rpggame.factions.FactionSystem;
 import com.rpggame.npcs.NPC;
 
 /**
@@ -9,10 +10,16 @@ import com.rpggame.npcs.NPC;
 public class QuestManager {
   private ArrayList<Quest> allQuests;
   private ArrayList<Quest> activeQuests;
+  private FactionSystem factionSystem;
 
   public QuestManager() {
     this.allQuests = new ArrayList<>();
     this.activeQuests = new ArrayList<>();
+  }
+
+  /** Conecta o sistema de facções para propagar impacto de quests */
+  public void setFactionSystem(FactionSystem factionSystem) {
+    this.factionSystem = factionSystem;
   }
 
   /**
@@ -43,6 +50,9 @@ public class QuestManager {
       if (quest.getId().equals(questId) && quest.isCompleted()) {
         quest.finish();
         activeQuests.remove(quest);
+        if (factionSystem != null) {
+          factionSystem.onQuestCompleted(quest);
+        }
         break;
       }
     }

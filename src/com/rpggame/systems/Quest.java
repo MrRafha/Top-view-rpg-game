@@ -1,35 +1,62 @@
 package com.rpggame.systems;
 
+import com.rpggame.factions.FactionType;
 import com.rpggame.npcs.NPC;
 
 /**
- * Classe que representa uma quest
+ * Classe que representa uma quest.
+ *
+ * Toda quest tem um QuestType (mecânica) e um QuestCategory (impacto).
+ * Apenas quests FACTION_PROGRESSION alteram warProgressGain / território.
  */
 public class Quest {
   private String id;
   private String name;
   private String description;
   private QuestType type;
+  private QuestCategory category;
   private QuestStatus status;
   private NPC questGiver;
 
   // Para quests de tipo KILL
-  private String targetEnemyType; // Tipo de inimigo a matar (ex: "Goblin")
-  private int targetAmount; // Quantidade necessária
-  private int currentAmount; // Quantidade atual
+  private String targetEnemyType;
+  private int targetAmount;
+  private int currentAmount;
 
   // Recompensas
   private int goldReward;
   private int expReward;
+
+  // Impacto em facção
+  private FactionType factionTarget;
+  private int reputationGain;
+  private int warProgressGain;
+  private boolean unlockRaid;
+  private boolean reinforceDefense;
+  private String territoryTarget;
 
   public Quest(String id, String name, String description, QuestType type, NPC questGiver) {
     this.id = id;
     this.name = name;
     this.description = description;
     this.type = type;
+    this.category = QuestCategory.PLAYER_PROGRESSION;
     this.questGiver = questGiver;
     this.status = QuestStatus.AVAILABLE;
     this.currentAmount = 0;
+  }
+
+  /** Configura esta quest como quest de progressão de facção */
+  public void setFactionImpact(FactionType faction, int repGain, int warGain,
+                                boolean unlockRaid, boolean reinforceDefense,
+                                String territoryTarget) {
+    this.category         = QuestCategory.FACTION_PROGRESSION;
+    this.factionTarget    = faction;
+    this.reputationGain   = repGain;
+    this.warProgressGain  = warGain;
+    this.unlockRaid       = unlockRaid;
+    this.reinforceDefense = reinforceDefense;
+    this.territoryTarget  = territoryTarget;
   }
 
   /**
@@ -183,5 +210,38 @@ public class Quest {
 
   public int getExpReward() {
     return expReward;
+  }
+
+  // Getters de categoria e impacto de facção
+  public QuestCategory getCategory() {
+    return category;
+  }
+
+  public boolean isFactionQuest() {
+    return category == QuestCategory.FACTION_PROGRESSION;
+  }
+
+  public FactionType getFactionTarget() {
+    return factionTarget;
+  }
+
+  public int getReputationGain() {
+    return reputationGain;
+  }
+
+  public int getWarProgressGain() {
+    return warProgressGain;
+  }
+
+  public boolean isUnlockRaid() {
+    return unlockRaid;
+  }
+
+  public boolean isReinforceDefense() {
+    return reinforceDefense;
+  }
+
+  public String getTerritoryTarget() {
+    return territoryTarget;
   }
 }

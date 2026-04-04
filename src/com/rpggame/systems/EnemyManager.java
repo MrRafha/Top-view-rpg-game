@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.Random;
 import com.rpggame.entities.*;
 import com.rpggame.enemies.Golem.Golem;
+import com.rpggame.factions.FactionSystem;
 import com.rpggame.world.*;
 import com.rpggame.core.GamePanel;
 
@@ -21,6 +22,7 @@ public class EnemyManager {
   private Random random;
   private GoblinCouncil goblinCouncil;
   private String currentMapId;
+  private FactionSystem factionSystem;
 
   // Sistema do boss Golem
   private boolean golemSpawned = false;
@@ -60,6 +62,11 @@ public class EnemyManager {
    */
   public void setCurrentMapId(String mapId) {
     this.currentMapId = mapId;
+  }
+
+  /** Conecta o sistema de facções — chamar após criar o FactionSystem */
+  public void setFactionSystem(FactionSystem factionSystem) {
+    this.factionSystem = factionSystem;
   }
 
   /**
@@ -115,6 +122,12 @@ public class EnemyManager {
    * Atualiza todos os inimigos.
    */
   public void update() {
+    // Tick do sistema de facções (reputação, suspeita, raids, territórios)
+    if (factionSystem != null && player != null) {
+      factionSystem.tick(currentMapId, player.getX(), player.getY());
+      factionSystem.onEnteredGoblinArea(currentMapId);
+    }
+
     // Atualizar conselho goblin
     goblinCouncil.update();
 
@@ -182,7 +195,7 @@ public class EnemyManager {
       enemies.remove(i);
       System.out.println("Inimigo removido da lista");
 
-      // Se for um goblin, remover da família e atualizar quest
+      // Se for um goblin, remover da família, atualizar quest e reputação
       if (enemy instanceof Goblin) {
         Goblin goblin = (Goblin) enemy;
         GoblinFamily family = goblin.getFamily();
@@ -191,6 +204,9 @@ public class EnemyManager {
           if (familyDefeated) {
             handleFamilyDefeated(family);
           }
+        }
+        if (factionSystem != null) {
+          factionSystem.onKilledGoblin();
         }
       }
     }

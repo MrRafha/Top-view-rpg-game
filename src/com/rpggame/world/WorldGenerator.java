@@ -17,7 +17,6 @@ import java.util.Set;
  * Gera um layout procedural de mundo com regras de continuidade por direção.
  */
 public class WorldGenerator {
-  private static final String HUMAN_VILLAGE_ID = "village";
   private static final String GOBLIN_VILLAGE_ID = "goblin_village";
 
   public WorldLayout generate(Map<String, RoomTemplate> templates, String preferredStartMapId, long seed) {
