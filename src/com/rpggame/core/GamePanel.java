@@ -28,6 +28,7 @@ import com.rpggame.ui.QuestUI;
 import com.rpggame.ui.GoldUI;
 import com.rpggame.ui.QuestChoiceBox;
 import com.rpggame.ui.ShopUI;
+import com.rpggame.ui.WorldMapUI;
 import com.rpggame.ui.LockpickingMinigame;
 
 /**
@@ -68,6 +69,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private GoldUI goldUI;
   private QuestChoiceBox questChoiceBox;
   private ShopUI shopUI;
+  private WorldMapUI worldMapUI;
 
   // Sistema de baús e minigame
   private java.util.ArrayList<Chest> chests;
@@ -132,6 +134,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Criar o mapa de tiles
     tileMap = new TileMap();
+    tileMap.setMapManager(mapManager);
 
     // Carregar o mapa inicial correto baseado no MapManager
     MapManager.MapData initialMap = mapManager.getCurrentMap();
@@ -159,6 +162,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Inicializar sistema de transições
     mapTransition = new MapTransition();
+
+    // Inicializar mapa mundi
+    worldMapUI = new WorldMapUI(mapManager);
 
     // Criar NPCs de exemplo
     createExampleNPCs();
@@ -505,6 +511,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       shopUI.render(g2d);
     }
 
+    // Renderizar mapa mundi por cima do gameplay, sem bloquear o loop
+    if (worldMapUI != null && worldMapUI.isVisible()) {
+      worldMapUI.render(g2d, getWidth(), getHeight());
+    }
+
     // Renderizar transição de mapa (sempre por último, em cima de tudo)
     if (mapTransition != null && mapTransition.isTransitioning()) {
       mapTransition.render(g2d, getWidth(), getHeight());
@@ -793,6 +804,21 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (showingCharacterScreen && characterScreen != null) {
       characterScreen.keyPressed(e);
       return;
+    }
+
+    // Mapa mundi: atalho global durante o jogo
+    if (worldMapUI != null) {
+      if (e.getKeyCode() == KeyEvent.VK_M) {
+        worldMapUI.toggle();
+        repaint();
+        return;
+      }
+
+      if (worldMapUI.isVisible() && e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+        worldMapUI.hide();
+        repaint();
+        return;
+      }
     }
 
     // Se inventário estiver aberto, passa eventos para ele
@@ -1471,18 +1497,13 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       return;
     }
 
-    // Obter dados do mapa de destino
-    MapManager.MapData targetMap = mapManager.getMap(portal.getTargetMapId());
-
-    // Usar spawn point do mapa de destino
-    int spawnX = targetMap.getDefaultSpawnX();
-    int spawnY = targetMap.getDefaultSpawnY();
-
     // Iniciar transição
+    // Usa spawn definido no próprio portal para respeitar o sentido da
+    // entrada/saída entre salas.
     mapTransition.startTransition(
-        targetMap.getFilePath(),
-        spawnX,
-        spawnY);
+        mapManager.getMap(portal.getTargetMapId()).getFilePath(),
+        portal.getTargetX(),
+        portal.getTargetY());
   }
 
   /**
@@ -1491,18 +1512,12 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private void changeMap(String mapPath, int playerX, int playerY) {
     System.out.println("🔄 Trocando mapa...");
 
-    // Determinar ID do mapa baseado no caminho
-    String mapId;
-    if (mapPath.contains("village")) {
-      mapId = "village";
-    } else if (mapPath.contains("secret_area")) {
-      mapId = "secret_area";
-    } else if (mapPath.contains("goblin_territories")) {
-      mapId = "goblin_territories";
-    } else if (mapPath.contains("cave") || mapPath.contains("new_map")) {
-      mapId = "cave";
-    } else {
-      mapId = "goblin_territories"; // Padrão
+    // Determinar ID do mapa via MapManager (compatível com geração procedural)
+    String mapId = mapManager.findMapIdByFilePath(mapPath);
+    if (mapId == null) {
+      // Fallback de segurança para não interromper a transição caso o arquivo não
+      // esteja registrado.
+      mapId = mapManager.getCurrentMapId();
     }
 
     // Recarregar mapa com ID

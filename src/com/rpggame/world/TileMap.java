@@ -52,6 +52,9 @@ public class TileMap {
   // Lista de portais no mapa
   private java.util.List<Portal> portals;
 
+  // Referência para dados do layout procedural
+  private MapManager mapManager;
+
   public TileMap() {
     // Inicializar cache de sprites
     tileSprites = new HashMap<>();
@@ -367,6 +370,59 @@ public class TileMap {
   public void setupPortals(String currentMapId) {
     portals.clear();
 
+    // Caminho novo: usa conexões do layout procedural.
+    if (mapManager != null && mapManager.getWorldLayout() != null) {
+      RoomTemplate currentTemplate = mapManager.getRoomTemplate(currentMapId);
+      if (currentTemplate != null) {
+        java.util.Map<Direction, String> connections = mapManager.getWorldLayout().getConnectionsFrom(currentMapId);
+
+        for (java.util.Map.Entry<Direction, String> entry : connections.entrySet()) {
+          Direction direction = entry.getKey();
+          String targetMapId = entry.getValue();
+          MapManager.MapData targetMap = mapManager.getMap(targetMapId);
+          RoomTemplate targetTemplate = mapManager.getRoomTemplate(targetMapId);
+
+          if (targetMap == null) {
+            continue;
+          }
+
+          int targetSpawnX = targetMap.getDefaultSpawnX();
+          int targetSpawnY = targetMap.getDefaultSpawnY();
+
+          if (targetTemplate != null) {
+            // Prioriza spawn na entrada oposta do mapa destino para manter continuidade de
+            // direção.
+            java.util.List<RoomTemplate.EntrancePoint> targetEntrances = targetTemplate
+                .getEntrances(direction.opposite());
+            if (!targetEntrances.isEmpty()) {
+              RoomTemplate.EntrancePoint targetEntry = targetEntrances.get(0);
+              targetSpawnX = targetEntry.getTileX() * TILE_SIZE;
+              targetSpawnY = targetEntry.getTileY() * TILE_SIZE;
+            }
+          }
+
+          java.util.List<RoomTemplate.EntrancePoint> entrances = currentTemplate.getEntrances(direction);
+          for (RoomTemplate.EntrancePoint entrance : entrances) {
+            // Cada entrada física da sala atual vira um portal com destino já resolvido.
+            portals.add(new Portal(
+                entrance.getTileX(),
+                entrance.getTileY(),
+                targetMapId,
+                targetSpawnX,
+                targetSpawnY,
+                entrance.getLabel()));
+          }
+        }
+
+        if (!portals.isEmpty()) {
+          System.out.println("🧭 Portais carregados via layout procedural: " + portals.size());
+          return;
+        }
+      }
+    }
+
+    // Caminho legado: mantém compatibilidade com mapas antigos que dependem de
+    // detecção por tile.
     // Procurar tiles PORTAL e WALKABLE_WATER no mapa e criar portais
     // automaticamente
     for (int y = 0; y < MAP_HEIGHT; y++) {
@@ -396,21 +452,22 @@ public class TileMap {
             if ((y >= 15 && y <= 16 && x <= 2) || isWaterlilyPortal) {
               // Portal da vitória régia (canto superior esquerdo) -> Secret Area
               // Spawna do lado direito na secret area (onde está o portal de volta)
-              portals.add(new Portal(x, y, "secret_area", 23, 15, "Passagem Secreta"));
+              portals.add(new Portal(x, y, "secret_area", 23 * TILE_SIZE, 15 * TILE_SIZE, "Passagem Secreta"));
               System.out.println("🌀 Portal Village encontrado em (" + x + ", " + y + ") -> Secret Area");
             } else {
               // Portal sul -> Goblin Territories
-              portals.add(new Portal(x, y, "goblin_territories", 0, 0, "Portal dos Territórios"));
+              portals.add(new Portal(x, y, "goblin_territories", 12 * TILE_SIZE, 3 * TILE_SIZE,
+                  "Portal dos Territórios"));
               System.out.println("🌀 Portal Village encontrado em (" + x + ", " + y + ") -> Goblin Territories");
             }
           } else if ("secret_area".equals(currentMapId)) {
             // Secret Area -> Village (volta pelo mesmo portal da vitória régia)
             // Spawna ao lado do portal da vitória régia
-            portals.add(new Portal(x, y, "village", 2, 15, "Portal da Vila"));
+            portals.add(new Portal(x, y, "village", 2 * TILE_SIZE, 15 * TILE_SIZE, "Portal da Vila"));
             System.out.println("🌀 Portal Secret Area encontrado em (" + x + ", " + y + ") -> Village");
           } else {
             // Goblin Territories -> Village
-            portals.add(new Portal(x, y, "village", 0, 0, "Portal da Vila"));
+            portals.add(new Portal(x, y, "village", 12 * TILE_SIZE, 22 * TILE_SIZE, "Portal da Vila"));
             System.out.println("🌀 Portal Goblin encontrado em (" + x + ", " + y + ") -> Village");
           }
         }
@@ -460,5 +517,12 @@ public class TileMap {
     } catch (Exception e) {
       System.err.println("❌ Erro ao recarregar mapa: " + e.getMessage());
     }
+  }
+
+  /**
+   * Injeta referência ao MapManager para setup de portais procedural.
+   */
+  public void setMapManager(MapManager mapManager) {
+    this.mapManager = mapManager;
   }
 }
