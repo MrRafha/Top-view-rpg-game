@@ -217,4 +217,11 @@ public class SkillSlotUI {
   public void setSkillManager(SkillManager skillManager) {
     this.skillManager = skillManager;
   }
+
+  /**
+   * Atualiza a largura de tela usada para posicionar os slots.
+   */
+  public void setScreenWidth(int screenWidth) {
+    this.screenWidth = screenWidth;
+  }
 }

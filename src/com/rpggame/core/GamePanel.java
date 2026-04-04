@@ -2,6 +2,8 @@ package com.rpggame.core;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
@@ -80,6 +82,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   // Sistema de mapas e transições
   private MapManager mapManager;
   private MapTransition mapTransition;
+  private static final int PORTAL_COOLDOWN_FRAMES = 30;
+  private int portalCooldownFrames = 0;
+  private boolean portalNeedsClear = false;
 
   // Sistema de música
   private MusicManager musicManager;
@@ -117,6 +122,14 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Garantir que use layout null por padrão para renderização custom
     setLayout(null);
+
+    // Ajusta elementos de UI quando a janela muda de tamanho.
+    addComponentListener(new ComponentAdapter() {
+      @Override
+      public void componentResized(ComponentEvent e) {
+        updateResponsiveUiLayout();
+      }
+    });
 
     // Garantir que o painel receba foco
     requestFocusInWindow();
@@ -215,7 +228,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
       // Inicializar UI de slots de habilidades
       if (player.getSkillManager() != null) {
-        skillSlotUI = new SkillSlotUI(player.getSkillManager(), Game.SCREEN_WIDTH);
+        int currentWidth = getWidth() > 0 ? getWidth() : Game.SCREEN_WIDTH;
+        skillSlotUI = new SkillSlotUI(player.getSkillManager(), currentWidth);
       }
 
       // Inicializar UI de quests e gold
@@ -224,7 +238,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
       // Inicializar tela de inventário
       inventoryScreen = new InventoryScreen(player.getInventory(), player);
-      inventoryScreen.updateLayout(Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT);
+      int currentWidth = getWidth() > 0 ? getWidth() : Game.SCREEN_WIDTH;
+      int currentHeight = getHeight() > 0 ? getHeight() : Game.SCREEN_HEIGHT;
+      inventoryScreen.updateLayout(currentWidth, currentHeight);
 
       // Inicializar console de desenvolvedor
       developerConsole = new DeveloperConsole(player);
@@ -332,7 +348,24 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     }
   }
 
+  private void updateResponsiveUiLayout() {
+    int currentWidth = getWidth() > 0 ? getWidth() : Game.SCREEN_WIDTH;
+    int currentHeight = getHeight() > 0 ? getHeight() : Game.SCREEN_HEIGHT;
+
+    if (inventoryScreen != null) {
+      inventoryScreen.updateLayout(currentWidth, currentHeight);
+    }
+
+    if (skillSlotUI != null) {
+      skillSlotUI.setScreenWidth(currentWidth);
+    }
+  }
+
   private void update() {
+    if (portalCooldownFrames > 0) {
+      portalCooldownFrames--;
+    }
+
     // Só atualizar se o player foi criado e não estiver na tela de características
     if (player == null || showingCharacterScreen)
       return;
@@ -1115,7 +1148,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       // Criar inventoryScreen se ainda não existe
       if (inventoryScreen == null) {
         inventoryScreen = new InventoryScreen(player.getInventory(), player);
-        inventoryScreen.updateLayout(Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT);
+        int currentWidth = getWidth() > 0 ? getWidth() : Game.SCREEN_WIDTH;
+        int currentHeight = getHeight() > 0 ? getHeight() : Game.SCREEN_HEIGHT;
+        inventoryScreen.updateLayout(currentWidth, currentHeight);
       }
 
       showingCharacterScreen = true;
@@ -1470,7 +1505,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
    * Verifica se o jogador está sobre um portal
    */
   private void checkPortalCollision() {
-    if (player == null || tileMap == null || mapTransition.isTransitioning()) {
+    if (player == null || tileMap == null || mapTransition.isTransitioning() || portalCooldownFrames > 0) {
       return;
     }
 
@@ -1480,6 +1515,15 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Verificar se há portal nesta posição
     Portal portal = tileMap.getPortalAt(playerTileX, playerTileY);
+
+    // Só rearma o sistema de portal quando o jogador sair totalmente do tile de
+    // portal.
+    if (portalNeedsClear) {
+      if (portal == null) {
+        portalNeedsClear = false;
+      }
+      return;
+    }
 
     if (portal != null) {
       System.out.println("🚪 Player entrou no portal: " + portal.getName());
@@ -1504,6 +1548,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
         mapManager.getMap(portal.getTargetMapId()).getFilePath(),
         portal.getTargetX(),
         portal.getTargetY());
+
+    // Evita dupla ativação do mesmo portal durante os primeiros frames da
+    // transição.
+    portalCooldownFrames = PORTAL_COOLDOWN_FRAMES;
+    portalNeedsClear = true;
   }
 
   /**
@@ -1526,7 +1575,12 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Reposicionar player
     if (player != null) {
       player.setPosition(playerX, playerY);
+      movePlayerOffPortalIfNeeded();
     }
+
+    // Bloqueio curto para impedir reentrada imediata ao final da troca de mapa.
+    portalCooldownFrames = PORTAL_COOLDOWN_FRAMES;
+    portalNeedsClear = true;
 
     // Reinicializar fog of war
     tileMap.getFogOfWar().resetFog();
@@ -1551,6 +1605,51 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     createExampleNPCs();
 
     System.out.println("✅ Mapa trocado com sucesso!");
+  }
+
+  /**
+   * Se o jogador surgir exatamente sobre um portal, desloca para um tile vizinho
+   * seguro.
+   */
+  private void movePlayerOffPortalIfNeeded() {
+    if (player == null || tileMap == null) {
+      return;
+    }
+
+    int playerTileX = (int) (player.getX() / TILE_SIZE);
+    int playerTileY = (int) (player.getY() / TILE_SIZE);
+    if (tileMap.getPortalAt(playerTileX, playerTileY) == null) {
+      portalNeedsClear = false;
+      return;
+    }
+
+    int[][] offsets = {
+        { 0, -1 }, { 1, 0 }, { 0, 1 }, { -1, 0 },
+        { 0, -2 }, { 2, 0 }, { 0, 2 }, { -2, 0 }
+    };
+
+    for (int[] offset : offsets) {
+      int nx = playerTileX + offset[0];
+      int ny = playerTileY + offset[1];
+
+      if (nx < 0 || ny < 0 || nx >= tileMap.getWidth() || ny >= tileMap.getHeight()) {
+        continue;
+      }
+      if (!tileMap.isWalkable(nx, ny)) {
+        continue;
+      }
+      if (tileMap.getPortalAt(nx, ny) != null) {
+        continue;
+      }
+
+      player.setPosition(nx * TILE_SIZE, ny * TILE_SIZE);
+      portalNeedsClear = false;
+      return;
+    }
+
+    // Se não houver tile seguro próximo, apenas mantém cooldown mais longo para
+    // evitar loop.
+    portalCooldownFrames = Math.max(portalCooldownFrames, PORTAL_COOLDOWN_FRAMES * 2);
   }
 
 }

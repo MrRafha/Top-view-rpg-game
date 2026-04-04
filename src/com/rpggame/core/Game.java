@@ -26,8 +26,9 @@ public class Game {
     // Configuração da janela principal
     frame = new JFrame(GAME_TITLE);
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    frame.setResizable(false);
+    frame.setResizable(true);
     frame.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+    frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
 
     // Iniciar com o menu principal
     MainMenuScreen mainMenu = new MainMenuScreen(frame);

@@ -34,8 +34,10 @@ public class WorldMapUI {
   private static final Color CONNECTION_COLOR = new Color(110, 140, 190);
   private static final Color DOT_COLOR = new Color(220, 220, 220);
 
-  private static final int PANEL_WIDTH = 1120;
-  private static final int PANEL_HEIGHT = 620;
+  private static final int MIN_PANEL_WIDTH = 760;
+  private static final int MAX_PANEL_WIDTH = 1100;
+  private static final int MIN_PANEL_HEIGHT = 460;
+  private static final int MAX_PANEL_HEIGHT = 700;
   private static final int THUMBNAIL_SCALE = 4;
   private static final int THUMBNAIL_WIDTH = 100;
   private static final int THUMBNAIL_HEIGHT = 100;
@@ -130,14 +132,16 @@ public class WorldMapUI {
     g.setColor(OVERLAY_COLOR);
     g.fillRect(0, 0, screenWidth, screenHeight);
 
-    int panelX = (screenWidth - PANEL_WIDTH) / 2;
-    int panelY = (screenHeight - PANEL_HEIGHT) / 2;
+    int panelWidth = Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, (int) (screenWidth * 0.86)));
+    int panelHeight = Math.max(MIN_PANEL_HEIGHT, Math.min(MAX_PANEL_HEIGHT, (int) (screenHeight * 0.82)));
+    int panelX = (screenWidth - panelWidth) / 2;
+    int panelY = (screenHeight - panelHeight) / 2;
 
     g.setColor(PANEL_COLOR);
-    g.fillRoundRect(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, 24, 24);
+    g.fillRoundRect(panelX, panelY, panelWidth, panelHeight, 24, 24);
     g.setColor(PANEL_BORDER);
     g.setStroke(new BasicStroke(3f));
-    g.drawRoundRect(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, 24, 24);
+    g.drawRoundRect(panelX, panelY, panelWidth, panelHeight, 24, 24);
 
     g.setFont(new Font("Arial", Font.BOLD, 30));
     g.setColor(TITLE_COLOR);
@@ -154,7 +158,7 @@ public class WorldMapUI {
     Set<String> visibleMapIds = new LinkedHashSet<>(mapManager.getDiscoveredMapIds());
     visibleMapIds.add(currentMapId);
 
-    Map<String, Point> nodePixels = projectNodes(panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, layout, visibleMapIds);
+    Map<String, Point> nodePixels = projectNodes(panelX, panelY, panelWidth, panelHeight, layout, visibleMapIds);
     drawLayoutConnections(g, layout, nodePixels, visibleMapIds);
 
     for (Map.Entry<String, Point> nodeEntry : nodePixels.entrySet()) {
@@ -162,7 +166,7 @@ public class WorldMapUI {
       renderNode(g, maps, nodeEntry.getKey(), p.x, p.y, currentMapId);
     }
 
-    drawLegend(g, panelX, panelY, PANEL_WIDTH, PANEL_HEIGHT, visibleMapIds.size(), maps.size());
+    drawLegend(g, panelX, panelY, panelWidth, panelHeight, visibleMapIds.size(), maps.size());
   }
 
   private Map<String, Point> projectNodes(int panelX, int panelY, int panelWidth, int panelHeight, WorldLayout layout,

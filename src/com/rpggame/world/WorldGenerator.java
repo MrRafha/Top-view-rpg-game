@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
@@ -16,6 +17,8 @@ import java.util.Set;
  * Gera um layout procedural de mundo com regras de continuidade por direção.
  */
 public class WorldGenerator {
+  private static final String HUMAN_VILLAGE_ID = "village";
+  private static final String GOBLIN_VILLAGE_ID = "goblin_village";
 
   public WorldLayout generate(Map<String, RoomTemplate> templates, String preferredStartMapId, long seed) {
     if (templates == null || templates.isEmpty()) {
@@ -38,6 +41,13 @@ public class WorldGenerator {
 
     List<String> unconnected = new ArrayList<>(templates.keySet());
     unconnected.remove(startMapId);
+    boolean hasGoblinVillage = templates.containsKey(GOBLIN_VILLAGE_ID) && !GOBLIN_VILLAGE_ID.equals(startMapId);
+
+    // Regra de design: seguramos a vila goblin para conectar por último no ponto
+    // mais distante.
+    if (hasGoblinVillage) {
+      unconnected.remove(GOBLIN_VILLAGE_ID);
+    }
 
     // Constrói uma árvore de conexão garantindo que todo mapa esteja alcançável.
     while (!unconnected.isEmpty()) {
@@ -75,9 +85,19 @@ public class WorldGenerator {
       }
     }
 
-    // Após garantir conectividade total, adicionamos algumas arestas extras para
-    // variar rotas.
-    addExtraConnections(layout, templates, random);
+    Map<String, RoomTemplate> templatesWithoutGoblin = templates;
+    if (hasGoblinVillage) {
+      templatesWithoutGoblin = new LinkedHashMap<>(templates);
+      templatesWithoutGoblin.remove(GOBLIN_VILLAGE_ID);
+    }
+
+    // Após garantir conectividade da parte principal, adicionamos algumas arestas
+    // extras para variar rotas.
+    addExtraConnections(layout, templatesWithoutGoblin, random);
+
+    if (hasGoblinVillage) {
+      attachGoblinVillageAsFarthest(layout, templates, startMapId, random);
+    }
 
     if (!isReachable(layout, startMapId, templates.keySet())) {
       throw new IllegalStateException("Falha ao gerar layout conectado de mundo.");
@@ -247,6 +267,65 @@ public class WorldGenerator {
     }
 
     return candidates.get(random.nextInt(candidates.size()));
+  }
+
+  private void attachGoblinVillageAsFarthest(WorldLayout layout, Map<String, RoomTemplate> templates,
+      String startMapId, Random random) {
+    RoomTemplate goblinTemplate = templates.get(GOBLIN_VILLAGE_ID);
+    if (goblinTemplate == null) {
+      return;
+    }
+
+    Map<String, Integer> distances = computeDistancesFromStart(layout, startMapId);
+    List<String> anchors = new ArrayList<>(distances.keySet());
+    anchors.sort((a, b) -> Integer.compare(distances.get(b), distances.get(a)));
+
+    for (String anchorId : anchors) {
+      RoomTemplate anchorTemplate = templates.get(anchorId);
+      if (anchorTemplate == null) {
+        continue;
+      }
+
+      DirectionPair pair = findAvailableDirectionPair(layout, anchorId, anchorTemplate, goblinTemplate, random);
+      if (pair == null) {
+        continue;
+      }
+
+      layout.connectBidirectional(anchorId, pair.anchorDirection, GOBLIN_VILLAGE_ID, pair.roomDirection);
+      Point anchorPos = layout.getNodePosition(anchorId);
+      Point goblinPos = findFreePosition(layout, anchorPos, pair.anchorDirection);
+      layout.setNodePosition(GOBLIN_VILLAGE_ID, goblinPos.x, goblinPos.y);
+      return;
+    }
+
+    // Fallback defensivo: se não encontrar par perfeito, ainda conecta no mais
+    // distante possível.
+    String fallbackAnchor = anchors.isEmpty() ? startMapId : anchors.get(0);
+    Point anchorPos = layout.getNodePosition(fallbackAnchor);
+    layout.connectBidirectional(fallbackAnchor, Direction.SOUTH, GOBLIN_VILLAGE_ID, Direction.NORTH);
+    layout.setNodePosition(GOBLIN_VILLAGE_ID, anchorPos.x, anchorPos.y + 1);
+  }
+
+  private Map<String, Integer> computeDistancesFromStart(WorldLayout layout, String startMapId) {
+    Map<String, Integer> distances = new LinkedHashMap<>();
+    Queue<String> queue = new ArrayDeque<>();
+    queue.add(startMapId);
+    distances.put(startMapId, 0);
+
+    while (!queue.isEmpty()) {
+      String current = queue.poll();
+      int base = distances.get(current);
+
+      for (String next : layout.getConnectionsFrom(current).values()) {
+        if (distances.containsKey(next)) {
+          continue;
+        }
+        distances.put(next, base + 1);
+        queue.add(next);
+      }
+    }
+
+    return distances;
   }
 
   private boolean isReachable(WorldLayout layout, String startMapId, Set<String> expectedMaps) {

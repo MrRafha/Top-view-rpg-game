@@ -40,17 +40,19 @@ public class MainMenuScreen extends JPanel {
     setBackground(BACKGROUND_COLOR);
     setFocusable(true);
 
-    // Inicializar posições dos botões
-    int buttonWidth = 200;
-    int buttonHeight = 60;
-    int centerX = 512; // Metade de 1024
-    int startY = 400;
+    // Inicializar posições dos botões (responsivo)
+    playButton = new Rectangle(0, 0, 220, 60);
+    exitButton = new Rectangle(0, 0, 220, 60);
+    musicToggleButton = new Rectangle(20, 20, 60, 60);
+    updateLayoutMetrics();
 
-    playButton = new Rectangle(centerX - buttonWidth / 2, startY, buttonWidth, buttonHeight);
-    exitButton = new Rectangle(centerX - buttonWidth / 2, startY + 100, buttonWidth, buttonHeight);
-
-    // Botão de música no canto inferior esquerdo
-    musicToggleButton = new Rectangle(20, 720, 60, 60);
+    addComponentListener(new ComponentAdapter() {
+      @Override
+      public void componentResized(ComponentEvent e) {
+        updateLayoutMetrics();
+        repaint();
+      }
+    });
 
     // Adicionar listeners
     addMouseListener(new MouseAdapter() {
@@ -71,6 +73,20 @@ public class MainMenuScreen extends JPanel {
     musicManager.playMusicByPath("songs/MainOST.wav");
 
     System.out.println("🎮 Menu Principal iniciado");
+  }
+
+  private void updateLayoutMetrics() {
+    int width = Math.max(1, getWidth());
+    int height = Math.max(1, getHeight());
+
+    int buttonWidth = 220;
+    int buttonHeight = 60;
+    int centerX = width / 2;
+    int startY = (int) (height * 0.55);
+
+    playButton.setBounds(centerX - buttonWidth / 2, startY, buttonWidth, buttonHeight);
+    exitButton.setBounds(centerX - buttonWidth / 2, startY + 100, buttonWidth, buttonHeight);
+    musicToggleButton.setBounds(20, Math.max(20, height - 90), 60, 60);
   }
 
   private void handleMouseMove(int x, int y) {
@@ -172,15 +188,16 @@ public class MainMenuScreen extends JPanel {
     String title = "Echoes of Forgotten Quests";
     FontMetrics fm = g.getFontMetrics();
     int titleWidth = fm.stringWidth(title);
-    int titleX = (1024 - titleWidth) / 2;
+    int titleX = (getWidth() - titleWidth) / 2;
+    int titleY = (int) (getHeight() * 0.20);
 
     // Sombra do título
     g.setColor(new Color(0, 0, 0, 150));
-    g.drawString(title, titleX + 3, 153);
+    g.drawString(title, titleX + 3, titleY + 3);
 
     // Título
     g.setColor(TITLE_COLOR);
-    g.drawString(title, titleX, 150);
+    g.drawString(title, titleX, titleY);
 
     // Subtítulo
     Font subtitleFont = new Font("Sans-serif", Font.ITALIC, 18);
@@ -188,7 +205,7 @@ public class MainMenuScreen extends JPanel {
     g.setColor(new Color(180, 180, 180));
     String subtitle = "Um RPG de aventura épica";
     int subtitleWidth = g.getFontMetrics().stringWidth(subtitle);
-    g.drawString(subtitle, (1024 - subtitleWidth) / 2, 200);
+    g.drawString(subtitle, (getWidth() - subtitleWidth) / 2, titleY + 50);
   }
 
   private void drawButton(Graphics2D g, Rectangle button, String text, boolean hover) {
