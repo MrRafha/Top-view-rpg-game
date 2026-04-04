@@ -6,7 +6,6 @@ import java.util.ArrayList;
 
 import com.rpggame.entities.Enemy;
 import com.rpggame.entities.Player;
-import com.rpggame.entities.Projectile;
 import com.rpggame.systems.EnemyManager;
 import com.rpggame.systems.Skill;
 import com.rpggame.world.Camera;
@@ -123,8 +122,6 @@ public class FireballSkill extends Skill {
 
           enemy.takeDamage(damage);
           enemiesHit++;
-
-          // TODO: Adicionar knockback quando o método for implementado na classe Enemy
         }
       }
     }

@@ -24,7 +24,6 @@ public class EnchantmentSkill extends Skill {
     double velocityY;
     boolean active;
     static final double SPEED = 6.0;
-    static final int SIZE = 16;
 
     EnchantmentProjectile(double x, double y, double dirX, double dirY) {
       this.posX = x;

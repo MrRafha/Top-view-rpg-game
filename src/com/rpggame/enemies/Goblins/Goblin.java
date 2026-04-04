@@ -45,7 +45,6 @@ public class Goblin extends Enemy {
             Math.pow(target.getY() - y, 2));
 
     if (distance <= attackRange) {
-      // TODO: Implementar sistema de dano ao jogador
       System.out.println("Goblin atacou o jogador! Dano: " + damage);
 
       // Efeito visual de ataque (opcional)
@@ -57,8 +56,6 @@ public class Goblin extends Enemy {
    * Cria um efeito visual para o ataque
    */
   private void createAttackEffect() {
-    // TODO: Implementar efeito visual de ataque
-    // Por enquanto apenas debug
     System.out.println("*SLASH* Goblin ataca!");
   }
 

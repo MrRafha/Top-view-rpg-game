@@ -228,6 +228,9 @@ public class ArrowRainSkill extends Skill {
     phaseTimer--;
 
     switch (currentPhase) {
+      case NONE:
+        break;
+
       case PREPARING:
         if (phaseTimer <= 0) {
           // Transição para chuva

@@ -15,7 +15,6 @@ import java.io.InputStream;
  */
 public class CharacterCreationScreen extends JPanel implements ActionListener {
   private JFrame parentFrame;
-  // private GamePanel gamePanel; // TODO: Implementar se necessário
 
   // Componentes da interface
   private JLabel titleLabel;
@@ -32,7 +31,6 @@ public class CharacterCreationScreen extends JPanel implements ActionListener {
 
   // Classe selecionada
   private String selectedClass = "";
-  // private BufferedImage selectedSprite; // TODO: Implementar se necessário
 
   // Cores do tema
   private final Color BACKGROUND_COLOR = new Color(20, 30, 40);
@@ -231,15 +229,12 @@ public class CharacterCreationScreen extends JPanel implements ActionListener {
 
     if (command.equals("GUERREIRO")) {
       selectedClass = "Warrior";
-      // selectedSprite = warriorSprite; // TODO: Implementar se necessário
       updateButtonStates();
     } else if (command.equals("MAGO")) {
       selectedClass = "Mage";
-      // selectedSprite = mageSprite; // TODO: Implementar se necessário
       updateButtonStates();
     } else if (command.equals("CAÇADOR")) {
       selectedClass = "Hunter";
-      // selectedSprite = hunterSprite; // TODO: Implementar se necessário
       updateButtonStates();
     } else if (command.equals("CUSTOMIZAR ATRIBUTOS")) {
       startGame();

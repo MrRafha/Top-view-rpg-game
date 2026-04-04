@@ -6,7 +6,6 @@ import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import com.rpggame.core.GamePanel;
 import com.rpggame.world.Camera;
 
 /**

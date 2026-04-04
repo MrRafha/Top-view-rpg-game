@@ -32,8 +32,6 @@ public class Player {
 
   // Controle de animação
   private int animationFrame = 0;
-  // private int animationTimer = 0; // TODO: Implementar animação
-  // private final int ANIMATION_SPEED = 15; // TODO: frames por troca de sprite
   private boolean facingLeft = false; // direção que o player está olhando
   private boolean isMoving = false;
 
@@ -474,28 +472,6 @@ public class Player {
     }
   }
 
-  // TODO: Implementar renderização de barra de vida
-  /*
-   * private void renderHealthBar(Graphics2D g, int screenX, int screenY) {
-   * int barWidth = WIDTH;
-   * int barHeight = 4;
-   * int barY = screenY - 8;
-   * 
-   * // Fundo da barra (vermelho)
-   * g.setColor(Color.RED);
-   * g.fillRect(screenX, barY, barWidth, barHeight);
-   * 
-   * // Vida atual (verde)
-   * g.setColor(Color.GREEN);
-   * int healthWidth = (int) ((double) currentHealth / maxHealth * barWidth);
-   * g.fillRect(screenX, barY, healthWidth, barHeight);
-   * 
-   * // Borda da barra
-   * g.setColor(Color.WHITE);
-   * g.drawRect(screenX, barY, barWidth, barHeight);
-   * }
-   */
-
   private void attack() {
     if (!canAttack)
       return;
@@ -622,21 +598,25 @@ public class Player {
         spacePressed = true;
         break;
       case KeyEvent.VK_1:
+      case KeyEvent.VK_NUMPAD1:
         if (skillManager != null) {
           skillManager.useSkill(1);
         }
         break;
       case KeyEvent.VK_2:
+      case KeyEvent.VK_NUMPAD2:
         if (skillManager != null) {
           skillManager.useSkill(2);
         }
         break;
       case KeyEvent.VK_3:
+      case KeyEvent.VK_NUMPAD3:
         if (skillManager != null) {
           skillManager.useSkill(3);
         }
         break;
       case KeyEvent.VK_4:
+      case KeyEvent.VK_NUMPAD4:
         if (skillManager != null) {
           skillManager.useSkill(4);
         }

@@ -44,10 +44,6 @@ public class Mimic extends Enemy {
   private int stateTimer = 0;
   private boolean hasAttacked = false;
 
-  // Animação de ataque
-  private int attackAnimFrame = 0;
-  private static final int ATTACK_ANIM_SPEED = 10;
-
   // Sistema de ataque com língua
   private boolean tongueAttacking = false;
   private int tongueAttackTimer = 0;
@@ -164,7 +160,6 @@ public class Mimic extends Enemy {
       case ATTACKING:
         // Aviso de ataque (2 segundos)
         stateTimer--;
-        attackAnimFrame++;
 
         // Se está puxando pela língua
         if (pullingToPlayer) {

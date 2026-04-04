@@ -5,7 +5,6 @@ import com.rpggame.items.ItemStack;
 import com.rpggame.items.EquippableItem;
 import com.rpggame.entities.Player;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -40,12 +39,10 @@ public class InventoryScreen extends JPanel implements KeyListener {
 
   // Slot selecionado com seta
   private int selectedSlot = 0;
-  private int hoveredSlot = -1;
 
   // Cores
   private static final Color BG_COLOR = new Color(30, 30, 40, 230);
   private static final Color SLOT_COLOR = new Color(50, 50, 60);
-  private static final Color SLOT_HOVER_COLOR = new Color(70, 70, 90);
   private static final Color SLOT_SELECTED_COLOR = new Color(80, 120, 180);
   private static final Color BORDER_COLOR = new Color(100, 100, 120);
   private static final Color TEXT_COLOR = Color.WHITE;
@@ -285,14 +282,14 @@ public class InventoryScreen extends JPanel implements KeyListener {
   /**
    * Trata clique do mouse (desabilitado - usar WASD + Enter).
    */
-  private void handleMouseClick(MouseEvent e) {
+  private void handleMouseClick(MouseEvent ignored) {
     // Sistema de navegação por teclado - mouse desabilitado
   }
 
   /**
    * Trata movimento do mouse (desabilitado).
    */
-  private void handleMouseMove(MouseEvent e) {
+  private void handleMouseMove(MouseEvent ignored) {
     // Sistema de navegação por teclado - mouse desabilitado
   }
 

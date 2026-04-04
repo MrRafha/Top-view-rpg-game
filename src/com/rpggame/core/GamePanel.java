@@ -6,7 +6,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseEvent;
-import java.util.ArrayList;
 
 import com.rpggame.entities.Player;
 import com.rpggame.entities.Chest;

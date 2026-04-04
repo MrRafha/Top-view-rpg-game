@@ -60,7 +60,6 @@ public class ArcaneMeteorSkill extends Skill {
   private double targetX, targetY; // Posição do alvo no mundo
   private double meteorY; // Posição Y do meteoro durante queda
   private int explosionRadius;
-  private int explosionTimer;
   private ArrayList<BurnEffect> burnEffects;
   private Player currentPlayer;
 
@@ -113,6 +112,9 @@ public class ArcaneMeteorSkill extends Skill {
     phaseTimer--;
 
     switch (currentPhase) {
+      case NONE:
+        break;
+
       case TARGETING:
         if (phaseTimer <= 0) {
           // Transição para fase de queda
@@ -262,6 +264,9 @@ public class ArcaneMeteorSkill extends Skill {
     int halfArea = areaSize / 2;
 
     switch (currentPhase) {
+      case NONE:
+        break;
+
       case TARGETING:
         // Círculo de alvo vermelho pulsante
         float pulse = 0.3f + 0.3f * (float) Math.sin(phaseTimer * 0.2);

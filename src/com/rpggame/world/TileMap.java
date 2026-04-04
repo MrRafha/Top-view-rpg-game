@@ -391,25 +391,6 @@ public class TileMap {
   }
 
   /**
-   * Verifica se o mapa tem areia significativa (indica vila)
-   */
-  private boolean hasSignificantSand() {
-    int sandCount = 0;
-    int totalTiles = 0;
-
-    for (int y = 0; y < MAP_HEIGHT; y++) {
-      for (int x = 0; x < MAP_WIDTH; x++) {
-        totalTiles++;
-        if (map[y][x] == TileType.SAND) {
-          sandCount++;
-        }
-      }
-    }
-
-    return sandCount > (totalTiles * 0.05); // Mais de 5% é areia
-  }
-
-  /**
    * Verifica se o jogador esta sobre um portal
    */
   public Portal getPortalAt(int tileX, int tileY) {

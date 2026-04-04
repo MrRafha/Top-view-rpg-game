@@ -13,7 +13,6 @@ public class Game {
   public static final String GAME_TITLE = "Echoes of Forgotten Quests";
 
   private JFrame frame;
-  // private GamePanel gamePanel; // TODO: Implementar se necessário
 
   /**
    * Construtor da classe Game.

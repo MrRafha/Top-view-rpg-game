@@ -19,8 +19,6 @@ public class PiercingArrowSkill extends Skill {
 
   private static final double ARROW_SPEED = 12.0;
   private static final double ARROW_RANGE = 500.0;
-  private static final int ARROW_WIDTH = 8;
-  private static final int ARROW_HEIGHT = 30;
 
   public PiercingArrowSkill() {
     super("Flecha Perfurante",
@@ -126,8 +124,6 @@ public class PiercingArrowSkill extends Skill {
 
             System.out.println("🎯 Flecha Perfurante atingiu inimigo! (" +
                 hitEnemies.size() + " inimigos perfurados)");
-
-            // TODO: Adicionar knockback quando o método for implementado na classe Enemy
           }
         }
       }

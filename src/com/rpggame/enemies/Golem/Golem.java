@@ -23,9 +23,6 @@ public class Golem extends Enemy {
   private BufferedImage spriteRight;
   private BufferedImage currentSprite;
 
-  // Direção que o Golem está olhando
-  private String facingDirection = "front"; // "front", "back", "left", "right"
-
   // Sistema de ataque
   private static final int ATTACK_WINDUP_TIME = 45; // 0.75 segundos de preparação
   private static final int ATTACK_RECOVERY_TIME = 90; // 1.5 segundos de cooldown
@@ -281,18 +278,14 @@ public class Golem extends Enemy {
     // Determinar direção baseada no maior delta
     if (Math.abs(deltaX) > Math.abs(deltaY)) {
       if (deltaX > 0) {
-        facingDirection = "right";
         currentSprite = spriteRight;
       } else {
-        facingDirection = "left";
         currentSprite = spriteLeft;
       }
     } else {
       if (deltaY > 0) {
-        facingDirection = "front";
         currentSprite = spriteFront;
       } else {
-        facingDirection = "back";
         currentSprite = spriteBack;
       }
     }

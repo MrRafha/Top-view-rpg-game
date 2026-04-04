@@ -65,8 +65,6 @@ public class HorizontalSlashSkill extends Skill {
         int damage = (int) (player.getStats().getStrength() * 2.0 + 15);
         enemy.takeDamage(damage);
         enemiesHit++;
-
-        // TODO: Adicionar knockback quando o método for implementado na classe Enemy
       }
     }
 
