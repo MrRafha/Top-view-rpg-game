@@ -321,39 +321,72 @@ Para multiplayer local (mesma máquina), duas opções ordenadas por simplicidad
 
 **Verificação:** o cliente renderiza corretamente sem acessar estado interno do servidor.
 
-### Fase 3 — Separar input de simulação
+### Fase 3 — Separar input de simulação ✅ CONCLUÍDA
 
-- [ ] Criar `InputPacket`
-- [ ] Fazer `GamePanel` produzir `InputPacket` em vez de setar flags diretamente
-- [ ] Fazer `PlayerSimulation` consumir `InputPacket`
+- [x] Criar `InputPacket` → `src/com/rpggame/shared/InputPacket.java`
+- [x] Criar `ClientInput` → `src/com/rpggame/client/ClientInput.java` — captura KeyEvents, produz InputPacket; única classe que conhece Swing input
+- [x] Criar `PlayerSimulation` → `src/com/rpggame/server/PlayerSimulation.java` — aplica InputPacket às flags do Player via `setInputUp/Down/Left/Right/Attack` e `triggerSkill`
+- [x] `GamePanel.keyPressed/keyReleased` delegam para `ClientInput` em vez de `player.keyPressed` diretamente
+- [x] `GamePanel.update()` chama `clientInput.buildPacket()` → `playerSimulation.applyInput()` antes de `player.update()`
+- [x] `ServerLoop` expõe `setPlayerSimulation()` e `submitInput()` para receber pacotes de input
+- [x] `Player` ganhou `setInputUp/Down/Left/Right/Attack()` e `triggerSkill(int)` para ser controlado por InputPacket
 
 **Verificação:** trocar o input por valores hardcoded no `InputPacket` move o player corretamente.
 
 ### Fase 4 — Transporte in-process (Opção B)
 
-- [ ] Criar `BlockingQueue<WorldSnapshot>` e `BlockingQueue<InputPacket>`
-- [ ] `ServerLoop` publica snapshots na fila
-- [ ] `ClientRenderer` consome snapshots da fila
-- [ ] `ClientInput` publica inputs na fila
-- [ ] `PlayerSimulation` consome inputs da fila
+- [x] Criar `InProcessTransport` com `BlockingQueue<WorldSnapshot>` (cap 2) e `BlockingQueue<InputPacket>` (cap 8) → `src/com/rpggame/server/InProcessTransport.java`
+- [x] `ServerLoop` publica snapshots na fila via `transport.publishSnapshot()` após cada tick
+- [x] `ServerLoop.submitInput()` publica InputPacket na fila via `transport.publishInput()` (além do fallback volatile)
+- [x] `ServerLoop.tickAllMaps()` drena inputs da fila antes de processar ticks
+- [x] `ClientInput` publica InputPacket via `transport.publishInput()` em `buildPacket()` — único ponto de envio
+- [x] `GameClient` criado → `src/com/rpggame/client/GameClient.java` — consome snapshots via `transport.pollSnapshot()`
+- [x] `GamePanel.update()` chama `gameClient.pollSnapshot()` e usa seus snapshots no render em vez de `serverLoop.getLatestSnapshot()`
+- [x] `GamePanel.initWorldState()` conecta transporte a `ClientInput` e `GameClient`
 
 **Verificação:** dois threads (server + client) se comunicando via fila, sem acesso compartilhado ao estado.
 
-### Fase 5 — Segundo jogador local
+> **Estado atual:** servidor e cliente ainda rodam na mesma JVM (in-process).
+> A separação em dois processos vem na Fase 6 (TCP). O contrato já está pronto — apenas o transporte muda.
 
-- [ ] Criar segundo `InputPacket` para o segundo jogador
-- [ ] Criar segundo `PlayerSimulation` no servidor
-- [ ] Criar segundo `ClientRenderer` (janela ou split-screen)
-- [ ] Servidor gerencia dois players no mesmo mapa
+### Fase 5 — Segundo jogador local ✅ CONCLUÍDA
+
+- [x] `Player` ganhou `getPlayerId()` / `setPlayerId()` — identidade única por instância
+- [x] `ServerLoop` mantém `Map<playerId, PlayerSimulation>` e `Map<playerId, InProcessTransport>` via `registerPlayer()` / `unregisterPlayer()`
+- [x] `WorldSnapshotAssembler.assembleMulti()` recebe `List<Player>` e monta snapshot com todos os players
+- [x] `ServerLoop.publishSnapshot()` usa `assembleMulti` e publica em todos os transportes de clientes registrados
+- [x] `GamePanel` ganhou `player2`, `clientInput2`, `playerSimulation2`, `gameClient2` e `player2Enabled`
+- [x] `GamePanel.enablePlayer2(spritePath)` cria P2, registra no ServerLoop e conecta pipeline dedicado
+- [x] `GamePanel.update()` atualiza P2 (input + player.update + gameClient2.pollSnapshot) quando ativo
+- [x] `SnapshotRenderSystem.renderPlayer()` itera todos os players do snapshot; P2+ renderizado em verde; interpolação por ID
+
+**Como ativar P2:** chamar `gamePanel.enablePlayer2("sprites/WarriorPlayer.png")` após criar o personagem.
 
 **Verificação:** dois personagens se movendo independentemente, vendo o mesmo mundo.
 
-### Fase 6 — TCP loopback (Opção A)
+> P2 usa teclas IJKL mapeadas em `ClientInput` — adicionar mapeamento IJKL em próxima sessão se necessário.
 
-- [ ] Criar `ServerNetwork` com `ServerSocket`
-- [ ] Substituir `BlockingQueue` por serialização TCP
-- [ ] Criar `ClientNetwork` com `Socket`
-- [ ] Testar na mesma máquina e depois na mesma LAN
+### Fase 6 — TCP loopback (Opção A) ✅ CONCLUÍDA (implementação)
+
+- [x] Criar `TcpFraming.java` — framing TCP com prefixo de 4 bytes → `src/com/rpggame/server/TcpFraming.java`
+- [x] Criar `JsonUtil.java` — serialização JSON manual sem deps externas para WorldSnapshot/InputPacket → `src/com/rpggame/server/JsonUtil.java`
+- [x] Criar `ServerNetwork.java` com `ServerSocket` e `ClientHandler` por conexão → `src/com/rpggame/server/ServerNetwork.java`
+- [x] Criar `GameServer.java` — entry point headless, sem Swing → `src/com/rpggame/server/GameServer.java`
+- [x] Criar `ClientNetwork.java` — conecta via TCP, alimenta/drena `InProcessTransport` → `src/com/rpggame/client/ClientNetwork.java`
+- [x] `GamePanel` integrado com flag `USE_NETWORK` (false=in-process, true=TCP)
+- [x] Handshake cliente↔servidor implementado
+- [x] `ServerLoop.getOrCreateSimulationForPlayer()` para suporte ao handshake TCP
+- [ ] **Para ativar:** mudar `USE_NETWORK = true` em `GamePanel.java` e rodar `GameServer` como processo separado
+
+**Como rodar em modo TCP:**
+```
+# Terminal 1 — servidor headless
+javac -d bin -encoding UTF-8 -sourcepath src src/com/rpggame/server/GameServer.java
+java -cp bin com.rpggame.server.GameServer
+
+# Terminal 2 — cliente (mude USE_NETWORK=true em GamePanel antes de compilar)
+java -cp bin com.rpggame.core.Game
+```
 
 ---
 

@@ -4,9 +4,13 @@ import com.rpggame.entities.Chest;
 import com.rpggame.entities.Player;
 import com.rpggame.factions.FactionSystem;
 import com.rpggame.npcs.NPC;
+import com.rpggame.shared.InputPacket;
 import com.rpggame.shared.WorldSnapshot;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -41,6 +45,9 @@ public class ServerLoop implements Runnable {
   private final WorldState worldState;
   private final WorldSnapshotAssembler snapshotAssembler;
 
+  // Fase 4: transporte via fila (substitui campos volatile de snapshot/input)
+  private final InProcessTransport transport;
+
   private final AtomicLong tickCounter = new AtomicLong(0L);
 
   private volatile String activeMapId;
@@ -48,7 +55,19 @@ public class ServerLoop implements Runnable {
   private volatile FactionSystem factionSystem;
   private volatile List<NPC> activeNpcs;
   private volatile List<Chest> activeChests;
+
+  // Mantido para compatibilidade com GamePanel.getLatestSnapshot() (in-process)
   private volatile WorldSnapshot latestSnapshot;
+
+  // Fase 5: múltiplos players — mapa de playerId → PlayerSimulation
+  private final Map<String, PlayerSimulation> playerSimulations = new ConcurrentHashMap<>();
+  // Transporte por cliente — mapa de playerId → InProcessTransport
+  private final Map<String, InProcessTransport> clientTransports = new ConcurrentHashMap<>();
+
+  // Compat Fase 3: player-1 direto (mantido para não quebrar GamePanel single-player)
+  private volatile PlayerSimulation playerSimulation;
+  // pendingInput mantido como fallback; Fase 4 usa transport.drainInputs()
+  private volatile InputPacket pendingInput;
 
   private volatile boolean running = false;
   private Thread thread;
@@ -56,6 +75,12 @@ public class ServerLoop implements Runnable {
   public ServerLoop(WorldState worldState) {
     this.worldState = worldState;
     this.snapshotAssembler = new WorldSnapshotAssembler();
+    this.transport = new InProcessTransport();
+  }
+
+  /** Retorna o transporte in-process para uso pelo GameClient/GamePanel. */
+  public InProcessTransport getTransport() {
+    return transport;
   }
 
   public void start() {
@@ -107,7 +132,23 @@ public class ServerLoop implements Runnable {
    * jogadores. O mapa ativo é atualizado pelo game loop principal (GamePanel)
    * para manter sincronismo com o rendering.
    */
+  private final java.util.List<InputPacket> inputDrainBuffer = new java.util.ArrayList<>(8);
+
   private void tickAllMaps(long deltaNanos) {
+    // Fase 4: drenar inputs da fila de transporte
+    inputDrainBuffer.clear();
+    transport.drainInputs(inputDrainBuffer);
+    if (!inputDrainBuffer.isEmpty() && playerSimulation != null) {
+      // Aplica apenas o input mais recente para evitar duplo-movimento
+      playerSimulation.applyInput(inputDrainBuffer.get(inputDrainBuffer.size() - 1));
+    } else {
+      // Fallback Fase 3: campo volatile
+      InputPacket input = pendingInput;
+      if (input != null && playerSimulation != null) {
+        playerSimulation.applyInput(input);
+      }
+    }
+
     for (MapSimulation sim : worldState.getAllSimulations()) {
       // O mapa com jogador ativo é atualizado pelo GamePanel — pular aqui para
       // evitar double-tick e condições de corrida nesta fase (in-process).
@@ -161,6 +202,66 @@ public class ServerLoop implements Runnable {
     return latestSnapshot;
   }
 
+  /**
+   * Registra o PlayerSimulation de P1 (compat Fase 3).
+   */
+  public void setPlayerSimulation(PlayerSimulation playerSimulation) {
+    this.playerSimulation = playerSimulation;
+    playerSimulations.put(playerSimulation.getPlayer().getPlayerId(), playerSimulation);
+  }
+
+  /**
+   * Fase 5: registra um PlayerSimulation para qualquer playerId.
+   * Cria também o InProcessTransport dedicado a esse cliente.
+   * Retorna o transporte para que o GameClient/ClientInput possam ser conectados.
+   */
+  public InProcessTransport registerPlayer(PlayerSimulation sim) {
+    String pid = sim.getPlayer().getPlayerId();
+    playerSimulations.put(pid, sim);
+    InProcessTransport t = new InProcessTransport();
+    clientTransports.put(pid, t);
+    return t;
+  }
+
+  /**
+   * Fase 6: retorna o PlayerSimulation existente para um playerId, ou cria um stub
+   * novo caso ainda nao exista (usado pelo ServerNetwork no handshake TCP).
+   * O stub usa o activePlayer se o playerId for "player-1", caso contrario cria
+   * um Player temporario que sera substituido quando o GamePanel registrar o real.
+   */
+  public PlayerSimulation getOrCreateSimulationForPlayer(String playerId) {
+    PlayerSimulation existing = playerSimulations.get(playerId);
+    if (existing != null) return existing;
+    // Stub minimo: cria um Player headless para o slot de rede
+    com.rpggame.entities.Player stub = new com.rpggame.entities.Player(0, 0, null);
+    stub.setPlayerId(playerId);
+    PlayerSimulation sim = new PlayerSimulation(stub);
+    playerSimulations.put(playerId, sim);
+    return sim;
+  }
+
+  /**
+   * Remove um player do servidor (desconexão / game over).
+   */
+  public void unregisterPlayer(String playerId) {
+    playerSimulations.remove(playerId);
+    clientTransports.remove(playerId);
+  }
+
+  /**
+   * Enfileira um InputPacket via transporte (Fase 4) e também atualiza
+   * o campo volatile de fallback (Fase 3).
+   */
+  public void submitInput(InputPacket packet) {
+    this.pendingInput = packet;           // fallback Fase 3
+    transport.publishInput(packet);       // Fase 4: fila P1
+    // Fase 5: também enfileira no transporte dedicado do player
+    InProcessTransport playerTransport = clientTransports.get(packet.getPlayerId());
+    if (playerTransport != null) {
+      playerTransport.publishInput(packet);
+    }
+  }
+
   private void publishSnapshot() {
     String mapId = activeMapId;
     if (mapId == null) {
@@ -168,13 +269,36 @@ public class ServerLoop implements Runnable {
     }
 
     long tick = tickCounter.incrementAndGet();
-    latestSnapshot = snapshotAssembler.assemble(
+
+    // Coletar todos os players registrados para o snapshot
+    List<Player> allPlayers = new ArrayList<>(playerSimulations.size() + 1);
+    if (activePlayer != null) {
+      allPlayers.add(activePlayer);
+    }
+    for (PlayerSimulation sim : playerSimulations.values()) {
+      Player p = sim.getPlayer();
+      if (p != activePlayer) {
+        allPlayers.add(p);
+      }
+    }
+
+    WorldSnapshot snapshot = snapshotAssembler.assembleMulti(
         tick,
         mapId,
         worldState,
-        activePlayer,
+        allPlayers,
         factionSystem,
         activeNpcs,
         activeChests);
+
+    latestSnapshot = snapshot;
+
+    // Publicar snapshot no transporte padrão (P1 / GamePanel legado)
+    transport.publishSnapshot(snapshot);
+
+    // Fase 5: publicar snapshot em cada transporte de cliente registrado
+    for (InProcessTransport t : clientTransports.values()) {
+      t.publishSnapshot(snapshot);
+    }
   }
 }

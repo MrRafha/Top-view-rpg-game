@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 import com.rpggame.core.GamePanel;
 import com.rpggame.world.TileMap;
 import com.rpggame.systems.EnemyManager;
@@ -19,6 +20,11 @@ import com.rpggame.systems.EnemyManager;
  * Classe base para todos os inimigos do jogo
  */
 public abstract class Enemy {
+  // ID estável por instância — sobrevive a trocas de mapa e é usado pela
+  // interpolação do SnapshotRenderSystem para rastrear o mesmo inimigo entre ticks.
+  private static final AtomicLong ID_COUNTER = new AtomicLong(0);
+  private final String entityId = "enemy-" + ID_COUNTER.incrementAndGet();
+
   protected double x, y;
   protected double dx, dy;
   protected double speed;
@@ -501,6 +507,10 @@ public abstract class Enemy {
 
   public BufferedImage getSprite() {
     return sprite;
+  }
+
+  public String getEntityId() {
+    return entityId;
   }
 
   public String getSpritePath() {

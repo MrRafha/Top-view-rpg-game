@@ -1,3 +1,4 @@
+
 package com.rpggame.world;
 
 import java.util.LinkedHashMap;

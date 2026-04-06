@@ -66,6 +66,56 @@ public class WorldSnapshotAssembler {
         Collections.emptyList());
   }
 
+  /**
+   * Versão multi-player: recebe lista de todos os players ativos no mapa.
+   * Usa o primeiro da lista para montar projéteis (P1 é o dono do transporte local).
+   */
+  public WorldSnapshot assembleMulti(
+      long tick,
+      String activeMapId,
+      WorldState worldState,
+      List<Player> players,
+      FactionSystem factionSystem,
+      List<NPC> activeNpcs,
+      List<Chest> activeChests) {
+
+    if (activeMapId == null || worldState == null) {
+      return new WorldSnapshot(tick, System.nanoTime(), "unknown",
+          Collections.emptyList(), Collections.emptyList(), Collections.emptyList(),
+          Collections.emptyList(), Collections.emptyList(), null,
+          Collections.emptyList(), Collections.emptyList());
+    }
+
+    MapSimulation activeSimulation = worldState.get(activeMapId);
+    Player primaryPlayer = (players != null && !players.isEmpty()) ? players.get(0) : null;
+
+    List<WorldSnapshot.SnapshotPlayer> snapshotPlayers = buildPlayersMulti(players);
+    List<WorldSnapshot.SnapshotEnemy> enemies = buildEnemies(activeSimulation, activeMapId);
+    List<WorldSnapshot.SnapshotProjectile> projectiles = buildProjectiles(primaryPlayer, activeMapId);
+    List<WorldSnapshot.SnapshotNpc> npcs = buildNpcs(activeNpcs, activeMapId);
+    List<WorldSnapshot.SnapshotChest> chests = buildChests(activeChests, activeMapId);
+    WorldSnapshot.SnapshotFactionSummary factionSummary = buildFactionSummary(factionSystem, activeMapId);
+    List<WorldSnapshot.SnapshotMapBackground> background = buildBackgroundMaps(worldState, factionSystem, activeMapId);
+
+    return new WorldSnapshot(tick, System.nanoTime(), activeMapId,
+        snapshotPlayers, enemies, projectiles, npcs, chests,
+        factionSummary, background, Collections.emptyList());
+  }
+
+  private List<WorldSnapshot.SnapshotPlayer> buildPlayersMulti(List<Player> players) {
+    if (players == null || players.isEmpty()) return Collections.emptyList();
+    List<WorldSnapshot.SnapshotPlayer> result = new ArrayList<>(players.size());
+    for (Player p : players) {
+      result.add(new WorldSnapshot.SnapshotPlayer(
+          p.getPlayerId(), p.getX(), p.getY(),
+          p.getCurrentHealth(), p.getMaxHealth(),
+          p.getCurrentMana(), p.getMaxMana(),
+          p.isMoving() ? "MOVING" : "IDLE",
+          p.isFacingLeft(), p.getPlayerClass()));
+    }
+    return result;
+  }
+
   private List<WorldSnapshot.SnapshotPlayer> buildPlayers(Player activePlayer) {
     if (activePlayer == null) {
       return Collections.emptyList();
@@ -104,7 +154,7 @@ public class WorldSnapshotAssembler {
       }
 
       enemies.add(new WorldSnapshot.SnapshotEnemy(
-          mapId + "-enemy-" + i,
+          enemy.getEntityId(),
           enemy.getEnemyTypeName(),
           enemy.getX(),
           enemy.getY(),

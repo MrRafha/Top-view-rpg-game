@@ -637,6 +637,15 @@ public class Player {
     return playerClass;
   }
 
+  /**
+   * ID único do jogador. Usado pelo servidor para distinguir múltiplos players.
+   * Por padrão retorna "player-1"; sobrescrito via setPlayerId() para P2+.
+   */
+  private String playerId = "player-1";
+
+  public String getPlayerId() { return playerId; }
+  public void   setPlayerId(String id) { this.playerId = id; }
+
   public CharacterStats getStats() {
     return stats;
   }
@@ -864,6 +873,25 @@ public class Player {
 
   public boolean isFacingLeft() {
     return facingLeft;
+  }
+
+  // ---- Setters de input para PlayerSimulation (Fase 3) ----
+  // Permitem que InputPacket seja aplicado sem passar por KeyEvent.
+
+  public void setInputUp(boolean v)     { this.up = v; }
+  public void setInputDown(boolean v)   { this.down = v; }
+  public void setInputLeft(boolean v)   { this.left = v; }
+  public void setInputRight(boolean v)  { this.right = v; }
+  public void setInputAttack(boolean v) { this.spacePressed = v; }
+
+  /**
+   * Aciona uma skill pelo número (1-4) de forma one-shot,
+   * equivalente ao jogador pressionar a tecla no mesmo frame.
+   */
+  public void triggerSkill(int slot) {
+    if (skillManager != null) {
+      skillManager.useSkill(slot);
+    }
   }
 
   public boolean isMoving() {

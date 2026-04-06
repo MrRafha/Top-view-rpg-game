@@ -92,26 +92,39 @@ public final class SnapshotRenderSystem {
       return;
     }
 
-    WorldSnapshot.SnapshotPlayer player = current.getPlayers().get(0);
-    WorldSnapshot.SnapshotPlayer prevPlayer = previous != null && !previous.getPlayers().isEmpty()
-        ? previous.getPlayers().get(0)
-        : null;
+    // Fase 5: renderiza todos os players do snapshot
+    for (WorldSnapshot.SnapshotPlayer player : current.getPlayers()) {
+      WorldSnapshot.SnapshotPlayer prevPlayer = findPlayerById(previous, player.getId());
 
-    double x = lerp(prevPlayer == null ? player.getX() : prevPlayer.getX(), player.getX(), alpha);
-    double y = lerp(prevPlayer == null ? player.getY() : prevPlayer.getY(), player.getY(), alpha);
+      double x = lerp(prevPlayer == null ? player.getX() : prevPlayer.getX(), player.getX(), alpha);
+      double y = lerp(prevPlayer == null ? player.getY() : prevPlayer.getY(), player.getY(), alpha);
 
-    int screenX = (int) (x - camera.getX());
-    int screenY = (int) (y - camera.getY());
+      int screenX = (int) (x - camera.getX());
+      int screenY = (int) (y - camera.getY());
 
-    BufferedImage sprite = resolvePlayerSprite(player, current.getTick());
-    if (sprite != null) {
-      g.drawImage(sprite, screenX, screenY, 33, 48, null);
-    } else {
-      g.setColor(new Color(40, 130, 255));
-      g.fillRect(screenX, screenY, 33, 48);
-      g.setColor(Color.WHITE);
-      g.drawRect(screenX, screenY, 33, 48);
+      BufferedImage sprite = resolvePlayerSprite(player, current.getTick());
+      if (sprite != null) {
+        g.drawImage(sprite, screenX, screenY, 33, 48, null);
+      } else {
+        // P1 azul, P2+ verde para distinguir visualmente
+        boolean isP1 = "player-1".equals(player.getId());
+        g.setColor(isP1 ? new Color(40, 130, 255) : new Color(50, 200, 80));
+        g.fillRect(screenX, screenY, 33, 48);
+        g.setColor(Color.WHITE);
+        g.drawRect(screenX, screenY, 33, 48);
+        // Label com ID do player
+        g.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 9));
+        g.drawString(player.getId(), screenX + 2, screenY + 10);
+      }
     }
+  }
+
+  private static WorldSnapshot.SnapshotPlayer findPlayerById(WorldSnapshot snapshot, String id) {
+    if (snapshot == null || id == null) return null;
+    for (WorldSnapshot.SnapshotPlayer p : snapshot.getPlayers()) {
+      if (id.equals(p.getId())) return p;
+    }
+    return null;
   }
 
   public static void renderProjectiles(

@@ -35,10 +35,16 @@ import com.rpggame.ui.LockpickingMinigame;
 import com.rpggame.factions.FactionSystem;
 import com.rpggame.factions.FactionType;
 import com.rpggame.factions.TerritoryType;
+import com.rpggame.server.InProcessTransport;
 import com.rpggame.server.MapSimulation;
+import com.rpggame.server.PlayerSimulation;
 import com.rpggame.server.ServerLoop;
 import com.rpggame.server.WorldState;
+import com.rpggame.shared.InputPacket;
 import com.rpggame.shared.WorldSnapshot;
+import com.rpggame.client.ClientInput;
+import com.rpggame.client.ClientNetwork;
+import com.rpggame.client.GameClient;
 import com.rpggame.render.SnapshotRenderSystem;
 
 /**
@@ -100,6 +106,29 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   // Persistência de mundo: estado de todos os mapas sobrevive a trocas de mapa
   private WorldState worldState;
   private ServerLoop serverLoop;
+
+  // Fase 3: separação de input
+  private ClientInput clientInput;
+  private PlayerSimulation playerSimulation;
+
+  // Fase 4: cliente consome snapshots via fila em vez de acesso direto ao ServerLoop
+  private GameClient gameClient;
+
+  // Fase 6: transporte TCP (ativado com USE_NETWORK=true)
+  // false = in-process (Fases 4/5, padrao de desenvolvimento)
+  // true  = TCP loopback (requer GameServer rodando em processo separado)
+  private static final boolean USE_NETWORK = false;
+  private static final String NETWORK_HOST = "127.0.0.1";
+  private static final int    NETWORK_PORT = 7777;
+  private ClientNetwork clientNetwork;
+
+  // Fase 5: segundo jogador local
+  private Player player2;
+  private ClientInput clientInput2;
+  private PlayerSimulation playerSimulation2;
+  private GameClient gameClient2;
+  private boolean player2Enabled = false;
+
   private volatile WorldSnapshot previousWorldSnapshot;
   private volatile WorldSnapshot latestWorldSnapshot;
   private volatile long latestSnapshotNanos = 0L;
@@ -341,6 +370,62 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     serverLoop.start();
     System.out.println("[WorldState] Iniciado. Mapa ativo: " + startMapId);
+
+    // Fase 3+4: criar pipeline de input e cliente com transporte compartilhado
+    clientInput = new ClientInput("player-1");
+    InProcessTransport p1Transport = serverLoop.getTransport();
+    clientInput.setTransport(p1Transport);
+    gameClient = new GameClient(p1Transport);
+    if (player != null) {
+      playerSimulation = new PlayerSimulation(player);
+      serverLoop.setPlayerSimulation(playerSimulation);
+    }
+
+    // Fase 6: se USE_NETWORK=true, conecta via TCP ao GameServer externo
+    if (USE_NETWORK) {
+      clientNetwork = new ClientNetwork(p1Transport, "player-1",
+          player != null ? player.getPlayerClass() : "Unknown");
+      clientNetwork.setConnectionListener(() -> {
+        System.err.println("[GamePanel] Conexao com o servidor perdida!");
+        // Aqui poderia exibir tela de reconexao — por ora apenas loga
+      });
+      try {
+        clientNetwork.connect(NETWORK_HOST, NETWORK_PORT);
+      } catch (java.io.IOException e) {
+        System.err.println("[GamePanel] Nao foi possivel conectar ao servidor "
+            + NETWORK_HOST + ":" + NETWORK_PORT + " — " + e.getMessage());
+        clientNetwork = null;
+      }
+    }
+  }
+
+  /**
+   * Fase 5: ativa o segundo jogador local.
+   * Deve ser chamado após initWorldState(). Cria Player2, conecta pipeline
+   * de input dedicado e registra no ServerLoop.
+   *
+   * @param spritePath sprite do segundo player (pode ser o mesmo de P1)
+   */
+  public void enablePlayer2(String spritePath) {
+    if (serverLoop != null && !player2Enabled) {
+      // Criar Player2 deslocado para não sobrepor P1
+      player2 = new Player(558 + 64, 217, spritePath);
+      player2.setPlayerId("player-2");
+      player2.setTileMap(tileMap);
+      player2.setEnemyManager(enemyManager);
+
+      // Pipeline de input dedicado para P2 (IJKL + Enter)
+      clientInput2 = new ClientInput("player-2");
+      playerSimulation2 = new PlayerSimulation(player2);
+
+      // Registrar no servidor — retorna transporte dedicado para P2
+      InProcessTransport transport2 = serverLoop.registerPlayer(playerSimulation2);
+      clientInput2.setTransport(transport2);
+      gameClient2 = new GameClient(transport2);
+
+      player2Enabled = true;
+      System.out.println("[Fase 5] Player 2 ativado.");
+    }
   }
 
   private void startGameLoop() {
@@ -492,7 +577,28 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       return;
     }
 
+    // Fase 3: aplicar InputPacket antes de atualizar o player
+    if (clientInput != null && playerSimulation != null) {
+      InputPacket packet = clientInput.buildPacket();
+      playerSimulation.applyInput(packet);
+      if (serverLoop != null) {
+        serverLoop.submitInput(packet);
+      }
+    }
+
     player.update();
+
+    // Fase 5: atualizar P2 se ativo
+    if (player2Enabled && player2 != null) {
+      if (clientInput2 != null && playerSimulation2 != null) {
+        InputPacket packet2 = clientInput2.buildPacket();
+        playerSimulation2.applyInput(packet2);
+      }
+      player2.update();
+      if (gameClient2 != null) {
+        gameClient2.pollSnapshot();
+      }
+    }
 
     // Atualizar fog apenas no ciclo de update para manter paintComponent leve
     long fogStart = System.nanoTime();
@@ -534,13 +640,14 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Publicar contexto para que o ServerLoop gere snapshots consistentes.
     if (serverLoop != null && mapManager != null) {
       serverLoop.updateSnapshotContext(mapManager.getCurrentMapId(), player, factionSystem, npcs, chests);
-      WorldSnapshot newSnapshot = serverLoop.getLatestSnapshot();
-      if (newSnapshot != null
-          && (latestWorldSnapshot == null || newSnapshot.getTick() != latestWorldSnapshot.getTick())) {
-        previousWorldSnapshot = latestWorldSnapshot;
-        latestWorldSnapshot = newSnapshot;
-        latestSnapshotNanos = System.nanoTime();
-      }
+    }
+
+    // Fase 4: consumir snapshot via GameClient (fila) em vez de acesso direto ao ServerLoop
+    if (gameClient != null) {
+      gameClient.pollSnapshot();
+      latestWorldSnapshot  = gameClient.getLatestSnapshot();
+      previousWorldSnapshot = gameClient.getPreviousSnapshot();
+      latestSnapshotNanos  = gameClient.getLatestSnapshotNanos();
     }
   }
 
@@ -1186,14 +1293,21 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       }
     }
 
-    // Delegar para o player (WASD, Space, números, etc)
-    player.keyPressed(e);
+    // Delegar para ClientInput (Fase 3: input via InputPacket)
+    if (clientInput != null) {
+      clientInput.onKeyPressed(e);
+    } else {
+      // Fallback enquanto clientInput não estiver inicializado
+      player.keyPressed(e);
+    }
   }
 
   @Override
   public void keyReleased(KeyEvent e) {
-    // Se player ainda não foi criado, ignorar input
-    if (player != null) {
+    if (player == null) return;
+    if (clientInput != null) {
+      clientInput.onKeyReleased(e);
+    } else {
       player.keyReleased(e);
     }
   }
