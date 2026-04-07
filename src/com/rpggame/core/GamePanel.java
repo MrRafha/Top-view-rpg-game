@@ -111,15 +111,16 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private ClientInput clientInput;
   private PlayerSimulation playerSimulation;
 
-  // Fase 4: cliente consome snapshots via fila em vez de acesso direto ao ServerLoop
+  // Fase 4: cliente consome snapshots via fila em vez de acesso direto ao
+  // ServerLoop
   private GameClient gameClient;
 
-  // Fase 6: transporte TCP (ativado com USE_NETWORK=true)
-  // false = in-process (Fases 4/5, padrao de desenvolvimento)
-  // true  = TCP loopback (requer GameServer rodando em processo separado)
-  private static final boolean USE_NETWORK = false;
-  private static final String NETWORK_HOST = "127.0.0.1";
-  private static final int    NETWORK_PORT = 7777;
+  // Fase 6/7: transporte TCP configuravel por modo de jogo
+  // false = in-process (solo)
+  // true = TCP (criar/entrar servidor)
+  private final boolean useNetwork;
+  private final String networkHost;
+  private final int networkPort;
   private ClientNetwork clientNetwork;
 
   // Fase 5: segundo jogador local
@@ -161,6 +162,14 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private long lastPerfLogNanos = System.nanoTime();
 
   public GamePanel() {
+    this(false, "127.0.0.1", 7777);
+  }
+
+  public GamePanel(boolean useNetwork, String networkHost, int networkPort) {
+    this.useNetwork = useNetwork;
+    this.networkHost = networkHost;
+    this.networkPort = networkPort;
+
     setPreferredSize(new Dimension(Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT));
     setBackground(Color.BLACK);
     setFocusable(true);
@@ -381,8 +390,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       serverLoop.setPlayerSimulation(playerSimulation);
     }
 
-    // Fase 6: se USE_NETWORK=true, conecta via TCP ao GameServer externo
-    if (USE_NETWORK) {
+    // Fase 6/7: se useNetwork=true, conecta via TCP ao servidor escolhido
+    if (useNetwork) {
       clientNetwork = new ClientNetwork(p1Transport, "player-1",
           player != null ? player.getPlayerClass() : "Unknown");
       clientNetwork.setConnectionListener(() -> {
@@ -390,10 +399,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
         // Aqui poderia exibir tela de reconexao — por ora apenas loga
       });
       try {
-        clientNetwork.connect(NETWORK_HOST, NETWORK_PORT);
+        clientNetwork.connect(networkHost, networkPort);
       } catch (java.io.IOException e) {
         System.err.println("[GamePanel] Nao foi possivel conectar ao servidor "
-            + NETWORK_HOST + ":" + NETWORK_PORT + " — " + e.getMessage());
+            + networkHost + ":" + networkPort + " — " + e.getMessage());
         clientNetwork = null;
       }
     }
@@ -642,12 +651,13 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       serverLoop.updateSnapshotContext(mapManager.getCurrentMapId(), player, factionSystem, npcs, chests);
     }
 
-    // Fase 4: consumir snapshot via GameClient (fila) em vez de acesso direto ao ServerLoop
+    // Fase 4: consumir snapshot via GameClient (fila) em vez de acesso direto ao
+    // ServerLoop
     if (gameClient != null) {
       gameClient.pollSnapshot();
-      latestWorldSnapshot  = gameClient.getLatestSnapshot();
+      latestWorldSnapshot = gameClient.getLatestSnapshot();
       previousWorldSnapshot = gameClient.getPreviousSnapshot();
-      latestSnapshotNanos  = gameClient.getLatestSnapshotNanos();
+      latestSnapshotNanos = gameClient.getLatestSnapshotNanos();
     }
   }
 
@@ -835,7 +845,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     g.drawString(deathText, textX, textY);
 
-    // Botão "Novo Jogo"
+    // Botão "Renascer" - Fase 8: Respawn mechanic
     int buttonWidth = 200;
     int buttonHeight = 50;
     int buttonX = (getWidth() - buttonWidth) / 2;
@@ -854,9 +864,9 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     g.setStroke(new BasicStroke(2));
     g.drawRoundRect(buttonX, buttonY, buttonWidth, buttonHeight, 10, 10);
 
-    // Texto do botão
+    // Texto do botão - "Renascer" ao invés de "Novo Jogo"
     g.setFont(new Font("Arial", Font.BOLD, 24));
-    String buttonText = "Novo Jogo";
+    String buttonText = "Renascer";
     fm = g.getFontMetrics();
     textWidth = fm.stringWidth(buttonText);
     int buttonTextX = buttonX + (buttonWidth - textWidth) / 2;
@@ -1304,7 +1314,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
   @Override
   public void keyReleased(KeyEvent e) {
-    if (player == null) return;
+    if (player == null)
+      return;
     if (clientInput != null) {
       clientInput.onKeyReleased(e);
     } else {
@@ -1321,10 +1332,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   public void mouseClicked(MouseEvent e) {
     requestFocusInWindow();
 
-    // Verificar clique no botão "Novo Jogo" na tela de morte
+    // Verificar clique no botão "Renascer" na tela de morte - Fase 8
     if (showingDeathScreen && newGameButton != null) {
       if (newGameButton.contains(e.getPoint())) {
-        restartGame();
+        respawnPlayer();
       }
     }
   }
@@ -1386,34 +1397,44 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   }
 
   /**
-   * Reinicia o jogo voltando para a tela de criação de personagem
+   * Fase 8: Respawn Mechanic
+   * Ressuscita o jogador com seu personagem atual:
+   * - Reseta health para máximo
+   * - Retorna à posição de spawn
+   * - Reseta XP do level atual (mas mantém o level)
+   * - Preserva: class, level, inventário, quests, gold, reputação
    */
-  private void restartGame() {
-    System.out.println("🔄 Reiniciando jogo...");
+  private void respawnPlayer() {
+    if (player == null) {
+      return;
+    }
 
-    // Parar o game loop
-    running = false;
+    System.out.println("🔄 Ressuscitando jogador no spawn...");
 
-    // Resetar estados
+    // Ressuscitar o jogador - restaurar health ao máximo
+    player.heal(player.getMaxHealth());
+
+    // Retornar à posição de spawn (0, 0 como ponto de spawn padrão)
+    // Em futuras implementações, isso pode ser obtido do mapa/mundo
+    player.setPosition(0, 0);
+
+    // Reseta XP do level atual (Fase 8: "zerar apenas a XP do level atual")
+    if (player.getExperienceSystem() != null) {
+      player.getExperienceSystem().resetCurrentLevelXp();
+    }
+
+    // Remover flags de morte
     playerDead = false;
     deathTransitionStarted = false;
     showingDeathScreen = false;
     newGameButton = null;
 
-    // Limpar referências
-    player = null;
-    enemyManager = null;
+    // Reiniciar o game loop se foi pausado
+    if (!running) {
+      startGameLoop();
+    }
 
-    // Fechar a janela atual e voltar para tela de criação
-    SwingUtilities.invokeLater(() -> {
-      JFrame topFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
-      if (topFrame != null) {
-        topFrame.dispose();
-      }
-
-      // Criar nova janela com tela de criação
-      Game.main(new String[] {});
-    });
+    System.out.println("✅ Jogador ressuscitado com sucesso no spawn!");
   }
 
   /**

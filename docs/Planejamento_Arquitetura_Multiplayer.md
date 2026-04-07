@@ -388,6 +388,51 @@ java -cp bin com.rpggame.server.GameServer
 java -cp bin com.rpggame.core.Game
 ```
 
+### Fase 7 — Server Lobby e Descoberta Multiplayer 🚀 PRÓXIMA
+
+Criar uma tela de lobby com três caminhos claros: **Jogar Solo**, **Criar Servidor** e **Entrar em Servidor**.
+
+- [ ] Criar `ServerInfo` — metadados do servidor → `src/com/rpggame/shared/ServerInfo.java`
+- [ ] Criar `ServerRegistry` — mantém servidores conhecidos → `src/com/rpggame/server/ServerRegistry.java`
+- [ ] Criar `ServerBroadcaster` — publica servidor via UDP broadcast → `src/com/rpggame/server/ServerBroadcaster.java`
+- [ ] Criar `ServerDiscovery` — descobre servidores locais → `src/com/rpggame/client/ServerDiscovery.java`
+- [ ] Criar `GameLauncher` — tela de lobby em Swing → `src/com/rpggame/ui/GameLauncher.java`
+- [ ] Adicionar opção **Jogar Solo** no menu principal do launcher (entrada direta em sessão local)
+- [ ] Criar `GameConnection` — gerencia conexão TCP do cliente → `src/com/rpggame/client/GameConnection.java`
+- [ ] Estender `GameServer` para suportar múltiplos clientes concorrentes → `src/com/rpggame/server/GameServer.java`
+- [ ] Integrar `GamePanel` com `GameConnection` para modo remoto
+- [ ] Mudar entry point: `Game.main()` → `GameLauncher.main()`
+- [ ] Testes: jogar solo, criar servidor local, conectar dois clientes, validar sincronização
+
+**Verificação:** GameLauncher abre → opção **Jogar Solo** inicia partida local imediatamente → "CREATE SERVER" inicia servidor headless → "REFRESH" descobre servidor na rede local → "CONNECT" abre GamePanel com conexão remota → dois clientes veem o mesmo mundo em tempo real.
+
+> **Documentação:** veja [docs/Fase_7_Server_Lobby_Multiplayer.md](Fase_7_Server_Lobby_Multiplayer.md) para o guia completo.
+
+### Fase 8 — Renascimento Pós-Morte (Respawn do mesmo personagem)
+
+Trocar o fluxo atual de "novo jogo" na tela de morte por um fluxo de **renascer** com o personagem atual.
+
+- [ ] Alterar tela "Você morreu" para ação principal **Renascer** (sem criar novo jogo/save)
+- [ ] Criar comando de respawn cliente → servidor (ex.: `InputPacket`/evento discreto)
+- [ ] Servidor aplicar respawn autoritativo:
+  - manter classe, atributos, inventário, quests, gold, reputação e level atual
+  - reposicionar no spawn definido
+  - zerar apenas a XP do level atual
+- [ ] Limpar flags de morte e estados temporários bloqueantes após respawn
+- [ ] Garantir que o snapshot seguinte reflita imediatamente player vivo no spawn e XP do level atual em 0
+
+**Verificação:** morrer com personagem atual → clicar **Renascer** → reaparecer no spawn com mesmo personagem, mesmo level e XP do level atual zerada, sem recriar partida.
+
+### Fase 9 — Status de Servidor e Admin UI (Futuro)
+
+Adicionar funcionalidades operacionais:
+
+- [ ] Página de status do servidor (ping, latência, TPS real, players conectados)
+- [ ] Admin UI (kick player, mudar configurações, pausar servidor)
+- [ ] Persistência (salvar estado do servidor em arquivo, recuperar ao reiniciar)
+- [ ] Chat in-game entre clientes
+- [ ] Performance tuning (compression de snapshot, bandwidth reduction)
+
 ---
 
 ## Acoplamentos críticos a resolver antes
@@ -426,3 +471,33 @@ Esta arquitetura estará implementada corretamente quando:
 - Um segundo processo cliente conecta e enxerga o mesmo mundo
 - O servidor roda sem janela, sem Swing, sem Graphics2D
 - Derrubar o cliente não derruba o servidor
+
+### Fase 7 — Multiplayer Local via Lobby
+
+- GameLauncher abre na inicialização (novo entry point)
+- Opção **Jogar Solo** no menu inicia sessão local sem descoberta de rede
+- Botão "CREATE SERVER" inicia uma instância de `GameServer` headless
+- Botão "REFRESH" descobre o servidor publicado via UDP broadcast
+- Botão "CONNECT" abre `GamePanel` com `GameConnection` TCP
+- Dois jogadores conectados ao mesmo servidor veem o mesmo mundo sincronizado
+- Amigos podem conectar ao jogar na mesma rede local (LAN)
+
+### Fase 8 — Renascimento Pós-Morte
+
+- Tela "Você morreu" oferece ação **Renascer** no lugar de "novo jogo"
+- Personagem atual é preservado (classe, atributos, inventário, quests, gold, reputação e level)
+- Player reaparece no spawn definido
+- XP do level atual é zerada no respawn
+- Não há criação de nova partida/save durante o fluxo de morte
+
+### Fase 9 — Operação de Servidor
+
+- Painel administrativo e status do servidor funcionam sem quebrar o fluxo de jogo
+
+### Sucesso Final
+
+- Todas as fases funcionando sem regressão
+- Jogador pode escolher solo ou multiplayer no menu principal
+- Multiplayer de verdade: amigos em diferentes máquinas jogando juntos
+- Servidor persiste mesmo se um cliente desconectar
+- Novo cliente que entra vê o mundo no estado atual

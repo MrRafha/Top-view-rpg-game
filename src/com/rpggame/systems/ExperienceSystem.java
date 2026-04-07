@@ -62,7 +62,7 @@ public class ExperienceSystem {
     System.out.println("❤️ Vida restaurada ao máximo!");
     System.out.println("XP necessário para próximo nível: " + xpToNextLevel);
   }
-  
+
   /**
    * Retorna se houve level up recente (para notificar o Player)
    */
@@ -123,6 +123,16 @@ public class ExperienceSystem {
     }
 
     return totalXp;
+  }
+
+  /**
+   * Fase 8: Respawn Mechanic
+   * Reseta o XP do nível atual para 0, mas mantém o level.
+   * Usado quando o jogador ressuscita após morte.
+   */
+  public void resetCurrentLevelXp() {
+    this.currentXp = 0;
+    System.out.println("🔄 [Fase 8 - Respawn] XP do nível atual zerado. Nível: " + currentLevel);
   }
 
   /**

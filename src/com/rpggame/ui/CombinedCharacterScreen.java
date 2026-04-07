@@ -37,6 +37,9 @@ import javax.swing.SwingConstants;
 public class CombinedCharacterScreen extends JPanel implements ActionListener {
   private JFrame parentFrame;
   private MusicManager musicManager;
+  private final boolean useNetwork;
+  private final String networkHost;
+  private final int networkPort;
 
   // Sprites das classes
   private BufferedImage warriorSprite;
@@ -95,7 +98,14 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
    * @param parentFrame frame pai da aplicação
    */
   public CombinedCharacterScreen(JFrame parentFrame) {
+    this(parentFrame, false, "127.0.0.1", 7777);
+  }
+
+  public CombinedCharacterScreen(JFrame parentFrame, boolean useNetwork, String networkHost, int networkPort) {
     this.parentFrame = parentFrame;
+    this.useNetwork = useNetwork;
+    this.networkHost = networkHost;
+    this.networkPort = networkPort;
     this.stats = new CharacterStats("Warrior");
     this.musicManager = new MusicManager();
     loadSprites();
@@ -691,7 +701,7 @@ public class CombinedCharacterScreen extends JPanel implements ActionListener {
     parentFrame.getContentPane().removeAll();
 
     // Criar o painel do jogo
-    GamePanel gamePanel = new GamePanel();
+    GamePanel gamePanel = new GamePanel(useNetwork, networkHost, networkPort);
     gamePanel.setPlayerClass(selectedClass, spritePath, stats);
 
     parentFrame.add(gamePanel);

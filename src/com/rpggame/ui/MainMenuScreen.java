@@ -12,6 +12,9 @@ public class MainMenuScreen extends JPanel {
   private JFrame parentFrame;
   private MusicManager musicManager;
   private boolean musicEnabled = true;
+  private final boolean useNetwork;
+  private final String networkHost;
+  private final int networkPort;
 
   // Botões
   private Rectangle playButton;
@@ -32,7 +35,14 @@ public class MainMenuScreen extends JPanel {
   private static final Color MUSIC_ICON_COLOR = new Color(200, 150, 50);
 
   public MainMenuScreen(JFrame frame) {
+    this(frame, false, "127.0.0.1", 7777);
+  }
+
+  public MainMenuScreen(JFrame frame, boolean useNetwork, String networkHost, int networkPort) {
     this.parentFrame = frame;
+    this.useNetwork = useNetwork;
+    this.networkHost = networkHost;
+    this.networkPort = networkPort;
     this.musicManager = new MusicManager();
 
     setLayout(null);
@@ -133,7 +143,8 @@ public class MainMenuScreen extends JPanel {
 
     // Trocar para tela de criação de personagem
     parentFrame.getContentPane().removeAll();
-    com.rpggame.ui.CombinedCharacterScreen characterScreen = new com.rpggame.ui.CombinedCharacterScreen(parentFrame);
+    com.rpggame.ui.CombinedCharacterScreen characterScreen = new com.rpggame.ui.CombinedCharacterScreen(parentFrame,
+        useNetwork, networkHost, networkPort);
     parentFrame.add(characterScreen);
     parentFrame.revalidate();
     parentFrame.repaint();
