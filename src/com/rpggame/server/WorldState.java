@@ -79,6 +79,17 @@ public class WorldState {
   }
 
   /**
+   * Retorna o mapId da simulacao associada a um objeto MapSimulation.
+   * Usado pelo ServerLoop para recuperar o mapId quando activeMapId ainda e null.
+   */
+  public synchronized String getMapIdForSimulation(MapSimulation target) {
+    for (Map.Entry<String, MapSimulation> entry : simulations.entrySet()) {
+      if (entry.getValue() == target) return entry.getKey();
+    }
+    return null;
+  }
+
+  /**
    * Número de mapas já registrados/visitados nesta sessão.
    */
   public synchronized int size() {

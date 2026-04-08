@@ -9,6 +9,7 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseEvent;
 import java.util.Arrays;
+import java.util.UUID;
 
 import com.rpggame.entities.Player;
 import com.rpggame.entities.Chest;
@@ -121,6 +122,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private final boolean useNetwork;
   private final String networkHost;
   private final int networkPort;
+  private final String localPlayerId;
   private ClientNetwork clientNetwork;
 
   // Fase 5: segundo jogador local
@@ -133,6 +135,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
   private volatile WorldSnapshot previousWorldSnapshot;
   private volatile WorldSnapshot latestWorldSnapshot;
   private volatile long latestSnapshotNanos = 0L;
+  private long lastReconciledSnapshotTick = -1L;
 
   // Sistema de música
   private MusicManager musicManager;
@@ -169,6 +172,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     this.useNetwork = useNetwork;
     this.networkHost = networkHost;
     this.networkPort = networkPort;
+    this.localPlayerId = "player-" + UUID.randomUUID().toString().substring(0, 8);
 
     setPreferredSize(new Dimension(Game.SCREEN_WIDTH, Game.SCREEN_HEIGHT));
     setBackground(Color.BLACK);
@@ -255,6 +259,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (tileMap != null) {
       // Posição inicial fixa no mapa village (x:558, y:217)
       player = new Player(558, 217, spritePath);
+      player.setPlayerId(localPlayerId);
       player.setTileMap(tileMap);
 
       // Reinicializar o gerenciador de inimigos com o novo player
@@ -276,6 +281,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (tileMap != null) {
       // Posição inicial fixa no mapa village (x:558, y:217)
       player = new Player(558, 217, spritePath, playerClass, stats);
+      player.setPlayerId(localPlayerId);
       player.setTileMap(tileMap);
 
       // Criar o gerenciador de inimigos com o novo player
@@ -365,6 +371,38 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
    * initializeGoblinFamilies().
    */
   private void initWorldState() {
+    // Guard: evita dupla inicialização se setPlayerClass for chamado 2x.
+    if (useNetwork && clientNetwork != null && clientNetwork.isConnected()) {
+      return;
+    }
+
+    // Modo rede: cliente puro. Nao sobe ServerLoop local para evitar mistura
+    // de snapshots locais com snapshots vindos do servidor TCP.
+    if (useNetwork) {
+      worldState = null;
+      serverLoop = null;
+      playerSimulation = null;
+
+      InProcessTransport networkTransport = new InProcessTransport();
+      clientInput = new ClientInput(localPlayerId);
+      clientInput.setTransport(networkTransport);
+      gameClient = new GameClient(networkTransport);
+
+      clientNetwork = new ClientNetwork(networkTransport, localPlayerId,
+          player != null ? player.getPlayerClass() : "Unknown");
+      clientNetwork.setConnectionListener(() -> {
+        System.err.println("[GamePanel] Conexao com o servidor perdida!");
+      });
+      try {
+        clientNetwork.connect(networkHost, networkPort);
+      } catch (java.io.IOException e) {
+        System.err.println("[GamePanel] Nao foi possivel conectar ao servidor "
+            + networkHost + ":" + networkPort + " — " + e.getMessage());
+        clientNetwork = null;
+      }
+      return;
+    }
+
     // Parar loop anterior (reinício de partida)
     if (serverLoop != null) {
       serverLoop.stop();
@@ -381,9 +419,11 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     System.out.println("[WorldState] Iniciado. Mapa ativo: " + startMapId);
 
     // Fase 3+4: criar pipeline de input e cliente com transporte compartilhado
-    clientInput = new ClientInput("player-1");
+    clientInput = new ClientInput(localPlayerId);
     InProcessTransport p1Transport = serverLoop.getTransport();
-    clientInput.setTransport(p1Transport);
+    // Em modo in-process, NÃO setar transport no clientInput: o input chega ao
+    // servidor via serverLoop.submitInput(). Setar aqui causava dupla publicação
+    // na mesma fila (buildPacket + submitInput → applyInput 2x por tick).
     gameClient = new GameClient(p1Transport);
     if (player != null) {
       playerSimulation = new PlayerSimulation(player);
@@ -392,7 +432,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
 
     // Fase 6/7: se useNetwork=true, conecta via TCP ao servidor escolhido
     if (useNetwork) {
-      clientNetwork = new ClientNetwork(p1Transport, "player-1",
+      clientNetwork = new ClientNetwork(p1Transport, localPlayerId,
           player != null ? player.getPlayerClass() : "Unknown");
       clientNetwork.setConnectionListener(() -> {
         System.err.println("[GamePanel] Conexao com o servidor perdida!");
@@ -586,16 +626,26 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       return;
     }
 
-    // Fase 3: aplicar InputPacket antes de atualizar o player
-    if (clientInput != null && playerSimulation != null) {
-      InputPacket packet = clientInput.buildPacket();
-      playerSimulation.applyInput(packet);
+    // Construir e distribuir InputPacket.
+    // Em modo in-process: aplica localmente via playerSimulation e envia ao ServerLoop.
+    // Em modo rede (useNetwork=true): playerSimulation e serverLoop sao null — o
+    // ClientInput publica diretamente no networkTransport via setTransport(), entao
+    // buildPacket() ja e suficiente para enviar o input ao servidor TCP.
+    player.update();
+
+    if (clientInput != null) {
+      // Em modo rede, envia a posição local autoritativa junto com o input.
+      // O servidor apenas espelha essa posição nos snapshots, sem recalcular.
+      InputPacket packet = useNetwork
+          ? clientInput.buildPacket(player.getX(), player.getY())
+          : clientInput.buildPacket();
+      if (playerSimulation != null) {
+        playerSimulation.applyInput(packet);
+      }
       if (serverLoop != null) {
         serverLoop.submitInput(packet);
       }
     }
-
-    player.update();
 
     // Fase 5: atualizar P2 se ativo
     if (player2Enabled && player2 != null) {
@@ -609,7 +659,10 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
       }
     }
 
-    // Atualizar fog apenas no ciclo de update para manter paintComponent leve
+    // Em modo cliente-autoritativo o servidor espelha a posição enviada pelo cliente
+    // — não há reconciliação de posição do player local. O snapshot é usado apenas
+    // para atualizar outros jogadores e entidades do mundo.
+
     long fogStart = System.nanoTime();
     tileMap.updateFogOfWar(player);
     fogUpdateNanosAccum += (System.nanoTime() - fogStart);
@@ -695,12 +748,62 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     if (enemyManager != null) {
       SnapshotRenderSystem.renderStructures(g2d, camera, enemyManager.getStructures());
     }
-    SnapshotRenderSystem.renderEnemies(g2d, camera, previousSnapshot, snapshot, interpolationAlpha,
-        tileMap.getFogOfWar());
-    SnapshotRenderSystem.renderNpcs(g2d, camera, snapshot);
+    // Em modo rede o servidor dedicado nao inicializa inimigos — renderizar local como fallback.
+    boolean snapshotHasEnemies = snapshot != null && !snapshot.getEnemies().isEmpty();
+    if (useNetwork && !snapshotHasEnemies && enemyManager != null) {
+      // Sintetizar SnapshotEnemy a partir dos inimigos locais para reutilizar o render do snapshot.
+      java.util.List<WorldSnapshot.SnapshotEnemy> localEnemyList = new java.util.ArrayList<>();
+      for (com.rpggame.entities.Enemy e : enemyManager.getEnemies()) {
+        if (e.isAlive()) {
+          localEnemyList.add(new WorldSnapshot.SnapshotEnemy(
+              e.getEntityId(), e.getEnemyTypeName(),
+              e.getX(), e.getY(),
+              e.getCurrentHealth(), e.getMaxHealth(),
+              e.getAiStateName(), e.getSpritePath(),
+              e.getWidth(), e.getHeight()));
+        }
+      }
+      if (!localEnemyList.isEmpty()) {
+        WorldSnapshot localEnemySnapshot = new WorldSnapshot(
+            snapshot != null ? snapshot.getTick() : 0L,
+            System.nanoTime(),
+            mapManager.getCurrentMapId(),
+            java.util.Collections.emptyList(),
+            localEnemyList,
+            java.util.Collections.emptyList(),
+            java.util.Collections.emptyList(),
+            java.util.Collections.emptyList(),
+            null,
+            java.util.Collections.emptyList(),
+            java.util.Collections.emptyList());
+        SnapshotRenderSystem.renderEnemies(g2d, camera, null, localEnemySnapshot, 1.0,
+            tileMap.getFogOfWar());
+      }
+    } else {
+      SnapshotRenderSystem.renderEnemies(g2d, camera, previousSnapshot, snapshot, interpolationAlpha,
+          tileMap.getFogOfWar());
+    }
+    // Em modo rede o servidor dedicado nao inclui NPCs no snapshot — renderizar local.
+    if (useNetwork && (snapshot == null || snapshot.getNpcs().isEmpty()) && npcs != null) {
+      for (com.rpggame.npcs.NPC npc : npcs) {
+        npc.render(g2d, camera);
+      }
+    } else {
+      SnapshotRenderSystem.renderNpcs(g2d, camera, snapshot);
+    }
     SnapshotRenderSystem.renderChests(g2d, camera, snapshot, tileMap.getFogOfWar());
     SnapshotRenderSystem.renderProjectiles(g2d, camera, previousSnapshot, snapshot, interpolationAlpha);
     SnapshotRenderSystem.renderPlayer(g2d, camera, previousSnapshot, snapshot, interpolationAlpha);
+
+    // Fallback: se o snapshot ainda nao chegou ou nao contem o player local,
+    // desenha um retangulo representando o player para nao sumir na tela.
+    boolean playerInSnapshot = snapshot != null && !snapshot.getPlayers().isEmpty();
+    if (!playerInSnapshot && player != null) {
+      int screenX = (int) (player.getX() - camera.getX());
+      int screenY = (int) (player.getY() - camera.getY());
+      g2d.setColor(new Color(40, 130, 255));
+      g2d.fillRect(screenX, screenY, 33, 48);
+    }
 
     // Render de debug continua local no cliente.
     if (showVisionCones) {
@@ -851,10 +954,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     int buttonX = (getWidth() - buttonWidth) / 2;
     int buttonY = textY + 80;
 
-    // Armazenar área do botão para detecção de clique
-    if (newGameButton == null) {
-      newGameButton = new Rectangle(buttonX, buttonY, buttonWidth, buttonHeight);
-    }
+    // Recalcular sempre — tamanho do painel pode mudar entre renders
+    newGameButton = new Rectangle(buttonX, buttonY, buttonWidth, buttonHeight);
 
     // Desenhar botão
     g.setColor(new Color(60, 60, 60));
@@ -906,7 +1007,7 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     int barSpacing = 30;
 
     WorldSnapshot snapshot = latestWorldSnapshot;
-    WorldSnapshot.SnapshotPlayer snapshotPlayer = getPrimarySnapshotPlayer(snapshot);
+    WorldSnapshot.SnapshotPlayer snapshotPlayer = findSnapshotPlayerById(snapshot, localPlayerId);
 
     int currentHealth = snapshotPlayer != null ? snapshotPlayer.getHp() : player.getCurrentHealth();
     int maxHealth = snapshotPlayer != null ? snapshotPlayer.getMaxHp() : player.getMaxHealth();
@@ -980,11 +1081,16 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     }
   }
 
-  private WorldSnapshot.SnapshotPlayer getPrimarySnapshotPlayer(WorldSnapshot snapshot) {
-    if (snapshot == null || snapshot.getPlayers().isEmpty()) {
+  private WorldSnapshot.SnapshotPlayer findSnapshotPlayerById(WorldSnapshot snapshot, String playerId) {
+    if (snapshot == null || playerId == null || snapshot.getPlayers().isEmpty()) {
       return null;
     }
-    return snapshot.getPlayers().get(0);
+    for (WorldSnapshot.SnapshotPlayer p : snapshot.getPlayers()) {
+      if (playerId.equals(p.getId())) {
+        return p;
+      }
+    }
+    return null;
   }
 
   /**
@@ -1414,9 +1520,8 @@ public class GamePanel extends JPanel implements KeyListener, MouseListener, Run
     // Ressuscitar o jogador - restaurar health ao máximo
     player.heal(player.getMaxHealth());
 
-    // Retornar à posição de spawn (0, 0 como ponto de spawn padrão)
-    // Em futuras implementações, isso pode ser obtido do mapa/mundo
-    player.setPosition(0, 0);
+    // Retornar ao spawn da village (mesmo ponto de criacao do personagem)
+    player.setPosition(558, 217);
 
     // Reseta XP do level atual (Fase 8: "zerar apenas a XP do level atual")
     if (player.getExperienceSystem() != null) {

@@ -46,6 +46,15 @@ public class EnemyManager {
   private int familyRespawnTimer = 0;
   private static final int FAMILY_RESPAWN_DELAY = 3600; // 1 minuto (60fps * 60s)
 
+  // Efeitos visuais de explosão do MAGIC_BOLT — lidos pelo GamePanel no render
+  public static final class ExplosionEffect {
+    public final double x, y;
+    public int timer;
+    public static final int DURATION = 18; // ~0.3s a 60fps
+    public ExplosionEffect(double x, double y) { this.x = x; this.y = y; this.timer = DURATION; }
+  }
+  private final ArrayList<ExplosionEffect> explosionEffects = new ArrayList<>();
+
   /**
    * Construtor do EnemyManager.
    */
@@ -260,6 +269,8 @@ public class EnemyManager {
   /**
    * Verifica colisão dos projéteis do jogador com inimigos.
    */
+  private static final double MAGIC_BOLT_SPLASH_RADIUS = 80.0;
+
   public void checkProjectileCollisions(ArrayList<Projectile> projectiles) {
     for (Enemy enemy : enemies) {
       if (!enemy.isAlive())
@@ -273,14 +284,29 @@ public class EnemyManager {
         Rectangle projBounds = projectile.getBounds();
 
         if (enemyBounds.intersects(projBounds)) {
-          // Dano ao inimigo
-          enemy.takeDamage(projectile.getDamage());
+          if (Projectile.MAGIC_BOLT.equals(projectile.getType())) {
+            // Mago: dano direto + explosão em área ao redor do ponto de impacto
+            enemy.takeDamage(projectile.getDamage());
+            double ex = projectile.getX();
+            double ey = projectile.getY();
+            explosionEffects.add(new ExplosionEffect(ex, ey));
+            for (Enemy other : enemies) {
+              if (other != enemy && other.isAlive()) {
+                double dist = Math.hypot(other.getX() - ex, other.getY() - ey);
+                if (dist <= MAGIC_BOLT_SPLASH_RADIUS) {
+                  // Dano de splash: 60% do dano base, diminui com a distância
+                  int splash = (int) (projectile.getDamage() * 0.6 * (1.0 - dist / MAGIC_BOLT_SPLASH_RADIUS));
+                  if (splash > 0) other.takeDamage(splash);
+                }
+              }
+            }
+          } else {
+            // Warrior / Hunter: dano simples sem splash
+            enemy.takeDamage(projectile.getDamage());
+          }
 
-          // Remove projétil
           projIterator.remove();
-
-          System.out.println("Projétil atingiu inimigo!");
-          break; // Projétil só pode atingir um inimigo
+          break; // Projétil para no primeiro inimigo (não-perfurante)
         }
       }
     }

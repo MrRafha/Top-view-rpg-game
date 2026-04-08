@@ -147,7 +147,8 @@ public class Player {
     this.maxMana = stats.getMaxMana();
     this.currentMana = maxMana;
     this.experienceSystem = new ExperienceSystem();
-    this.speed = 3.0; // Velocidade base fixa
+    this.speed = 4.0; // Mesma velocidade base do construtor simples
+    this.lastLevelCheck = 1; // Inicializar nivel inicial (estava ausente neste construtor)
     this.projectiles = new ArrayList<>();
     this.floatingTexts = new ArrayList<>();
     this.skillManager = new SkillManager(this);
@@ -457,18 +458,23 @@ public class Player {
           + " + Arma: " + weaponBonus + ")");
     }
 
+    // Ângulo visual correto: usa 'facing' se em movimento, senão usa facingLeft.
+    // Isso garante que o ataque vai na direção que o sprite está olhando.
+    double attackAngle = (dx != 0 || dy != 0) ? facing : (facingLeft ? Math.PI : 0.0);
+
     Projectile projectile = null;
     switch (playerClass.toLowerCase()) {
       case "mage":
-        projectile = new Projectile(startX, startY, facing, Projectile.MAGIC_BOLT, totalDamage);
+        projectile = new Projectile(startX, startY, attackAngle, Projectile.MAGIC_BOLT, totalDamage);
         break;
       case "hunter":
-        projectile = new Projectile(startX, startY, facing, Projectile.ARROW, totalDamage);
+        projectile = new Projectile(startX, startY, attackAngle, Projectile.ARROW, totalDamage);
         break;
       case "warrior":
-        double slashX = startX + Math.cos(facing) * 30;
-        double slashY = startY + Math.sin(facing) * 30;
-        projectile = new Projectile(slashX, slashY, facing, Projectile.SWORD_SLASH, totalDamage);
+        // Estocada em linha reta: projétil começa 30px à frente do centro
+        double slashX = startX + Math.cos(attackAngle) * 30;
+        double slashY = startY + Math.sin(attackAngle) * 30;
+        projectile = new Projectile(slashX, slashY, attackAngle, Projectile.SWORD_SLASH, totalDamage);
         break;
       default:
         break;
@@ -635,6 +641,10 @@ public class Player {
 
   public String getPlayerClass() {
     return playerClass;
+  }
+
+  public void setPlayerClass(String playerClass) {
+    this.playerClass = playerClass;
   }
 
   /**

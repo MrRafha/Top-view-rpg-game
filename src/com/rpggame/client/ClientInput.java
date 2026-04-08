@@ -90,8 +90,11 @@ public class ClientInput {
    * Constrói um InputPacket com o estado atual e avança o contador de frames.
    * Skills pulse são consumidas (zeradas) após cada packet para garantir
    * que cada ativação seja processada exatamente uma vez.
+   *
+   * @param px posição X atual do player no cliente (modo cliente-autoritativo)
+   * @param py posição Y atual do player no cliente (modo cliente-autoritativo)
    */
-  public InputPacket buildPacket() {
+  public InputPacket buildPacket(double px, double py) {
     long frame = frameCounter.incrementAndGet();
 
     InputPacket packet = InputPacket.builder(playerId, frame)
@@ -100,6 +103,7 @@ public class ClientInput {
         .skill1(skill1Pulse).skill2(skill2Pulse)
         .skill3(skill3Pulse).skill4(skill4Pulse)
         .interact(interact)
+        .playerPos(px, py)
         .mouse(mouseX, mouseY)
         .build();
 
@@ -115,6 +119,11 @@ public class ClientInput {
     }
 
     return packet;
+  }
+
+  /** Sobrecarga sem posição — usada no modo in-process (single-player). */
+  public InputPacket buildPacket() {
+    return buildPacket(0.0, 0.0);
   }
 
   /** Conecta o transporte para que buildPacket() publique inputs direto na fila. */

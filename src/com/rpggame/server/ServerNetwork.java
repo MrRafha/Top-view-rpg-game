@@ -16,17 +16,17 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Camada de rede do servidor: aceita conexoes TCP e gerencia cada cliente.
  *
  * Cada cliente conectado ganha:
- *  - um ClientHandler em thread propria
- *  - um PlayerSimulation registrado no ServerLoop
- *  - um InProcessTransport dedicado (retornado por registerPlayer)
+ * - um ClientHandler em thread propria
+ * - um PlayerSimulation registrado no ServerLoop
+ * - um InProcessTransport dedicado (retornado por registerPlayer)
  *
  * Fluxo por cliente:
- *   1. Aceita Socket
- *   2. Le handshake { "playerId": "...", "playerClass": "..." }
- *   3. Registra PlayerSimulation no ServerLoop -> obtem InProcessTransport
- *   4. Confirma handshake ao cliente
- *   5. Lanca threads inputReader e snapshotWriter em paralelo
- *   6. Ao desconectar, chama ServerLoop.unregisterPlayer
+ * 1. Aceita Socket
+ * 2. Le handshake { "playerId": "...", "playerClass": "..." }
+ * 3. Registra PlayerSimulation no ServerLoop -> obtem InProcessTransport
+ * 4. Confirma handshake ao cliente
+ * 5. Lanca threads inputReader e snapshotWriter em paralelo
+ * 6. Ao desconectar, chama ServerLoop.unregisterPlayer
  */
 public class ServerNetwork {
 
@@ -48,7 +48,8 @@ public class ServerNetwork {
    * Nao bloqueia — retorna imediatamente apos iniciar a thread.
    */
   public void start(int port) throws IOException {
-    if (running) return;
+    if (running)
+      return;
     serverSocket = new ServerSocket(port);
     running = true;
     acceptThread = new Thread(this::acceptLoop, "server-accept");
@@ -58,7 +59,8 @@ public class ServerNetwork {
   }
 
   /**
-   * Para o servidor: fecha o ServerSocket (desbloqueia o accept) e aguarda a thread.
+   * Para o servidor: fecha o ServerSocket (desbloqueia o accept) e aguarda a
+   * thread.
    */
   public void stop() {
     running = false;
@@ -66,7 +68,8 @@ public class ServerNetwork {
       if (serverSocket != null && !serverSocket.isClosed()) {
         serverSocket.close();
       }
-    } catch (IOException ignored) {}
+    } catch (IOException ignored) {
+    }
     if (acceptThread != null) {
       acceptThread.interrupt();
     }
@@ -113,24 +116,26 @@ public class ServerNetwork {
     public void run() {
       System.out.println("[ServerNetwork] Cliente " + clientId
           + " conectado: " + socket.getRemoteSocketAddress());
-      try (Socket s = socket) {
-        InputStream in = s.getInputStream();
-        OutputStream out = s.getOutputStream();
+      try {
+        if (!doHandshake(socket.getInputStream(), socket.getOutputStream()))
+          return;
 
-        if (!doHandshake(in, out)) return;
-
+        // Threads obtem streams diretamente do socket — nao capturam referencias
+        // locais que ficam invalidas quando o socket e fechado por cleanup().
         Thread inputReader = new Thread(
-            () -> inputReaderLoop(in), "client-input-reader-" + clientId);
+            this::inputReaderLoop, "client-input-reader-" + clientId);
         Thread snapshotWriter = new Thread(
-            () -> snapshotWriterLoop(out), "client-snapshot-writer-" + clientId);
+            this::snapshotWriterLoop, "client-snapshot-writer-" + clientId);
         inputReader.setDaemon(true);
         snapshotWriter.setDaemon(true);
         inputReader.start();
         snapshotWriter.start();
 
+        // Aguarda o inputReader terminar (indica desconexao do cliente).
+        // Entao interrompe o snapshotWriter — ele nao precisa continuar sozinho.
         inputReader.join();
         snapshotWriter.interrupt();
-        snapshotWriter.join(1000);
+        snapshotWriter.join(2000);
 
       } catch (IOException | InterruptedException e) {
         if (running) {
@@ -138,6 +143,8 @@ public class ServerNetwork {
               + clientId + ": " + e.getMessage());
         }
       } finally {
+        // cleanup() fecha o socket DEPOIS que as threads terminaram,
+        // nao durante — evita SocketException prematura no inputReader.
         cleanup();
       }
     }
@@ -145,15 +152,21 @@ public class ServerNetwork {
     private boolean doHandshake(InputStream in, OutputStream out) {
       try {
         String requestJson = TcpFraming.readMessage(in);
-        String pid = JsonUtil.parseHandshakePlayerId(requestJson);
+        String requestedPid = JsonUtil.parseHandshakePlayerId(requestJson);
+        String pid = requestedPid;
         if (pid == null || pid.isEmpty()) {
           TcpFraming.writeMessage(out,
               JsonUtil.handshakeResponseJson(false, null, "playerId ausente"));
           return false;
         }
 
+        if (serverLoop.hasPlayerSimulation(pid)) {
+          pid = requestedPid + "-" + clientId;
+        }
+
         this.playerId = pid;
-        PlayerSimulation sim = serverLoop.getOrCreateSimulationForPlayer(playerId);
+        String playerClass = JsonUtil.parseHandshakePlayerClass(requestJson);
+        PlayerSimulation sim = serverLoop.getOrCreateSimulationForPlayer(playerId, playerClass);
         this.transport = serverLoop.registerPlayer(sim);
 
         TcpFraming.writeMessage(out,
@@ -168,8 +181,9 @@ public class ServerNetwork {
       }
     }
 
-    private void inputReaderLoop(InputStream in) {
+    private void inputReaderLoop() {
       try {
+        InputStream in = socket.getInputStream();
         while (!Thread.currentThread().isInterrupted()) {
           String json = TcpFraming.readMessage(in);
           InputPacket packet = JsonUtil.inputPacketFromJson(json);
@@ -181,20 +195,30 @@ public class ServerNetwork {
         // Conexao encerrada normalmente pelo cliente
       } catch (SocketException e) {
         if (!socket.isClosed()) {
-          System.err.println("[ServerNetwork] SocketException no inputReader do cliente " + clientId);
+          System.err.println("[ServerNetwork] SocketException no inputReader do cliente "
+              + clientId + ": " + e.getMessage());
         }
       } catch (IOException e) {
         System.err.println("[ServerNetwork] Erro no inputReader do cliente "
             + clientId + ": " + e.getMessage());
       }
+      // Ao sair, a thread principal (run) detecta via join() e chama cleanup()
     }
 
-    private void snapshotWriterLoop(OutputStream out) {
+    private void snapshotWriterLoop() {
       try {
+        OutputStream out = socket.getOutputStream();
+        long lastSentMs = System.currentTimeMillis();
         while (!Thread.currentThread().isInterrupted()) {
           WorldSnapshot snapshot = transport.pollSnapshot();
+          long nowMs = System.currentTimeMillis();
           if (snapshot != null) {
             TcpFraming.writeMessage(out, JsonUtil.toJson(snapshot));
+            lastSentMs = nowMs;
+          } else if (nowMs - lastSentMs > 2000) {
+            // Heartbeat: mantém o socket TCP vivo quando não há snapshots novos.
+            TcpFraming.writeMessage(out, "{\"ping\":true}");
+            lastSentMs = nowMs;
           } else {
             Thread.sleep(SNAPSHOT_POLL_INTERVAL_MS);
           }
@@ -203,11 +227,19 @@ public class ServerNetwork {
         Thread.currentThread().interrupt();
       } catch (SocketException e) {
         if (!socket.isClosed()) {
-          System.err.println("[ServerNetwork] SocketException no snapshotWriter do cliente " + clientId);
+          System.err.println("[ServerNetwork] SocketException no snapshotWriter do cliente "
+              + clientId + ": " + e.getMessage());
         }
+        // Fechar socket desbloqueia o inputReader que esta em join() no run()
+        try { socket.close(); } catch (IOException ignored) {}
       } catch (IOException e) {
         System.err.println("[ServerNetwork] Erro no snapshotWriter do cliente "
             + clientId + ": " + e.getMessage());
+        try { socket.close(); } catch (IOException ignored) {}
+      } catch (RuntimeException e) {
+        System.err.println("[ServerNetwork] Erro inesperado no snapshotWriter do cliente "
+            + clientId + ": " + e);
+        try { socket.close(); } catch (IOException ignored) {}
       }
     }
 
@@ -218,8 +250,10 @@ public class ServerNetwork {
             + " (" + playerId + ") desconectado e desregistrado.");
       }
       try {
-        if (!socket.isClosed()) socket.close();
-      } catch (IOException ignored) {}
+        if (!socket.isClosed())
+          socket.close();
+      } catch (IOException ignored) {
+      }
     }
   }
 }

@@ -205,6 +205,8 @@ public final class JsonUtil {
         + ",\"skill3\":" + p.isSkill3()
         + ",\"skill4\":" + p.isSkill4()
         + ",\"interact\":" + p.isInteract()
+        + ",\"playerX\":" + p.getPlayerX()
+        + ",\"playerY\":" + p.getPlayerY()
         + ",\"mouseX\":" + p.getMouseX()
         + ",\"mouseY\":" + p.getMouseY() + "}";
   }
@@ -227,6 +229,7 @@ public final class JsonUtil {
         .skill3(r.readBool("skill3"))
         .skill4(r.readBool("skill4"))
         .interact(r.readBool("interact"))
+        .playerPos(r.readDouble("playerX"), r.readDouble("playerY"))
         .mouse(r.readFloat("mouseX"), r.readFloat("mouseY"))
         .build();
   }

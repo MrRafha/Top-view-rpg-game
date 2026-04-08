@@ -67,6 +67,19 @@ public class SkillManager {
   }
 
   /**
+   * Marca todas as habilidades registradas como aprendidas.
+   * Usado pelo stub do servidor para garantir que skills funcionem em
+   * modo rede sem depender do sistema de progressão de level do cliente.
+   */
+  public void learnAllSkills() {
+    for (Skill skill : skills.values()) {
+      if (skill != null) {
+        skill.setLearned(true);
+      }
+    }
+  }
+
+  /**
    * Executa uma habilidade pelo número do slot.
    */
   public boolean useSkill(int slot) {

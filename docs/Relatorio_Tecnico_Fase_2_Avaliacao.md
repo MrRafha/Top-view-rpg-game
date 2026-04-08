@@ -11,7 +11,7 @@ A Fase 2 tinha quatro objetivos centrais no planejamento original:
 - fazer o `GamePanel` consumir snapshot em vez de ler estado interno diretamente
 - remover `Graphics2D` de `EnemyManager`, `Player` e entidades
 
-O checklist correspondente foi atualizado como concluido em [docs/Planejamento_Arquitetura_Multiplayer.md](docs/Planejamento_Arquitetura_Multiplayer.md).
+O checklist correspondente foi consolidado em [docs/Multiplayer_Arquitetura_e_Evolucao.md](docs/Multiplayer_Arquitetura_e_Evolucao.md).
 
 ## Sumario Executivo
 

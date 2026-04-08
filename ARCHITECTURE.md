@@ -31,9 +31,9 @@ Se você quer **jogar o jogo**, vá para [Como Jogar](README.md#-como-jogar).
 
 Se você quer **entender como o código está organizado**:
 
-1. **Comece:** [Planejamento da Arquitetura](Planejamento_Arquitetura_Multiplayer.md)
-   - Entenda a visão geral das 8 fases
-   - Veja o diagrama de comunicação
+1. **Comece:** [Multiplayer - Arquitetura, Funcionamento e Evolucao](docs/Multiplayer_Arquitetura_e_Evolucao.md)
+  - Entenda como o multiplayer funciona hoje
+  - Veja os pontos de evolucao futura
    
 2. **Aprofunde:** [Relatório Técnico - Fase 2](Relatorio_Tecnico_Fase_2_Avaliacao.md)
    - Análise linha por linha do código
@@ -42,15 +42,11 @@ Se você quer **entender como o código está organizado**:
 
 ### 🚀 Implementadores (Quer fazer)
 
-Se você quer **implementar a Fase 7** (Server Lobby & Multiplayer):
+Se você quer **implementar ou evoluir o multiplayer**:
 
-**Comece aqui:** [Fase 7 - Navigator](docs/Fase_7_Navigator.md)
-- Escolha seu caminho (rápido, completo ou técnico)
-
-**Depois, execute em paralelo:**
-- [Quick Start](docs/Fase_7_Quick_Start.md) → Checklist + código  
-- [Arquitetura Completa](docs/Fase_7_Server_Lobby_Multiplayer.md) → Componentes detalhados
-- [Padrão de Comunicação](docs/Fase_7_Padrao_Comunicacao.md) → TCP + JSON + threading
+**Comece aqui:** [Multiplayer - Arquitetura, Funcionamento e Evolucao](docs/Multiplayer_Arquitetura_e_Evolucao.md)
+- Veja a visão geral do fluxo
+- Revise as melhorias futuras sugeridas
 
 ---
 
@@ -246,10 +242,9 @@ Tela exibe mundo
 
 ### Implementar Fase 7
 
-1. Leia [Fase 7 Navigator](docs/Fase_7_Navigator.md)
-2. Copie código de [Fase 7 Server Lobby Multiplayer](docs/Fase_7_Server_Lobby_Multiplayer.md)
-3. Implemente passo a passo do [Quick Start](docs/Fase_7_Quick_Start.md)
-4. Testes conforme [Padrão de Comunicação](docs/Fase_7_Padrao_Comunicacao.md)
+1. Leia o documento consolidado de multiplayer
+2. Use os pontos de evolucao como guia para a proxima iteracao
+3. Revise `GameServer`, `ServerLoop` e `ClientNetwork` antes de mudar o protocolo
 
 ### Revisar Código Existente
 
@@ -274,13 +269,9 @@ Use o [Relatório Técnico - Fase 2](Relatorio_Tecnico_Fase_2_Avaliacao.md) para
 
 ## 📜 Referências
 
-- **Planejamento Completo:** [Planejamento_Arquitetura_Multiplayer.md](Planejamento_Arquitetura_Multiplayer.md)
+- **Planejamento Completo:** [Multiplayer - Arquitetura, Funcionamento e Evolucao](docs/Multiplayer_Arquitetura_e_Evolucao.md)
 - **Fase 2 Análise:** [Relatorio_Tecnico_Fase_2_Avaliacao.md](Relatorio_Tecnico_Fase_2_Avaliacao.md)
-- **Fase 2 Implementação:** [Implementacao_Fase_2_Arquitetura_Multiplayer.md](Implementacao_Fase_2_Arquitetura_Multiplayer.md)
-- **Fase 7 - Comece aqui:** [Fase_7_Navigator.md](Fase_7_Navigator.md)
-- **Fase 7 - Quick:** [Fase_7_Quick_Start.md](Fase_7_Quick_Start.md)
-- **Fase 7 - Completo:** [Fase_7_Server_Lobby_Multiplayer.md](Fase_7_Server_Lobby_Multiplayer.md)
-- **Fase 7 - Rede:** [Fase_7_Padrao_Comunicacao.md](Fase_7_Padrao_Comunicacao.md)
+- **Fase 2 e 7:** [Multiplayer - Arquitetura, Funcionamento e Evolucao](docs/Multiplayer_Arquitetura_e_Evolucao.md)
 
 ---
 

@@ -70,6 +70,11 @@ public class MainMenuScreen extends JPanel {
       public void mouseClicked(MouseEvent e) {
         handleMouseClick(e.getX(), e.getY());
       }
+
+      @Override
+      public void mousePressed(MouseEvent e) {
+        handleMouseClick(e.getX(), e.getY());
+      }
     });
 
     addMouseMotionListener(new MouseMotionAdapter() {
@@ -123,12 +128,14 @@ public class MainMenuScreen extends JPanel {
     if (playButton.contains(x, y)) {
       System.out.println("▶️ Iniciando jogo...");
       startGame();
+      return;
     }
 
     // Botão Sair
     if (exitButton.contains(x, y)) {
       System.out.println("👋 Saindo do jogo...");
       exitGame();
+      return;
     }
 
     // Botão de música
@@ -141,14 +148,13 @@ public class MainMenuScreen extends JPanel {
     // Parar música do menu
     musicManager.stopMusic();
 
-    // Trocar para tela de criação de personagem
-    parentFrame.getContentPane().removeAll();
+    // Trocar para tela de criação de personagem de forma consistente
     com.rpggame.ui.CombinedCharacterScreen characterScreen = new com.rpggame.ui.CombinedCharacterScreen(parentFrame,
         useNetwork, networkHost, networkPort);
-    parentFrame.add(characterScreen);
+    parentFrame.setContentPane(characterScreen);
     parentFrame.revalidate();
     parentFrame.repaint();
-    characterScreen.requestFocusInWindow();
+    SwingUtilities.invokeLater(characterScreen::requestFocusInWindow);
   }
 
   private void exitGame() {

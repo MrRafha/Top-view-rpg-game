@@ -26,14 +26,29 @@ public class PlayerSimulation {
   }
 
   /**
-   * Aplica o packet ao estado de input do Player.
-   * Chamado pelo ServerLoop antes de player.update().
-   * Pacotes já processados (frame repetido) são ignorados.
+   * Aplica o packet ao estado do Player.
+   *
+   * Modo cliente-autoritativo (playerX/Y != 0):
+   *   O cliente envia sua posição calculada localmente a 60 FPS.
+   *   O servidor apenas espelha essa posição — sem recalcular movimento.
+   *   Isso elimina rollback/rubber-band causado pela diferença de tick rate.
+   *
+   * Modo legado in-process (playerX/Y == 0):
+   *   Mantém o comportamento anterior: seta flags e deixa player.update() calcular.
    */
   public void applyInput(InputPacket packet) {
     if (packet == null) return;
-    if (packet.getClientFrame() == lastProcessedFrame) return;
-    lastProcessedFrame = packet.getClientFrame();
+    // Long.MIN_VALUE é sentinel de "zerar movimento" — sempre processar.
+    // Frames normais (>= 1) são deduplicados para evitar double-apply.
+    if (packet.getClientFrame() != Long.MIN_VALUE) {
+      if (packet.getClientFrame() == lastProcessedFrame) return;
+      lastProcessedFrame = packet.getClientFrame();
+    }
+
+    // Modo cliente-autoritativo: posição vinda do cliente tem prioridade.
+    if (packet.getPlayerX() != 0.0 || packet.getPlayerY() != 0.0) {
+      player.setPosition(packet.getPlayerX(), packet.getPlayerY());
+    }
 
     player.setInputUp(packet.isUp());
     player.setInputDown(packet.isDown());

@@ -29,6 +29,10 @@ public final class InputPacket {
   private final boolean skill4;
   private final boolean interact;
 
+  // Posição autoritativa do player no cliente (modo cliente-autoritativo)
+  private final double playerX;
+  private final double playerY;
+
   // Posição do mouse (coordenadas de tela — usadas por habilidades direcionais)
   private final float mouseX;
   private final float mouseY;
@@ -46,6 +50,8 @@ public final class InputPacket {
     this.skill3     = b.skill3;
     this.skill4     = b.skill4;
     this.interact   = b.interact;
+    this.playerX    = b.playerX;
+    this.playerY    = b.playerY;
     this.mouseX     = b.mouseX;
     this.mouseY     = b.mouseY;
   }
@@ -64,6 +70,8 @@ public final class InputPacket {
   public boolean isSkill3()     { return skill3; }
   public boolean isSkill4()     { return skill4; }
   public boolean isInteract()   { return interact; }
+  public double  getPlayerX()   { return playerX; }
+  public double  getPlayerY()   { return playerY; }
   public float   getMouseX()    { return mouseX; }
   public float   getMouseY()    { return mouseY; }
 
@@ -93,6 +101,7 @@ public final class InputPacket {
     private final long clientFrame;
     private boolean up, down, left, right;
     private boolean attack, skill1, skill2, skill3, skill4, interact;
+    private double playerX, playerY;
     private float mouseX, mouseY;
 
     private Builder(String playerId, long clientFrame) {
@@ -110,6 +119,7 @@ public final class InputPacket {
     public Builder skill3(boolean v)   { this.skill3 = v;   return this; }
     public Builder skill4(boolean v)   { this.skill4 = v;   return this; }
     public Builder interact(boolean v) { this.interact = v; return this; }
+    public Builder playerPos(double x, double y) { this.playerX = x; this.playerY = y; return this; }
     public Builder mouse(float x, float y) { this.mouseX = x; this.mouseY = y; return this; }
 
     public InputPacket build() {
